@@ -218,6 +218,90 @@
         .service-price { color: var(--baby-blue); font-size: 20px; font-weight: bold; text-shadow: 0 0 10px rgba(135, 206, 235, 0.5); animation: priceGlow 2s infinite; }
         @keyframes priceGlow { 0%, 100% { text-shadow: 0 0 10px rgba(135, 206, 235, 0.5); } 50% { text-shadow: 0 0 20px rgba(135, 206, 235, 0.8); } }
         
+        /* Barber Selection Styles */
+        .barber-selection { margin-top: 20px; }
+        .barbers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; margin-top: 15px; }
+        .barber-item { 
+            background: var(--dark-bg); 
+            padding: 20px; 
+            border-radius: 15px; 
+            border: 2px solid transparent; 
+            cursor: pointer; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative; 
+            overflow: hidden;
+            text-align: center;
+        }
+        .barber-item::before { 
+            content: ''; 
+            position: absolute; 
+            top: 0; 
+            left: -100%; 
+            width: 100%; 
+            height: 100%; 
+            background: linear-gradient(90deg, transparent, rgba(135, 206, 235, 0.1), transparent); 
+            transition: left 0.5s; 
+        }
+        .barber-item:hover::before { left: 100%; }
+        .barber-item:hover { 
+            border-color: var(--baby-blue); 
+            transform: translateY(-5px) scale(1.05); 
+            box-shadow: 0 8px 25px rgba(135, 206, 235, 0.3); 
+        }
+        .barber-item.selected { 
+            border-color: var(--baby-blue); 
+            background: rgba(135, 206, 235, 0.1); 
+            transform: scale(1.08); 
+            box-shadow: 0 10px 30px rgba(135, 206, 235, 0.4); 
+        }
+        .barber-item.selected::after { 
+            content: '\f00c'; 
+            font-family: 'Font Awesome 6 Free'; 
+            font-weight: 900; 
+            position: absolute; 
+            top: 10px; 
+            right: 10px; 
+            color: var(--baby-blue); 
+            font-size: 18px; 
+            animation: checkmark 0.5s; 
+        }
+        .barber-photo-circle { 
+            width: 80px; 
+            height: 80px; 
+            border-radius: 50%; 
+            border: 3px solid var(--baby-blue); 
+            background: var(--dark-card); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 32px; 
+            color: var(--baby-blue); 
+            margin: 0 auto 15px; 
+            box-shadow: 0 5px 15px rgba(135, 206, 235, 0.2);
+            transition: all 0.3s;
+        }
+        .barber-photo-circle img { 
+            width: 100%; 
+            height: 100%; 
+            border-radius: 50%; 
+            object-fit: cover; 
+        }
+        .barber-item:hover .barber-photo-circle {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(135, 206, 235, 0.4);
+        }
+        .barber-name { 
+            color: var(--baby-blue); 
+            font-size: 16px; 
+            font-weight: 600; 
+            margin-bottom: 8px;
+        }
+        .barber-specialty { 
+            color: var(--text-muted); 
+            font-size: 12px; 
+            line-height: 1.3;
+        }
+        
         /* Calendar */
         .calendar { margin-top: 20px; }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -305,6 +389,10 @@
             .bookings-inner-content { padding: 20px; }
             .client-name { font-size: 20px; }
             .client-welcome { padding: 12px 20px; }
+            .barbers-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; }
+            .barber-photo-circle { width: 60px; height: 60px; font-size: 24px; }
+            .barber-name { font-size: 14px; }
+            .barber-specialty { font-size: 11px; }
         }
 
         @media (max-width: 480px) {
@@ -321,6 +409,10 @@
             .bookings-expand-button { padding: 12px 15px; font-size: 1em; }
             .bookings-inner-content { padding: 15px; }
             .client-name { font-size: 18px; }
+            .barbers-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .barber-photo-circle { width: 50px; height: 50px; font-size: 20px; }
+            .barber-name { font-size: 13px; }
+            .barber-specialty { font-size: 10px; }
         }
     </style>
 </head>
@@ -498,6 +590,15 @@
 
             <div class="card">
                 <h3><i class="fas fa-calendar-alt"></i> Agendar Horário</h3>
+                
+                <!-- Barber Selection Section -->
+                <div class="barber-selection" id="barberSelection" style="display: none;">
+                    <h4 style="color: var(--baby-blue); margin-bottom: 15px;">
+                        <i class="fas fa-user-tie"></i> Escolha o Barbeiro
+                    </h4>
+                    <div class="barbers-grid" id="barbersList"></div>
+                </div>
+                
                 <div class="calendar">
                     <div class="calendar-header">
                         <button id="prevMonth"><i class="fas fa-chevron-left"></i></button>
@@ -543,9 +644,11 @@
         let currentUser = null;
         let currentDate = new Date();
         let selectedService = null;
+        let selectedBarber = null;
         let selectedDate = null;
         let selectedTime = null;
         let services = [];
+        let barbers = [];
         let bookedSlots = [];
         let scheduleConfig = {};
         let intervalTime = 30;
@@ -1051,6 +1154,7 @@
             profileBtn.style.display = 'block';
             await loadSettings();
             await loadServices();
+            await loadBarbers();
             await loadMyBookings();
             await loadUserProfile();
             renderCalendar();
@@ -1087,7 +1191,7 @@
             try {
                 const { data, error } = await supabase
                     .from('bookings')
-                    .select('*, services(name, price, duration)')
+                    .select('*, services(name, price, duration), barbers(name)')
                     .eq('user_id', currentUser.id)
                     .order('booking_date', { ascending: true })
                     .order('booking_time', { ascending: true });
@@ -1142,6 +1246,7 @@
                             </div>
                             
                             <div class="booking-info">
+                                <p><i class="fas fa-user-tie"></i> Barbeiro: ${booking.barbers?.name || 'Não especificado'}</p>
                                 <p><i class="fas fa-hourglass-half"></i> ${booking.services?.duration || 0} minutos</p>
                                 <p><i class="fas fa-money-bill-wave"></i> R$ ${booking.services?.price?.toFixed(2) || '0.00'}</p>
                             </div>
@@ -1170,6 +1275,21 @@
             }
         }
 
+        async function loadBarbers() {
+            try {
+                const { data, error } = await supabase
+                    .from('barbers')
+                    .select('*')
+                    .order('id', { ascending: true });
+
+                if (error) throw error;
+
+                barbers = data || [];
+            } catch (error) {
+                console.error('Erro ao carregar barbeiros:', error);
+            }
+        }
+
         function renderServices() {
             const container = document.getElementById('servicesList');
             
@@ -1189,12 +1309,56 @@
             `).join('');
         }
 
+        function renderBarbers() {
+            const container = document.getElementById('barbersList');
+            
+            if (barbers.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Nenhum barbeiro disponível</p>';
+                return;
+            }
+
+            container.innerHTML = barbers.map(barber => `
+                <div class="barber-item" onclick="selectBarber(${barber.id})">
+                    <div class="barber-photo-circle">
+                        ${barber.photo_url ? 
+                            `<img src="${barber.photo_url}" alt="${barber.name}">` : 
+                            '<i class="fas fa-user-tie"></i>'
+                        }
+                    </div>
+                    <div class="barber-name">${barber.name}</div>
+                    <div class="barber-specialty">${barber.specialty || 'Barbeiro'}</div>
+                </div>
+            `).join('');
+        }
+
         function selectService(id) {
             selectedService = services.find(s => s.id === id);
             document.querySelectorAll('.service-item').forEach(el => el.classList.remove('selected'));
             event.currentTarget.classList.add('selected');
+            
+            // Reset selections
+            selectedBarber = null;
             selectedDate = null;
             selectedTime = null;
+            
+            // Show barber selection
+            const barberSelection = document.getElementById('barberSelection');
+            barberSelection.style.display = 'block';
+            renderBarbers();
+            
+            renderCalendar();
+            document.getElementById('confirmBooking').classList.add('hidden');
+        }
+
+        function selectBarber(id) {
+            selectedBarber = barbers.find(b => b.id === id);
+            document.querySelectorAll('.barber-item').forEach(el => el.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            
+            // Reset date and time selections
+            selectedDate = null;
+            selectedTime = null;
+            
             renderCalendar();
             document.getElementById('confirmBooking').classList.add('hidden');
         }
@@ -1255,6 +1419,11 @@
                 return;
             }
             
+            if (!selectedBarber) {
+                alert('Selecione um barbeiro primeiro!');
+                return;
+            }
+            
             selectedDate = new Date(year, month, day, 12, 0, 0);
             selectedTime = null;
             renderCalendar();
@@ -1266,11 +1435,18 @@
             try {
                 const dateStr = formatDateToYYYYMMDD(selectedDate);
                 
-                const { data, error } = await supabase
+                let query = supabase
                     .from('bookings')
                     .select('booking_time, services(duration)')
                     .eq('booking_date', dateStr)
                     .eq('status', 'confirmed');
+
+                // If a barber is selected, filter by barber_id
+                if (selectedBarber) {
+                    query = query.eq('barber_id', selectedBarber.id);
+                }
+
+                const { data, error } = await query;
 
                 if (error) throw error;
 
@@ -1403,6 +1579,7 @@
             
             summary.innerHTML = `
                 <p><strong><i class="fas fa-scissors"></i> Serviço:</strong> ${selectedService.name}</p>
+                <p><strong><i class="fas fa-user-tie"></i> Barbeiro:</strong> ${selectedBarber.name}</p>
                 <p><strong><i class="fas fa-calendar"></i> Data:</strong> ${dateFormatted}</p>
                 <p><strong><i class="fas fa-clock"></i> Horário:</strong> ${selectedTime}</p>
                 <p><strong><i class="fas fa-money-bill-wave"></i> Valor:</strong> R$ ${selectedService.price.toFixed(2)}</p>
@@ -1454,11 +1631,12 @@
                     .insert([{
                         user_id: currentUser.id,
                         service_id: selectedService.id,
+                        barber_id: selectedBarber.id,
                         booking_date: dateStr,
                         booking_time: selectedTime,
                         status: 'confirmed'
                     }])
-                    .select('*, services(name, price, duration)')
+                    .select('*, services(name, price, duration), barbers(name)')
                     .single();
 
                 if (error) throw error;
@@ -1484,6 +1662,7 @@
                             service_name: selectedService.name,
                             service_price: selectedService.price,
                             service_duration: selectedService.duration,
+                            barber_name: selectedBarber.name,
                             booking_date: selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
                             booking_time: selectedTime,
                             status: 'confirmed'
@@ -1509,6 +1688,10 @@
                         <span>${selectedService.name}</span>
                     </p>
                     <p>
+                        <strong><i class="fas fa-user-tie"></i> Barbeiro:</strong>
+                        <span>${selectedBarber.name}</span>
+                    </p>
+                    <p>
                         <strong><i class="fas fa-calendar"></i> Data:</strong>
                         <span>${dateFormatted}</span>
                     </p>
@@ -1529,11 +1712,14 @@
                 modal.classList.remove('hidden');
                 
                 selectedService = null;
+                selectedBarber = null;
                 selectedDate = null;
                 selectedTime = null;
                 
                 document.querySelectorAll('.service-item').forEach(el => el.classList.remove('selected'));
+                document.querySelectorAll('.barber-item').forEach(el => el.classList.remove('selected'));
                 document.getElementById('confirmBooking').classList.add('hidden');
+                document.getElementById('barberSelection').style.display = 'none';
                 document.getElementById('timeSlotsContainer').innerHTML = '';
                 renderCalendar();
             } catch (error) {
@@ -1583,3 +1769,4 @@
     </script>
 </body>
 </html>
+
