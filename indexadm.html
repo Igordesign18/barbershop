@@ -667,7 +667,8 @@
         }
         
         .service-item, 
-        .client-item { 
+        .client-item,
+        .barber-item { 
             background: var(--dark-bg); 
             padding: 15px; 
             border-radius: var(--border-radius); 
@@ -682,33 +683,38 @@
         }
         
         .service-item:hover,
-        .client-item:hover {
+        .client-item:hover,
+        .barber-item:hover {
             transform: translateX(3px);
             box-shadow: 0 3px 15px rgba(135, 206, 235, 0.1);
         }
         
         .service-info h4, 
-        .client-info h4 { 
+        .client-info h4,
+        .barber-info h4 { 
             margin-bottom: 5px; 
             color: var(--lime);
         }
         
         .service-info p, 
-        .client-info p { 
+        .client-info p,
+        .barber-info p { 
             color: var(--text-muted); 
             font-size: 14px; 
             margin-top: 3px; 
         }
         
         .service-actions, 
-        .client-actions { 
+        .client-actions,
+        .barber-actions { 
             display: flex; 
             gap: 10px; 
             flex-wrap: wrap; 
         }
         
         .service-actions button, 
-        .client-actions button { 
+        .client-actions button,
+        .barber-actions button { 
             padding: 8px 15px; 
             border: none; 
             border-radius: var(--border-radius); 
@@ -730,6 +736,77 @@
             gap: 5px; 
             font-size: 12px; 
             color: var(--text-muted); 
+        }
+
+        /* Barber specific styles */
+        .barber-photo-display {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid var(--lime);
+            background: var(--dark-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: var(--lime);
+            object-fit: cover;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .barber-photo-display img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .barber-item {
+            align-items: flex-start;
+        }
+
+        .barber-content {
+            display: flex;
+            align-items: center;
+            flex: 1;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            background: var(--dark-bg);
+            border: 2px dashed var(--lime);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            text-align: center;
+            transition: var(--transition);
+            margin-top: 10px;
+        }
+
+        .file-input-wrapper:hover {
+            background: rgba(135, 206, 235, 0.1);
+            border-color: var(--lime-dark);
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+        }
+
+        .file-input-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            color: var(--lime);
+            font-size: 14px;
+        }
+
+        .file-input-label i {
+            font-size: 24px;
         }
         
         /* Schedule Management */
@@ -1042,18 +1119,29 @@
                 min-width: 100%; 
             }
             .service-item, 
-            .client-item { 
+            .client-item,
+            .barber-item { 
                 flex-direction: column; 
                 align-items: flex-start; 
             }
             .service-actions, 
-            .client-actions { 
+            .client-actions,
+            .barber-actions { 
                 width: 100%; 
                 flex-direction: column; 
             }
             .service-actions button, 
-            .client-actions button { 
+            .client-actions button,
+            .barber-actions button { 
                 width: 100%; 
+            }
+            .barber-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            .barber-photo-display {
+                margin-right: 0;
+                margin-bottom: 10px;
             }
         }
         
@@ -1315,6 +1403,33 @@
                 <div class="services-list" id="servicesList" role="region" aria-label="Lista de serviços"></div>
             </div>
 
+            <div class="card">
+                <h2><i class="fas fa-user-tie" aria-hidden="true"></i> Gerenciar Barbeiros</h2>
+                <div class="form-group">
+                    <label for="barberName">Nome do Barbeiro</label>
+                    <input type="text" id="barberName" placeholder="Ex: João Silva">
+                </div>
+                <div class="form-group">
+                    <label for="barberSpecialty">Especialidade</label>
+                    <input type="text" id="barberSpecialty" placeholder="Ex: Cortes modernos, Barbas">
+                </div>
+                <div class="form-group">
+                    <label>Foto do Barbeiro</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="barberPhoto" accept="image/*">
+                        <label for="barberPhoto" class="file-input-label">
+                            <i class="fas fa-camera"></i>
+                            <span>Clique para selecionar uma foto</span>
+                            <small>JPG, PNG ou GIF (máx. 2MB)</small>
+                        </label>
+                    </div>
+                </div>
+                <button class="btn" onclick="addBarber()">
+                    <i class="fas fa-plus" aria-hidden="true"></i> Adicionar Barbeiro
+                </button>
+                <div class="services-list" id="barbersList" role="region" aria-label="Lista de barbeiros"></div>
+            </div>
+
             <div class="card full-width">
                 <h2><i class="fas fa-users" aria-hidden="true"></i> Gerenciar Clientes</h2>
                 <div class="filter-section">
@@ -1374,6 +1489,47 @@
                         <i class="fas fa-save" aria-hidden="true"></i> Salvar Alterações
                     </button>
                     <button type="button" class="btn btn-secondary" style="flex: 1; min-width: 150px;" onclick="closeEditClientModal()">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="editBarberModal" class="modal hidden" role="dialog" aria-labelledby="editBarberModalTitle" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="editBarberModalTitle"><i class="fas fa-user-edit" aria-hidden="true"></i> Editar Barbeiro</h2>
+                <button class="close-modal" onclick="closeEditBarberModal()" aria-label="Fechar modal">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+            <form id="editBarberForm">
+                <input type="hidden" id="editBarberId">
+                <div class="form-group">
+                    <label for="editBarberName">Nome do Barbeiro</label>
+                    <input type="text" id="editBarberName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editBarberSpecialty">Especialidade</label>
+                    <input type="text" id="editBarberSpecialty" required>
+                </div>
+                <div class="form-group">
+                    <label>Nova Foto (opcional)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="editBarberPhoto" accept="image/*">
+                        <label for="editBarberPhoto" class="file-input-label">
+                            <i class="fas fa-camera"></i>
+                            <span>Clique para alterar a foto</span>
+                            <small>JPG, PNG ou GIF (máx. 2MB)</small>
+                        </label>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="submit" class="btn" style="flex: 1; min-width: 150px;">
+                        <i class="fas fa-save" aria-hidden="true"></i> Salvar Alterações
+                    </button>
+                    <button type="button" class="btn btn-secondary" style="flex: 1; min-width: 150px;" onclick="closeEditBarberModal()">
                         Cancelar
                     </button>
                 </div>
@@ -1627,7 +1783,7 @@
                 const today = new Date().toISOString().split('T')[0];
                 document.getElementById('filterDate').value = today;
                 
-                await Promise.all([loadBookings(), loadServices(), loadClients(), loadScheduleSettings()]);
+                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings()]);
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
                 showNotification('Erro ao carregar dados do dashboard', 'error');
@@ -1966,7 +2122,7 @@
                 }
                 
                 let query = supabase.from('bookings')
-                    .select('*, users(full_name, phone, email), services(name, price, duration)')
+                    .select('*, users(full_name, phone, email), services(name, price, duration), barbers(name)')
                     .eq('booking_date', filterDate) // SEMPRE filtrar pela data
                     .order('booking_time', { ascending: true });
                 
@@ -1998,6 +2154,7 @@
                                 <div class="booking-client">
                                     <h4><i class="fas fa-user" aria-hidden="true"></i> ${booking.users?.full_name || 'Cliente'}</h4>
                                     <p><i class="fas fa-cut" aria-hidden="true"></i> ${booking.services?.name}</p>
+                                    <p><i class="fas fa-user-tie" aria-hidden="true"></i> Barbeiro: ${booking.barbers?.name || 'Não especificado'}</p>
                                     <p><i class="fas fa-phone" aria-hidden="true"></i> ${booking.users?.phone || 'Sem telefone'}</p>
                                     <p><i class="fas fa-dollar-sign" aria-hidden="true"></i> R$ ${booking.services?.price?.toFixed(2) || '0.00'} • <i class="fas fa-hourglass-half" aria-hidden="true"></i> ${booking.services?.duration || 0}min</p>
                                 </div>
@@ -2199,6 +2356,203 @@
                 loadServices();
             } catch (error) {
                 showNotification('Erro ao excluir serviço: ' + error.message, 'error');
+            }
+        }
+
+        // Barber Management Functions
+        async function loadBarbers() {
+            try {
+                const { data, error } = await supabase.from('barbers').select('*').order('id', { ascending: true });
+                if (error) throw error;
+                
+                const container = document.getElementById('barbersList');
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="empty-state" style="padding: 20px;"><i class="fas fa-user-tie" aria-hidden="true"></i><p>Nenhum barbeiro cadastrado</p></div>';
+                    return;
+                }
+                
+                container.innerHTML = `<h3 style="margin: 20px 0 15px; color: var(--lime); font-size: 16px;">Barbeiros Cadastrados</h3>` + 
+                    data.map(barber => 
+                        `<div class="barber-item">
+                            <div class="barber-content">
+                                <div class="barber-photo-display">
+                                    ${barber.photo_url ? 
+                                        `<img src="${barber.photo_url}" alt="${barber.name}">` : 
+                                        '<i class="fas fa-user-tie"></i>'
+                                    }
+                                </div>
+                                <div class="barber-info">
+                                    <h4>${barber.name}</h4>
+                                    <p>${barber.specialty || 'Especialidade não informada'}</p>
+                                </div>
+                            </div>
+                            <div class="barber-actions">
+                                <button class="btn-edit" onclick="openEditBarberModal('${barber.id}')" aria-label="Editar barbeiro ${barber.name}">
+                                    <i class="fas fa-edit" aria-hidden="true"></i> Editar
+                                </button>
+                                <button class="btn-delete" onclick="deleteBarber('${barber.id}')" aria-label="Excluir barbeiro ${barber.name}">
+                                    <i class="fas fa-trash" aria-hidden="true"></i> Excluir
+                                </button>
+                            </div>
+                        </div>`
+                    ).join('');
+            } catch (error) {
+                console.error('Erro ao carregar barbeiros:', error);
+                showNotification('Erro ao carregar barbeiros', 'error');
+            }
+        }
+
+        async function addBarber() {
+            const name = document.getElementById('barberName').value.trim();
+            const specialty = document.getElementById('barberSpecialty').value.trim();
+            const photoFile = document.getElementById('barberPhoto').files[0];
+            
+            if (!name || name.length < 3) { 
+                showNotification('Nome do barbeiro inválido!', 'error'); 
+                return; 
+            }
+            
+            try {
+                let photoUrl = null;
+                
+                // Upload da foto se fornecida
+                if (photoFile) {
+                    if (photoFile.size > 2 * 1024 * 1024) { // 2MB
+                        showNotification('Arquivo muito grande! Máximo 2MB.', 'error');
+                        return;
+                    }
+                    
+                    const fileExt = photoFile.name.split('.').pop();
+                    const fileName = `${Math.random()}.${fileExt}`;
+                    
+                    const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('barber-photos')
+                        .upload(fileName, photoFile);
+                    
+                    if (uploadError) {
+                        console.error('Erro no upload:', uploadError);
+                        showNotification('Erro ao fazer upload da foto', 'error');
+                        return;
+                    }
+                    
+                    const { data: urlData } = supabase.storage
+                        .from('barber-photos')
+                        .getPublicUrl(fileName);
+                    
+                    photoUrl = urlData.publicUrl;
+                }
+                
+                const { error } = await supabase.from('barbers').insert([{ 
+                    name, 
+                    specialty: specialty || null,
+                    photo_url: photoUrl
+                }]);
+                
+                if (error) throw error;
+                
+                showNotification('Barbeiro adicionado com sucesso!', 'success');
+                document.getElementById('barberName').value = '';
+                document.getElementById('barberSpecialty').value = '';
+                document.getElementById('barberPhoto').value = '';
+                loadBarbers();
+            } catch (error) {
+                showNotification('Erro ao adicionar barbeiro: ' + error.message, 'error');
+            }
+        }
+
+        async function openEditBarberModal(barberId) {
+            try {
+                const { data: barber, error } = await supabase.from('barbers').select('*').eq('id', barberId).single();
+                if (error) throw error;
+                
+                document.getElementById('editBarberId').value = barber.id;
+                document.getElementById('editBarberName').value = barber.name || '';
+                document.getElementById('editBarberSpecialty').value = barber.specialty || '';
+                
+                const modal = document.getElementById('editBarberModal');
+                modal.classList.remove('hidden');
+                
+                // Focus management
+                const firstInput = modal.querySelector('input[type="text"]');
+                firstInput.focus();
+            } catch (error) {
+                showNotification('Erro ao carregar dados do barbeiro: ' + error.message, 'error');
+            }
+        }
+
+        function closeEditBarberModal() {
+            document.getElementById('editBarberModal').classList.add('hidden');
+            document.getElementById('editBarberForm').reset();
+        }
+
+        document.getElementById('editBarberForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const barberId = document.getElementById('editBarberId').value;
+            const name = document.getElementById('editBarberName').value.trim();
+            const specialty = document.getElementById('editBarberSpecialty').value.trim();
+            const photoFile = document.getElementById('editBarberPhoto').files[0];
+            
+            if (!name || name.length < 3) { 
+                showNotification('Nome deve ter pelo menos 3 caracteres!', 'error'); 
+                return; 
+            }
+            
+            try {
+                let updateData = { 
+                    name: name, 
+                    specialty: specialty || null
+                };
+                
+                // Upload nova foto se fornecida
+                if (photoFile) {
+                    if (photoFile.size > 2 * 1024 * 1024) { // 2MB
+                        showNotification('Arquivo muito grande! Máximo 2MB.', 'error');
+                        return;
+                    }
+                    
+                    const fileExt = photoFile.name.split('.').pop();
+                    const fileName = `${Math.random()}.${fileExt}`;
+                    
+                    const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('barber-photos')
+                        .upload(fileName, photoFile);
+                    
+                    if (uploadError) {
+                        console.error('Erro no upload:', uploadError);
+                        showNotification('Erro ao fazer upload da foto', 'error');
+                        return;
+                    }
+                    
+                    const { data: urlData } = supabase.storage
+                        .from('barber-photos')
+                        .getPublicUrl(fileName);
+                    
+                    updateData.photo_url = urlData.publicUrl;
+                }
+                
+                const { error } = await supabase.from('barbers').update(updateData).eq('id', barberId);
+                
+                if (error) throw error;
+                
+                showNotification('Barbeiro atualizado com sucesso!', 'success');
+                closeEditBarberModal();
+                loadBarbers();
+            } catch (error) {
+                showNotification('Erro ao atualizar barbeiro: ' + error.message, 'error');
+            }
+        });
+
+        async function deleteBarber(barberId) {
+            if (!confirm('Tem certeza que deseja excluir este barbeiro?')) return;
+            
+            try {
+                const { error } = await supabase.from('barbers').delete().eq('id', barberId);
+                if (error) throw error;
+                
+                showNotification('Barbeiro excluído com sucesso!', 'success');
+                loadBarbers();
+            } catch (error) {
+                showNotification('Erro ao excluir barbeiro: ' + error.message, 'error');
             }
         }
 
@@ -2540,3 +2894,4 @@
     </script>
 </body>
 </html>
+
