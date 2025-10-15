@@ -185,7 +185,7 @@
         /* My Bookings */
         .my-bookings { grid-column: 1 / -1; }
         .bookings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-top: 20px; }
-        .booking-card { background: var(--dark-bg); padding: 20px; border-radius: 10px; border-left: 4px solid var(--baby-blue); transition: all 0.3s; }
+        .booking-card { background: var(--dark-bg); padding: 20px; border-left: 4px solid var(--baby-blue); transition: all 0.3s; }
         .booking-card:hover { transform: translateX(5px); box-shadow: 0 5px 20px rgba(135, 206, 235, 0.2); }
         .booking-card.cancelled { border-left-color: var(--red); opacity: 0.7; }
         .booking-card.completed { border-left-color: var(--text-muted); opacity: 0.7; }
@@ -429,7 +429,6 @@
                 <div class="barber-details">
                     <h1>BarberSync</h1>
                     
-                    <!-- Welcome message for client -->
                     <div class="client-welcome" id="clientWelcome" style="display: none;">
                         <div class="welcome-text">Bem-vindo de volta!</div>
                         <div class="client-name" id="clientName">Cliente</div>
@@ -504,7 +503,6 @@
     </div>
 
     <div class="main-app container" id="mainApp">
-        <!-- Expandable Bookings Section -->
         <div class="expandable-bookings">
             <button class="bookings-expand-button" onclick="toggleBookings()">
                 <span><i class="fas fa-calendar-check"></i> Meus Agendamentos Futuros</span>
@@ -591,7 +589,6 @@
             <div class="card">
                 <h3><i class="fas fa-calendar-alt"></i> Agendar Horário</h3>
                 
-                <!-- Barber Selection Section -->
                 <div class="barber-selection" id="barberSelection" style="display: none;">
                     <h4 style="color: var(--baby-blue); margin-bottom: 15px;">
                         <i class="fas fa-user-tie"></i> Escolha o Barbeiro
@@ -1284,7 +1281,11 @@
 
                 if (error) throw error;
 
-                barbers = data || [];
+                // Adiciona a opção "Qualquer Barbeiro" (ID: null)
+                barbers = [
+                    { id: null, name: "Qualquer Barbeiro", specialty: "Primeiro Disponível", photo_url: null },
+                    ...(data || [])
+                ];
             } catch (error) {
                 console.error('Erro ao carregar barbeiros:', error);
             }
@@ -1313,22 +1314,34 @@
             const container = document.getElementById('barbersList');
             
             if (barbers.length === 0) {
+                 // Deve sempre ter pelo menos a opção "Qualquer Barbeiro" se loadBarbers rodar
                 container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Nenhum barbeiro disponível</p>';
                 return;
             }
 
-            container.innerHTML = barbers.map(barber => `
-                <div class="barber-item" onclick="selectBarber(${barber.id})">
-                    <div class="barber-photo-circle">
-                        ${barber.photo_url ? 
-                            `<img src="${barber.photo_url}" alt="${barber.name}">` : 
-                            '<i class="fas fa-user-tie"></i>'
-                        }
+            container.innerHTML = barbers.map(barber => {
+                const isAnyBarber = barber.id === null;
+                const photoHtml = isAnyBarber 
+                    ? '<i class="fas fa-random"></i>' 
+                    : (barber.photo_url ? `<img src="${barber.photo_url}" alt="${barber.name}">` : '<i class="fas fa-user-tie"></i>');
+                
+                // Transforma o ID para string para ser seguro no onclick
+                const barberIdString = isAnyBarber ? 'null' : barber.id;
+                
+                const isSelected = selectedBarber && selectedBarber.id == barberIdString;
+                
+                return `
+                    <div class="barber-item ${isSelected ? 'selected' : ''}" 
+                         data-barber-id="${barberIdString}"
+                         onclick="selectBarber('${barberIdString}')">
+                        <div class="barber-photo-circle">
+                            ${photoHtml}
+                        </div>
+                        <div class="barber-name">${barber.name}</div>
+                        <div class="barber-specialty">${barber.specialty || 'Barbeiro'}</div>
                     </div>
-                    <div class="barber-name">${barber.name}</div>
-                    <div class="barber-specialty">${barber.specialty || 'Barbeiro'}</div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function selectService(id) {
@@ -1350,15 +1363,29 @@
             document.getElementById('confirmBooking').classList.add('hidden');
         }
 
+        // FUNÇÃO OTIMIZADA PARA A SELEÇÃO DO BARBEIRO
         function selectBarber(id) {
-            selectedBarber = barbers.find(b => b.id === id);
+            // Converte a string 'null' para null real se necessário
+            const barberId = id === 'null' ? null : id;
+            
+            // Encontra o objeto barbeiro (usa '==' para lidar com IDs UUID string e o 'null' real)
+            selectedBarber = barbers.find(b => b.id == barberId);
+            
+            // Remove a classe 'selected' de todos os itens
             document.querySelectorAll('.barber-item').forEach(el => el.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
+            
+            // Adiciona a classe 'selected' ao item clicado (event.currentTarget é a div do item)
+            // Usa querySelector com o data attribute para garantir que o item correto seja marcado
+            const targetElement = document.querySelector(`.barber-item[data-barber-id="${barberId}"]`);
+            if (targetElement) {
+                targetElement.classList.add('selected');
+            }
             
             // Reset date and time selections
             selectedDate = null;
             selectedTime = null;
             
+            // Re-renderiza o calendário para limpar a seleção de data e hora
             renderCalendar();
             document.getElementById('confirmBooking').classList.add('hidden');
         }
@@ -1389,7 +1416,7 @@
                 const isPast = date < today;
                 const isWorkingDay = scheduleConfig[dayOfWeek]?.active || false;
                 const isToday = date.getDate() === new Date().getDate() && 
-                               date.getMonth() === new Date().getMonth() && 
+                               new Date().getMonth() === new Date().getMonth() && // Corrigido para current date
                                date.getFullYear() === new Date().getFullYear();
                 
                 const isSelected = selectedDate && 
@@ -1419,7 +1446,8 @@
                 return;
             }
             
-            if (!selectedBarber) {
+            // Verifica se o barbeiro foi selecionado, inclusive a opção null
+            if (selectedBarber === undefined || selectedBarber === null) {
                 alert('Selecione um barbeiro primeiro!');
                 return;
             }
@@ -1437,42 +1465,58 @@
                 
                 let query = supabase
                     .from('bookings')
-                    .select('booking_time, services(duration)')
+                    .select('booking_time, services(duration), barbers(id)') // Inclui barbers(id)
                     .eq('booking_date', dateStr)
                     .eq('status', 'confirmed');
-
-                // If a barber is selected, filter by barber_id
-                if (selectedBarber) {
-                    query = query.eq('barber_id', selectedBarber.id);
-                }
 
                 const { data, error } = await query;
 
                 if (error) throw error;
 
-                bookedSlots = [];
+                // bookedSlots armazena horários OBRIGATORIAMENTE indisponíveis
+                // Se um barbeiro específico for selecionado, só bloqueia se o barbeiro estiver ocupado.
+                // Se 'Qualquer Barbeiro' for selecionado, a lógica é mais complexa e é tratada abaixo.
+                
+                const allBookedSlots = {}; // { time: [barber_id1, barber_id2, ...]}
+                
                 data.forEach(booking => {
                     const startTime = booking.booking_time.substring(0, 5);
                     const duration = booking.services?.duration || 30;
+                    const barberId = booking.barbers?.id || 'ANY'; // Usa 'ANY' se o barbeiro for nulo
                     
-                    bookedSlots.push(startTime);
-                    
-                    const [hour, minute] = startTime.split(':').map(Number);
-                    let currentMinutes = hour * 60 + minute + intervalTime;
-                    const endMinutes = hour * 60 + minute + duration;
-                    
-                    while (currentMinutes < endMinutes) {
-                        const h = Math.floor(currentMinutes / 60);
-                        const m = currentMinutes % 60;
-                        const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                        bookedSlots.push(time);
-                        currentMinutes += intervalTime;
+                    for(let time of generateBlockedTimes(startTime, duration, intervalTime)) {
+                        if(!allBookedSlots[time]) {
+                            allBookedSlots[time] = [];
+                        }
+                        if(!allBookedSlots[time].includes(barberId)) {
+                            allBookedSlots[time].push(barberId);
+                        }
                     }
                 });
+                
+                bookedSlots = allBookedSlots;
+                
             } catch (error) {
                 console.error('Erro ao carregar horários:', error);
-                bookedSlots = [];
+                bookedSlots = {};
             }
+        }
+        
+        // Função auxiliar para gerar todos os slots bloqueados por uma reserva
+        function generateBlockedTimes(startTime, duration, interval) {
+            const slots = [];
+            const [startHour, startMin] = startTime.split(':').map(Number);
+            let currentMinutes = startHour * 60 + startMin;
+            const endMinutes = currentMinutes + duration;
+            
+            while (currentMinutes < endMinutes) {
+                const h = Math.floor(currentMinutes / 60);
+                const m = currentMinutes % 60;
+                const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                slots.push(time);
+                currentMinutes += interval;
+            }
+            return slots;
         }
 
         function renderTimeSlots() {
@@ -1508,6 +1552,8 @@
             if (!dayConfig || !dayConfig.active) return slots;
 
             const selectedDateStr = formatDateToYYYYMMDD(selectedDate);
+            const serviceDuration = selectedService ? selectedService.duration : 30;
+            const totalBarbers = barbers.length > 0 ? barbers.length - 1 : 0; // Exclui 'Qualquer Barbeiro'
 
             for (let period of dayConfig.periods) {
                 const [openHour, openMin] = period.start.split(':').map(Number);
@@ -1516,35 +1562,43 @@
                 let currentMinutes = openHour * 60 + openMin;
                 const endMinutes = closeHour * 60 + closeMin;
                 
-                while (currentMinutes < endMinutes) {
+                while (currentMinutes + serviceDuration <= endMinutes) {
                     const hour = Math.floor(currentMinutes / 60);
                     const minute = currentMinutes % 60;
                     const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
                     
-                    // Verificar se o horário já passou
                     const isTimePassed = isTimeSlotPassed(selectedDateStr, time + ':00');
-                    
-                    let isBlocked = bookedSlots.includes(time) || isTimePassed;
-                    
+                    let isBlocked = isTimePassed;
+
                     if (!isBlocked && selectedService) {
-                        const serviceDuration = selectedService.duration;
-                        let checkMinutes = currentMinutes + intervalTime;
-                        const serviceEndMinutes = currentMinutes + serviceDuration;
+                        const isAnyBarberSelected = selectedBarber && selectedBarber.id === null;
                         
-                        while (checkMinutes < serviceEndMinutes) {
-                            const h = Math.floor(checkMinutes / 60);
-                            const m = checkMinutes % 60;
-                            const checkTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                        // 1. Geração de horários de bloqueio para o serviço (inclui slots seguintes)
+                        const blockTimes = generateBlockedTimes(time, serviceDuration, intervalTime);
+                        
+                        for (let blockTime of blockTimes) {
+                            const bookingsAtBlockTime = bookedSlots[blockTime] || [];
                             
-                            if (bookedSlots.includes(checkTime) || isTimeSlotPassed(selectedDateStr, checkTime + ':00')) {
-                                isBlocked = true;
-                                break;
+                            if (isAnyBarberSelected) {
+                                // Se "Qualquer Barbeiro" foi selecionado:
+                                // O slot está bloqueado SE o número de barbeiros ocupados for igual ao total de barbeiros disponíveis.
+                                
+                                // O número de agendamentos para o slot 'blockTime' é igual ao número de barbeiros ocupados.
+                                const occupiedBarbers = new Set(bookingsAtBlockTime.filter(id => id !== 'ANY')).size;
+
+                                if (occupiedBarbers >= totalBarbers) {
+                                    isBlocked = true;
+                                    break;
+                                }
+                                
+                            } else {
+                                // Se um barbeiro ESPECÍFICO foi selecionado:
+                                // O slot está bloqueado SE o ID do barbeiro estiver na lista de bookingsAtBlockTime.
+                                if (bookingsAtBlockTime.includes(selectedBarber.id)) {
+                                    isBlocked = true;
+                                    break;
+                                }
                             }
-                            checkMinutes += intervalTime;
-                        }
-                        
-                        if (serviceEndMinutes > endMinutes) {
-                            isBlocked = true;
                         }
                     }
                     
@@ -1577,9 +1631,12 @@
                 year: 'numeric'
             });
             
+            // Determina o nome correto do barbeiro
+            const barberName = selectedBarber.id === null ? 'Qualquer Barbeiro' : selectedBarber.name;
+            
             summary.innerHTML = `
                 <p><strong><i class="fas fa-scissors"></i> Serviço:</strong> ${selectedService.name}</p>
-                <p><strong><i class="fas fa-user-tie"></i> Barbeiro:</strong> ${selectedBarber.name}</p>
+                <p><strong><i class="fas fa-user-tie"></i> Barbeiro:</strong> ${barberName}</p>
                 <p><strong><i class="fas fa-calendar"></i> Data:</strong> ${dateFormatted}</p>
                 <p><strong><i class="fas fa-clock"></i> Horário:</strong> ${selectedTime}</p>
                 <p><strong><i class="fas fa-money-bill-wave"></i> Valor:</strong> R$ ${selectedService.price.toFixed(2)}</p>
@@ -1589,6 +1646,7 @@
             container.classList.remove('hidden');
         }
 
+        // ... (Ajustar a função confirmBtn)
         document.getElementById('confirmBtn').addEventListener('click', async (e) => {
             const btn = e.target.closest('button');
             if (btn.disabled) return;
@@ -1597,6 +1655,7 @@
             btn.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Confirmando...</span>';
             
             try {
+                // ... (código de verificação de usuário omitido para brevidade)
                 const { data: userData, error: userError } = await supabase
                     .from('users')
                     .select('id')
@@ -1604,8 +1663,7 @@
                     .single();
                 
                 if (userError || !userData) {
-                    console.log('Usuário não encontrado na tabela users, criando...');
-                    
+                    // ... (criação de usuário omitida para brevidade)
                     const { data: authUser } = await supabase.auth.getUser();
                     
                     const { error: insertError } = await supabase
@@ -1626,12 +1684,16 @@
                 
                 const dateStr = formatDateToYYYYMMDD(selectedDate);
                 
+                // AJUSTE CRUCIAL: Se selectedBarber.id for null, envia null para o Supabase
+                const barberIdToSave = selectedBarber.id;
+                
                 const { data: bookingData, error } = await supabase
                     .from('bookings')
                     .insert([{
                         user_id: currentUser.id,
                         service_id: selectedService.id,
-                        barber_id: selectedBarber.id,
+                        // Usa o ID real (UUID) ou null (para Qualquer Barbeiro)
+                        barber_id: barberIdToSave, 
                         booking_date: dateStr,
                         booking_time: selectedTime,
                         status: 'confirmed'
@@ -1641,6 +1703,7 @@
 
                 if (error) throw error;
 
+                // ... (código de webhook omitido para brevidade)
                 try {
                     const { data: userDataFull } = await supabase
                         .from('users')
@@ -1662,7 +1725,7 @@
                             service_name: selectedService.name,
                             service_price: selectedService.price,
                             service_duration: selectedService.duration,
-                            barber_name: selectedBarber.name,
+                            barber_name: bookingData.barbers?.name || 'Qualquer Barbeiro', // Usa o nome da DB
                             booking_date: selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
                             booking_time: selectedTime,
                             status: 'confirmed'
@@ -1681,6 +1744,8 @@
                     month: 'long', 
                     year: 'numeric'
                 });
+
+                const finalBarberName = selectedBarber.id === null ? 'Qualquer Barbeiro' : selectedBarber.name;
                 
                 modalDetails.innerHTML = `
                     <p>
@@ -1689,7 +1754,7 @@
                     </p>
                     <p>
                         <strong><i class="fas fa-user-tie"></i> Barbeiro:</strong>
-                        <span>${selectedBarber.name}</span>
+                        <span>${finalBarberName}</span>
                     </p>
                     <p>
                         <strong><i class="fas fa-calendar"></i> Data:</strong>
@@ -1769,4 +1834,3 @@
     </script>
 </body>
 </html>
-
