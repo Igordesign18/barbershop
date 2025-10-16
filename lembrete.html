@@ -344,7 +344,7 @@
                 <div class="stat-value" id="totalSent">0</div>
             </div>
             <div class="stat-box">
-                <div class="stat-label">Agendamentos Próximos</div>
+                <div class="stat-label">Agendamentos Pendentes Hoje</div>
                 <div class="stat-value" id="upcomingCount">0</div>
             </div>
             <div class="stat-box">
@@ -678,14 +678,28 @@
                 const now = new Date();
                 const today = now.toISOString().split('T')[0];
                 
+                // Buscar todos os agendamentos futuros confirmados
                 const { data: upcomingBookings } = await supabase
                     .from('bookings')
-                    .select('id')
-                    .eq('booking_date', today)
+                    .select('id, booking_date, booking_time')
+                    .gte('booking_date', today)
                     .eq('status', 'confirmed');
                 
-                document.getElementById('upcomingCount').textContent = 
-                    upcomingBookings?.length || 0;
+                // Contar apenas os que estão dentro da janela de tempo para hoje
+                let todayPendingCount = 0;
+                if (upcomingBookings) {
+                    upcomingBookings.forEach(booking => {
+                        if (booking.booking_date === today) {
+                            const bookingTime = new Date(`${booking.booking_date}T${booking.booking_time}`);
+                            const timeDiff = (bookingTime - now) / 60000;
+                            if (timeDiff <= config.reminderTime && timeDiff > 0 && !sentRemindersToday.has(booking.id)) {
+                                todayPendingCount++;
+                            }
+                        }
+                    });
+                }
+                
+                document.getElementById('upcomingCount').textContent = todayPendingCount;
             } catch (error) {
                 console.error('Erro ao atualizar estatísticas:', error);
             }
@@ -728,14 +742,18 @@
                 const now = new Date();
                 const today = now.toISOString().split('T')[0];
                 
+                addLog(`🔍 Buscando agendamentos... Filtro Data: ${filterDate}, Status: ${filterStatus}`);
+                
                 // Calcular range de datas baseado no filtro
                 let dateFilter = {};
                 if (filterDate === 'today') {
                     dateFilter = { eq: today };
+                    addLog(`📅 Buscando apenas para hoje: ${today}`);
                 } else if (filterDate === 'tomorrow') {
                     const tomorrow = new Date(now);
                     tomorrow.setDate(tomorrow.getDate() + 1);
                     dateFilter = { eq: tomorrow.toISOString().split('T')[0] };
+                    addLog(`📅 Buscando apenas para amanhã: ${dateFilter.eq}`);
                 } else if (filterDate === 'week') {
                     const weekLater = new Date(now);
                     weekLater.setDate(weekLater.getDate() + 7);
@@ -743,6 +761,7 @@
                         gte: today, 
                         lte: weekLater.toISOString().split('T')[0] 
                     };
+                    addLog(`📅 Buscando próximos 7 dias: ${dateFilter.gte} até ${dateFilter.lte}`);
                 }
 
                 // Montar query
@@ -761,11 +780,17 @@
                 } else {
                     // Para 'all', buscar agendamentos futuros (a partir de hoje)
                     query = query.gte('booking_date', today);
+                    addLog(`📅 Buscando todos agendamentos a partir de: ${today}`);
                 }
 
                 const { data: bookings, error } = await query;
 
-                if (error) throw error;
+                if (error) {
+                    addLog(`❌ Erro na consulta: ${error.message}`, 'error');
+                    throw error;
+                }
+
+                addLog(`✅ Encontrados ${bookings?.length || 0} agendamentos confirmados`);
 
                 if (!bookings || bookings.length === 0) {
                     const filterText = {
@@ -780,10 +805,16 @@
                             <i class="fas fa-calendar-times"></i>
                             <h3 style="color: #87ceeb; margin-bottom: 10px;">Nenhum Agendamento</h3>
                             <p>Não há agendamentos confirmados ${filterText}</p>
+                            <p style="margin-top: 15px; font-size: 12px; color: #888888;">
+                                Data de hoje: ${today}<br>
+                                Verifique se existem agendamentos com status "confirmed" no banco
+                            </p>
                         </div>
                     `;
                     return;
                 }
+
+                addLog(`📊 Processando ${bookings.length} agendamento(s)...`);
 
                 // Processar cada agendamento
                 const processedBookings = await Promise.all(bookings.map(async (booking) => {
@@ -857,6 +888,8 @@
                         statusClass = 'status-too-early';
                     }
 
+                    addLog(`  → ${booking.users?.full_name}: ${bookingDateOnly} ${booking.booking_time.substring(0,5)} - Status: ${statusText}`);
+
                     return { 
                         ...booking, 
                         barberName, 
@@ -875,6 +908,7 @@
                 let filteredBookings = processedBookings;
                 if (filterStatus !== 'all') {
                     filteredBookings = processedBookings.filter(b => b.status === filterStatus);
+                    addLog(`🔍 Após filtro de status "${filterStatus}": ${filteredBookings.length} agendamento(s)`);
                 }
 
                 if (filteredBookings.length === 0) {
@@ -883,10 +917,16 @@
                             <i class="fas fa-filter"></i>
                             <h3 style="color: #87ceeb; margin-bottom: 10px;">Nenhum Resultado</h3>
                             <p>Não há agendamentos com o status selecionado</p>
+                            <p style="margin-top: 15px; font-size: 12px; color: #888888;">
+                                Total encontrado: ${bookings.length}<br>
+                                Após filtro: ${filteredBookings.length}
+                            </p>
                         </div>
                     `;
                     return;
                 }
+
+                addLog(`✅ Exibindo ${filteredBookings.length} agendamento(s)`, 'success');
 
                 // Renderizar agendamentos
                 container.innerHTML = filteredBookings.map(booking => {
@@ -993,11 +1033,15 @@
 
             } catch (error) {
                 console.error('Erro ao carregar agendamentos:', error);
+                addLog(`❌ ERRO: ${error.message}`, 'error');
                 container.innerHTML = `
                     <div class="empty-bookings">
                         <i class="fas fa-exclamation-triangle" style="color: #ff4444;"></i>
                         <h3 style="color: #ff4444; margin-bottom: 10px;">Erro ao Carregar</h3>
                         <p>${error.message}</p>
+                        <p style="margin-top: 15px; font-size: 12px;">
+                            Verifique o console do navegador (F12) para mais detalhes
+                        </p>
                     </div>
                 `;
             }
