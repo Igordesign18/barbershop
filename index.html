@@ -25,7 +25,34 @@
         .header-cover { width: 100%; height: 200px; background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); position: relative; overflow: hidden; transition: background 0.3s; }
         [data-theme="light"] .header-cover { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); }
         .header-cover::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 200"><path d="M0,100 Q300,20 600,100 T1200,100 L1200,200 L0,200 Z" fill="%2387ceeb" opacity="0.1"/></svg>') no-repeat bottom; background-size: cover; }
-        .header-cover img { width: 100%; height: 100%; object-fit: cover; opacity: 0.4; }
+        .header-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .theme-toggle-fixed {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--dark-card);
+            border: 2px solid var(--baby-blue);
+            color: var(--baby-blue);
+            padding: 12px 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.4s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            height: 50px;
+        }
+        
+        .theme-toggle-fixed:hover {
+            background: var(--baby-blue);
+            color: var(--dark-bg);
+            transform: scale(1.1) rotate(20deg);
+            box-shadow: 0 6px 20px rgba(135, 206, 235, 0.5);
+        }
         .header-content { display: flex; align-items: flex-end; justify-content: space-between; max-width: 1200px; margin: -60px auto 0; padding: 0 20px 20px; position: relative; }
         .barber-info { display: flex; align-items: flex-end; gap: 20px; }
         .barber-photo { width: 120px; height: 120px; border-radius: 50%; border: 5px solid var(--dark-card); background: var(--dark-bg); display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--baby-blue); box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5); flex-shrink: 0; transition: all 0.3s; }
@@ -44,30 +71,11 @@
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .location-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: var(--baby-blue); background: rgba(135, 206, 235, 0.1); border: 2px solid var(--baby-blue); transition: all 0.3s; }
         .logout-btn, #profileBtn { display: none !important; }
-        .header-buttons { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .header-buttons { display: none !important; }
 
         
         .theme-toggle-btn {
-            background: transparent;
-            border: 2px solid var(--baby-blue);
-            color: var(--baby-blue);
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 18px;
-            transition: all 0.4s;
-            height: fit-content;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 45px;
-        }
-        
-        .theme-toggle-btn:hover {
-            background: var(--baby-blue);
-            color: var(--dark-bg);
-            transform: scale(1.05) rotate(20deg);
-            box-shadow: 0 5px 20px rgba(135, 206, 235, 0.4);
+            display: none !important;
         }
         .auth-screen { display: none !important; }
         .form-group { margin-bottom: 20px; }
@@ -135,6 +143,13 @@
         .modal-close-btn { width: 100%; padding: 15px; background: var(--baby-blue); color: var(--dark-bg); border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-top: 10px; }
         .modal-close-btn:hover { background: var(--baby-blue-dark); transform: translateY(-3px); }
         @media (max-width: 768px) {
+            .theme-toggle-fixed {
+                top: 15px;
+                right: 15px;
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
             .header-cover { height: 150px; }
             .barber-photo { width: 100px; height: 100px; font-size: 40px; }
             .barber-details h1 { font-size: 24px; }
@@ -152,6 +167,11 @@
     </style>
 </head>
 <body>
+    <!-- Botão de Tema Fixo no Canto Superior Direito -->
+    <button class="theme-toggle-fixed" id="themeToggle" title="Alternar tema">
+        <i class="fas fa-moon"></i>
+    </button>
+
     <header>
         <div class="header-cover">
             <img src="https://png.pngtree.com/thumb_back/fh260/background/20230612/pngtree-some-pictures-of-an-antique-barber-shop-image_2906288.jpg" alt="Capa da Barbearia">
@@ -181,11 +201,7 @@
                     </div>
                 </div>
             </div>
-            <div class="header-buttons">
-                <button class="theme-toggle-btn" id="themeToggle" title="Alternar tema">
-                    <i class="fas fa-moon"></i>
-                </button>
-            </div>
+
         </div>
     </header>
 
