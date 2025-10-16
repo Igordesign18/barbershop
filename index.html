@@ -28,30 +28,58 @@
         .header-cover img { width: 100%; height: 100%; object-fit: cover; }
         .theme-toggle-fixed {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 15px;
+            right: 15px;
             z-index: 1000;
-            background: var(--dark-card);
-            border: 2px solid var(--baby-blue);
-            color: var(--baby-blue);
-            padding: 12px 15px;
+            background: linear-gradient(135deg, var(--baby-blue) 0%, var(--baby-blue-dark) 100%);
+            border: none;
+            color: #fff;
+            padding: 8px;
             border-radius: 50%;
             cursor: pointer;
-            font-size: 20px;
-            transition: all 0.4s;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            font-size: 14px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 15px rgba(135, 206, 235, 0.3), inset 0 -2px 6px rgba(0, 0, 0, 0.2);
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 50px;
-            height: 50px;
+            width: 38px;
+            height: 38px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .theme-toggle-fixed::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
         }
         
         .theme-toggle-fixed:hover {
-            background: var(--baby-blue);
-            color: var(--dark-bg);
-            transform: scale(1.1) rotate(20deg);
-            box-shadow: 0 6px 20px rgba(135, 206, 235, 0.5);
+            transform: scale(1.2) rotate(180deg);
+            box-shadow: 0 6px 20px rgba(135, 206, 235, 0.5), inset 0 -2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .theme-toggle-fixed:active {
+            transform: scale(0.9);
+        }
+        
+        .theme-toggle-fixed i {
+            position: relative;
+            z-index: 1;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
         }
         .header-content { display: flex; align-items: flex-end; justify-content: space-between; max-width: 1200px; margin: -60px auto 0; padding: 0 20px 20px; position: relative; }
         .barber-info { display: flex; align-items: flex-end; gap: 20px; }
@@ -69,7 +97,62 @@
         .status-badge.open .status-dot { background: #4caf50; }
         .status-badge.closed .status-dot { background: #ff4444; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .location-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: var(--baby-blue); background: rgba(135, 206, 235, 0.1); border: 2px solid var(--baby-blue); transition: all 0.3s; }
+        .location-badge { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 8px; 
+            padding: 10px 18px; 
+            border-radius: 25px; 
+            font-size: 13px; 
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+            border: none;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.3), inset 0 -2px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .location-badge::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+        
+        .location-badge:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.5), inset 0 -2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .location-badge:active {
+            transform: translateY(-1px) scale(1.02);
+        }
+        
+        .location-badge i {
+            font-size: 16px;
+            animation: bounce 2s infinite;
+            position: relative;
+            z-index: 1;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        
+        .location-badge span {
+            position: relative;
+            z-index: 1;
+        }
         .logout-btn, #profileBtn { display: none !important; }
         .header-buttons { display: none !important; }
 
@@ -83,9 +166,46 @@
         .form-group input { width: 100%; padding: 12px; background: var(--dark-bg); border: 2px solid #333; border-radius: 5px; color: var(--text); font-size: 16px; transition: all 0.3s; position: relative; }
         [data-theme="light"] .form-group input { border-color: #ddd; }
         .form-group input:focus { outline: none; border-color: var(--baby-blue); box-shadow: 0 0 15px rgba(135, 206, 235, 0.3); transform: translateY(-2px); }
-        .btn { width: 100%; padding: 15px; background: var(--baby-blue); color: var(--dark-bg); border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; box-shadow: 0 4px 15px rgba(135, 206, 235, 0.3); }
-        .btn:hover { background: var(--baby-blue-dark); transform: translateY(-3px); box-shadow: 0 8px 25px rgba(135, 206, 235, 0.5); }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn { 
+            width: 100%; 
+            padding: 15px; 
+            background: linear-gradient(135deg, var(--baby-blue) 0%, var(--baby-blue-dark) 100%);
+            color: #fff; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative; 
+            overflow: hidden; 
+            box-shadow: 0 8px 25px rgba(135, 206, 235, 0.4), inset 0 -3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transform: rotate(45deg);
+            transition: all 0.6s;
+        }
+        
+        .btn:hover::before {
+            transform: translateX(100%) translateY(100%) rotate(45deg);
+        }
+        
+        .btn:hover { 
+            transform: translateY(-3px) scale(1.02); 
+            box-shadow: 0 12px 35px rgba(135, 206, 235, 0.6), inset 0 -3px 10px rgba(0, 0, 0, 0.3);
+        }
+        .btn:active {
+            transform: translateY(-1px) scale(1);
+        }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
         .btn span { position: relative; z-index: 1; }
         .main-app { padding: 40px 20px; }
         .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; }
@@ -107,8 +227,49 @@
         .barber-photo-circle img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
         .barber-name { color: var(--baby-blue); font-size: 16px; font-weight: 600; margin-bottom: 8px; }
         .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .calendar-header button { background: var(--dark-bg); border: 2px solid var(--baby-blue); color: var(--baby-blue); padding: 8px 15px; border-radius: 5px; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; }
-        .calendar-header button:hover { color: var(--dark-bg); transform: scale(1.1); box-shadow: 0 5px 15px rgba(135, 206, 235, 0.3); }
+        .calendar-header button { 
+            background: linear-gradient(135deg, var(--dark-bg) 0%, rgba(135, 206, 235, 0.1) 100%);
+            border: 2px solid var(--baby-blue); 
+            color: var(--baby-blue); 
+            padding: 10px 18px; 
+            border-radius: 10px; 
+            cursor: pointer; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative; 
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(135, 206, 235, 0.2);
+            font-weight: 600;
+        }
+        
+        .calendar-header button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: var(--baby-blue);
+            transform: translate(-50%, -50%);
+            transition: width 0.4s, height 0.4s;
+        }
+        
+        .calendar-header button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        
+        .calendar-header button:hover { 
+            color: #fff;
+            transform: scale(1.1); 
+            box-shadow: 0 6px 20px rgba(135, 206, 235, 0.4);
+            border-color: var(--baby-blue-dark);
+        }
+        
+        .calendar-header button i {
+            position: relative;
+            z-index: 1;
+        }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 20px; }
         .calendar-day { aspect-ratio: 1; background: var(--dark-bg); border: 2px solid #333; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-size: 14px; position: relative; overflow: hidden; }
         [data-theme="light"] .calendar-day { border-color: #ddd; }
@@ -140,15 +301,54 @@
         .modal-details { background: var(--dark-bg); padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; transition: background 0.3s; }
         .modal-details p { margin: 10px 0; display: flex; align-items: center; gap: 10px; font-size: 16px; }
         .modal-details strong { color: var(--baby-blue); min-width: 100px; }
-        .modal-close-btn { width: 100%; padding: 15px; background: var(--baby-blue); color: var(--dark-bg); border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-top: 10px; }
-        .modal-close-btn:hover { background: var(--baby-blue-dark); transform: translateY(-3px); }
+        .modal-close-btn { 
+            width: 100%; 
+            padding: 15px; 
+            background: linear-gradient(135deg, var(--baby-blue) 0%, var(--baby-blue-dark) 100%);
+            color: #fff; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            margin-top: 10px;
+            box-shadow: 0 8px 25px rgba(135, 206, 235, 0.4), inset 0 -3px 10px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .modal-close-btn::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transform: rotate(45deg);
+            transition: all 0.6s;
+        }
+        
+        .modal-close-btn:hover::before {
+            transform: translateX(100%) translateY(100%) rotate(45deg);
+        }
+        
+        .modal-close-btn:hover { 
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 35px rgba(135, 206, 235, 0.6), inset 0 -3px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-close-btn:active {
+            transform: translateY(-1px) scale(1);
+        }
         @media (max-width: 768px) {
             .theme-toggle-fixed {
-                top: 15px;
-                right: 15px;
-                width: 45px;
-                height: 45px;
-                font-size: 18px;
+                top: 12px;
+                right: 12px;
+                width: 35px;
+                height: 35px;
+                font-size: 13px;
             }
             .header-cover { height: 150px; }
             .barber-photo { width: 100px; height: 100px; font-size: 40px; }
@@ -194,10 +394,13 @@
                             <span class="status-dot"></span>
                             <span id="statusText">Verificando...</span>
                         </span>
-                        <span class="location-badge">
+                        <a href="https://www.google.com/maps/search/?api=1&query=Rua+Antonio+Cordeiro+de+Freita,+1517,+Russas,+CE" 
+                           target="_blank" 
+                           class="location-badge"
+                           title="Abrir no Google Maps">
                             <i class="fas fa-map-marker-alt"></i>
-                            <span>Russas, CE</span>
-                        </span>
+                            <span>Ver Localização</span>
+                        </a>
                     </div>
                 </div>
             </div>
