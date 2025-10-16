@@ -36,10 +36,9 @@
         .status-badge.closed .status-dot { background: #ff4444; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .location-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: var(--baby-blue); background: rgba(135, 206, 235, 0.1); border: 2px solid var(--baby-blue); }
-        .header-buttons { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
         
         /* Main App */
-        .main-app { padding: 40px 20px; }
+        .main-app { display: block; padding: 40px 20px; }
         .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; }
         .card { background: var(--dark-card); padding: 30px; border-radius: 15px; box-shadow: 0 3px 20px rgba(0, 0, 0, 0.3); transition: all 0.3s; position: relative; overflow: hidden; }
         .card::before { content: ''; position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(135, 206, 235, 0.03), transparent); animation: cardGlow 15s infinite; }
@@ -170,31 +169,35 @@
         @keyframes selectTime { 0%, 100% { transform: scale(1.08); } 50% { transform: scale(1.15); } }
         .time-slot.disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
         
-        /* Client Form - Expandable */
-        .client-form {
+        /* Customer Form - Expandable */
+        .customer-form {
             max-height: 0;
             overflow: hidden;
             opacity: 0;
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             transform: translateY(-20px);
-            margin-top: 30px;
-            background: rgba(135, 206, 235, 0.1);
-            border: 2px solid var(--baby-blue);
-            border-radius: 10px;
+            margin-top: 20px;
+            background: rgba(135, 206, 235, 0.05);
+            border: 2px solid rgba(135, 206, 235, 0.2);
+            border-radius: 15px;
         }
 
-        .client-form.expanded {
+        .customer-form.expanded {
             max-height: 500px;
             opacity: 1;
             transform: translateY(0);
+        }
+
+        .customer-form-content {
             padding: 30px;
         }
 
-        .client-form h4 {
+        .customer-form h4 {
             color: var(--baby-blue);
             margin-bottom: 20px;
             text-align: center;
-            font-size: 1.2em;
+            font-size: 1.3em;
+            animation: pulse 2s infinite;
         }
 
         .form-group {
@@ -282,7 +285,7 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-
+        
         .hidden { display: none !important; }
         
         /* Modal */
@@ -291,18 +294,13 @@
         .modal-content { background: var(--dark-card); padding: 40px; border-radius: 15px; max-width: 500px; width: 90%; text-align: center; border: 3px solid var(--baby-blue); box-shadow: 0 10px 50px rgba(135, 206, 235, 0.3); animation: slideUp 0.3s; }
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .modal-icon { font-size: 64px; color: var(--baby-blue); margin-bottom: 20px; animation: scaleIn 0.5s; }
-        .modal-icon.warning { color: var(--red); }
         @keyframes scaleIn { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
         .modal-content h2 { color: var(--baby-blue); margin-bottom: 20px; font-size: 28px; }
         .modal-details { background: var(--dark-bg); padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; }
         .modal-details p { margin: 10px 0; display: flex; align-items: center; gap: 10px; font-size: 16px; }
         .modal-details strong { color: var(--baby-blue); min-width: 100px; }
         .modal-close-btn { width: 100%; padding: 15px; background: var(--baby-blue); color: var(--dark-bg); border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-top: 10px; position: relative; overflow: hidden; }
-        .modal-close-btn::after { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; background: rgba(255, 255, 255, 0.4); border-radius: 50%; transform: translate(-50%, -50%); transition: width 0.6s, height 0.6s; }
-        .modal-close-btn:hover::after { width: 400px; height: 400px; }
         .modal-close-btn:hover { background: var(--baby-blue-dark); transform: translateY(-3px); box-shadow: 0 8px 25px rgba(135, 206, 235, 0.5); }
-        .modal-close-btn:active { transform: translateY(-1px); }
-        .modal-close-btn i { position: relative; z-index: 1; margin-right: 8px; }
         
         @media (max-width: 768px) {
             .header-cover { height: 150px; }
@@ -311,7 +309,6 @@
             .header-content { flex-direction: column; align-items: center; gap: 15px; margin-top: -50px; }
             .barber-info { flex-direction: column; align-items: center; text-align: center; }
             .barber-meta { justify-content: center; }
-            .header-buttons { width: 100%; justify-content: center; }
             .dashboard { grid-template-columns: 1fr; }
             .calendar-grid { gap: 5px; }
             .calendar-day { font-size: 12px; padding: 5px; }
@@ -322,7 +319,6 @@
             .time-slot { padding: 10px; font-size: 14px; }
             .service-item { flex-direction: column; text-align: center; gap: 10px; }
             .service-price { font-size: 18px; }
-            .modal-content { padding: 30px 20px; width: 95%; }
             .calendar-header h4 { font-size: 16px; }
             .card h3 { font-size: 18px; }
             .barbers-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; }
@@ -358,7 +354,6 @@
                 </div>
                 <div class="barber-details">
                     <h1>BarberSync</h1>
-                    
                     <div class="barber-meta">
                         <span class="status-badge" id="statusBadge">
                             <span class="status-dot"></span>
@@ -374,8 +369,8 @@
         </div>
     </header>
 
-    <div class="main-app container">
-        <div class="dashboard">
+    <div class="main-app container" id="mainApp">
+        <div class="dashboard" id="dashboardSection">
             <div class="card">
                 <h3><i class="fas fa-cut"></i> Escolha o Serviço</h3>
                 <div id="servicesList"></div>
@@ -401,31 +396,35 @@
                     <div id="timeSlotsContainer"></div>
                 </div>
                 
-                <div class="client-form" id="clientForm">
-                    <h4><i class="fas fa-user"></i> Seus Dados</h4>
-                    
-                    <div class="form-group">
-                        <label for="clientName">Nome Completo:</label>
-                        <input type="text" id="clientName" placeholder="Digite seu nome completo" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="clientPhone">Telefone:</label>
-                        <input type="tel" id="clientPhone" placeholder="(11) 99999-9999" required>
-                    </div>
-                    
-                    <button class="confirm-btn" id="confirmBtn" onclick="confirmAppointment()">
-                        Confirmar Agendamento
-                    </button>
-                </div>
+                <!-- Customer Form - Expandable -->
+                <div class="customer-form" id="customerForm">
+                    <div class="customer-form-content">
+                        <h4><i class="fas fa-user"></i> Seus Dados para Agendamento</h4>
+                        
+                        <div class="form-group">
+                            <label for="customerName">Nome Completo:</label>
+                            <input type="text" id="customerName" placeholder="Digite seu nome completo" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="customerPhone">Telefone (WhatsApp):</label>
+                            <input type="tel" id="customerPhone" placeholder="(88) 99999-9999" required>
+                        </div>
+                        
+                        <button class="confirm-btn" id="confirmBookingBtn" onclick="confirmBooking()">
+                            Confirmar Agendamento
+                        </button>
 
-                <div class="success-message" id="successMessage">
-                    ✅ Agendamento confirmado com sucesso!
+                        <div class="success-message" id="successMessage">
+                            ✅ Agendamento confirmado com sucesso!
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Success Modal -->
     <div class="modal-overlay hidden" id="confirmationModal">
         <div class="modal-content">
             <div class="modal-icon">
@@ -443,12 +442,11 @@
     </div>
 
     <script>
-        // CREDENCIAIS SUPABASE
-        const SUPABASE_URL = 'https://huggzgfejtedacfyatke.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1Z2d6Z2ZlanRlZGFjZnlhdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NDk3ODYsImV4cCI6MjA3NjAyNTc4Nn0.aTrXAe7m1KsRNwH28LmBvcOlBjYI8C-2kvHYGdkUmv8';
-        const WEBHOOK_URL = 'https://seu-webhook-url.com/agendamento';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+        // CONFIGURAÇÃO DO WEBHOOK
+        // Para usar webhook real, descomente e configure a linha abaixo:
+        // const WEBHOOK_URL = 'https://sua-url-webhook.com/agendamento';
+        const WEBHOOK_URL = null; // null = modo simulação (para testes)
+        
         let currentDate = new Date();
         let selectedService = null;
         let selectedBarber = null;
@@ -456,24 +454,18 @@
         let selectedTime = null;
         let services = [];
         let barbers = [];
-        let bookedSlots = {};
         let scheduleConfig = {};
         let intervalTime = 30;
 
         // Definir data mínima como hoje
         currentDate.setHours(0, 0, 0, 0);
 
-        function formatPhone(input) {
-            let value = input.value.replace(/\D/g, '');
-            value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
-            value = value.replace(/(\d)(\d{4})$/, '$1-$2');
-            input.value = value;
+        function formatDateToYYYYMMDD(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
         }
-
-        // Formatação automática do telefone
-        document.getElementById('clientPhone').addEventListener('input', function() {
-            formatPhone(this);
-        });
 
         function updateStatusBadge() {
             const statusBadge = document.getElementById('statusBadge');
@@ -526,57 +518,32 @@
             document.getElementById('confirmationModal').classList.add('hidden');
         }
 
-        async function loadSettings() {
-            try {
-                const { data } = await supabase
-                    .from('settings')
-                    .select('*')
-                    .in('key', ['schedule_config', 'interval_time']);
+        // Mock data - replace with your actual data loading
+        function loadMockData() {
+            services = [
+                { id: 1, name: 'Corte Masculino', price: 25.00, duration: 30 },
+                { id: 2, name: 'Barba', price: 15.00, duration: 20 },
+                { id: 3, name: 'Corte + Barba', price: 35.00, duration: 45 }
+            ];
 
-                if (data) {
-                    data.forEach(setting => {
-                        if (setting.key === 'schedule_config') {
-                            scheduleConfig = JSON.parse(setting.value);
-                        } else if (setting.key === 'interval_time') {
-                            intervalTime = parseInt(setting.value);
-                        }
-                    });
-                }
-                updateStatusBadge();
-            } catch (error) {
-                console.error('Erro ao carregar configurações:', error);
-            }
-        }
+            barbers = [
+                { id: 1, name: 'João Silva', specialty: 'Especialista em cortes modernos' },
+                { id: 2, name: 'Pedro Santos', specialty: 'Barbeiro tradicional' }
+            ];
 
-        async function loadServices() {
-            try {
-                const { data, error } = await supabase
-                    .from('services')
-                    .select('*')
-                    .order('id', { ascending: true });
+            scheduleConfig = {
+                1: { active: true, periods: [{ start: '08:00', end: '18:00' }] },
+                2: { active: true, periods: [{ start: '08:00', end: '18:00' }] },
+                3: { active: true, periods: [{ start: '08:00', end: '18:00' }] },
+                4: { active: true, periods: [{ start: '08:00', end: '18:00' }] },
+                5: { active: true, periods: [{ start: '08:00', end: '18:00' }] },
+                6: { active: true, periods: [{ start: '08:00', end: '16:00' }] },
+                0: { active: false, periods: [] }
+            };
 
-                if (error) throw error;
-
-                services = data || [];
-                renderServices();
-            } catch (error) {
-                console.error('Erro ao carregar serviços:', error);
-            }
-        }
-
-        async function loadBarbers() {
-            try {
-                const { data, error } = await supabase
-                    .from('barbers')
-                    .select('*')
-                    .order('id', { ascending: true });
-
-                if (error) throw error;
-
-                barbers = data || [];
-            } catch (error) {
-                console.error('Erro ao carregar barbeiros:', error);
-            }
+            renderServices();
+            renderCalendar();
+            updateStatusBadge();
         }
 
         function renderServices() {
@@ -607,19 +574,14 @@
             }
 
             container.innerHTML = barbers.map(barber => {
-                const photoHtml = barber.photo_url 
-                    ? `<img src="${barber.photo_url}" alt="${barber.name}">` 
-                    : '<i class="fas fa-user-tie"></i>';
-                
-                const barberIdString = barber.id;
-                const isSelected = selectedBarber && selectedBarber.id == barberIdString;
+                const isSelected = selectedBarber && selectedBarber.id == barber.id;
                 
                 return `
                     <div class="barber-item ${isSelected ? 'selected' : ''}" 
-                         data-barber-id="${barberIdString}"
-                         onclick="selectBarber('${barberIdString}')">
+                         data-barber-id="${barber.id}"
+                         onclick="selectBarber(${barber.id})">
                         <div class="barber-photo-circle">
-                            ${photoHtml}
+                            <i class="fas fa-user-tie"></i>
                         </div>
                         <div class="barber-name">${barber.name}</div>
                         <div class="barber-specialty">${barber.specialty || 'Barbeiro'}</div>
@@ -644,16 +606,17 @@
             renderBarbers();
             
             renderCalendar();
-            hideClientForm();
+            hideCustomerForm();
         }
 
         function selectBarber(id) {
-            const barberId = id;
-            selectedBarber = barbers.find(b => b.id == barberId);
+            selectedBarber = barbers.find(b => b.id == id);
             
+            // Remove selection from all barber items
             document.querySelectorAll('.barber-item').forEach(el => el.classList.remove('selected'));
             
-            const targetElement = document.querySelector(`.barber-item[data-barber-id="${barberId}"]`);
+            // Add selection to clicked item
+            const targetElement = document.querySelector(`.barber-item[data-barber-id="${id}"]`);
             if (targetElement) {
                 targetElement.classList.add('selected');
             }
@@ -663,7 +626,7 @@
             selectedTime = null;
             
             renderCalendar();
-            hideClientForm();
+            hideCustomerForm();
         }
 
         function renderCalendar() {
@@ -716,7 +679,7 @@
             grid.innerHTML = html;
         }
 
-        async function selectDate(year, month, day) {
+        function selectDate(year, month, day) {
             if (!selectedService) {
                 alert('Selecione um serviço primeiro!');
                 return;
@@ -730,65 +693,8 @@
             selectedDate = new Date(year, month, day, 12, 0, 0);
             selectedTime = null;
             renderCalendar();
-            await loadBookedSlots();
             renderTimeSlots();
-        }
-
-        async function loadBookedSlots() {
-            try {
-                const dateStr = formatDateToYYYYMMDD(selectedDate);
-                
-                let query = supabase
-                    .from('bookings')
-                    .select('booking_time, services(duration), barbers(id)') 
-                    .eq('booking_date', dateStr)
-                    .eq('status', 'confirmed');
-
-                query = query.eq('barber_id', selectedBarber.id);
-
-                const { data, error } = await query;
-
-                if (error) throw error;
-
-                const allBookedSlots = {};
-                
-                data.forEach(booking => {
-                    const startTime = booking.booking_time.substring(0, 5);
-                    const duration = booking.services?.duration || 30;
-                    const barberId = booking.barbers?.id;
-                    
-                    for(let time of generateBlockedTimes(startTime, duration, intervalTime)) {
-                        if(!allBookedSlots[time]) {
-                            allBookedSlots[time] = [];
-                        }
-                        if(barberId && !allBookedSlots[time].includes(barberId)) {
-                            allBookedSlots[time].push(barberId);
-                        }
-                    }
-                });
-                
-                bookedSlots = allBookedSlots;
-                
-            } catch (error) {
-                console.error('Erro ao carregar horários:', error);
-                bookedSlots = {};
-            }
-        }
-        
-        function generateBlockedTimes(startTime, duration, interval) {
-            const slots = [];
-            const [startHour, startMin] = startTime.split(':').map(Number);
-            let currentMinutes = startHour * 60 + startMin;
-            const endMinutes = currentMinutes + duration;
-            
-            while (currentMinutes < endMinutes) {
-                const h = Math.floor(currentMinutes / 60);
-                const m = currentMinutes % 60;
-                const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                slots.push(time);
-                currentMinutes += interval;
-            }
-            return slots;
+            hideCustomerForm();
         }
 
         function renderTimeSlots() {
@@ -807,9 +713,9 @@
                 </h4>
                 <div class="time-slots">
                     ${slots.map(slot => `
-                        <div class="time-slot ${slot.isBooked ? 'disabled' : ''} ${selectedTime === slot.time ? 'selected' : ''}"
-                             onclick="${!slot.isBooked ? `selectTime('${slot.time}')` : ''}">
-                            <span>${slot.time}</span>
+                        <div class="time-slot ${selectedTime === slot ? 'selected' : ''}"
+                             onclick="selectTime('${slot}')">
+                            <span>${slot}</span>
                         </div>
                     `).join('')}
                 </div>
@@ -823,7 +729,6 @@
 
             if (!dayConfig || !dayConfig.active) return slots;
 
-            const selectedDateStr = formatDateToYYYYMMDD(selectedDate);
             const serviceDuration = selectedService ? selectedService.duration : 30;
 
             for (let period of dayConfig.periods) {
@@ -838,27 +743,7 @@
                     const minute = currentMinutes % 60;
                     const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
                     
-                    const isTimePassed = isTimeSlotPassed(selectedDateStr, time + ':00');
-                    let isBlocked = isTimePassed;
-
-                    if (!isBlocked && selectedService) {
-                        const blockTimes = generateBlockedTimes(time, serviceDuration, intervalTime);
-                        
-                        for (let blockTime of blockTimes) {
-                            const bookingsAtBlockTime = bookedSlots[blockTime] || [];
-                            
-                            if (bookingsAtBlockTime.includes(selectedBarber.id)) {
-                                isBlocked = true;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    slots.push({
-                        time: time,
-                        isBooked: isBlocked
-                    });
-                    
+                    slots.push(time);
                     currentMinutes += intervalTime;
                 }
             }
@@ -869,33 +754,55 @@
         function selectTime(time) {
             selectedTime = time;
             renderTimeSlots();
-            showClientForm();
+            showCustomerForm();
         }
 
-        function showClientForm() {
-            const clientForm = document.getElementById('clientForm');
-            clientForm.classList.add('expanded');
+        function showCustomerForm() {
+            const customerForm = document.getElementById('customerForm');
+            customerForm.classList.add('expanded');
         }
 
-        function hideClientForm() {
-            const clientForm = document.getElementById('clientForm');
-            clientForm.classList.remove('expanded');
+        function hideCustomerForm() {
+            const customerForm = document.getElementById('customerForm');
+            customerForm.classList.remove('expanded');
         }
 
-        async function confirmAppointment() {
-            const name = document.getElementById('clientName').value.trim();
-            const phone = document.getElementById('clientPhone').value.trim();
+        // Phone formatting
+        document.getElementById('customerPhone').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
             
-            if (!name || !phone || !selectedDate || !selectedTime) {
-                alert('Por favor, preencha todos os campos!');
+            if (value.length > 11) {
+                value = value.slice(0, 11);
+            }
+            
+            if (value.length > 0) {
+                if (value.length <= 2) {
+                    value = `(${value}`;
+                } else if (value.length <= 7) {
+                    value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+                } else {
+                    value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+                }
+            }
+            
+            e.target.value = value;
+        });
+
+        async function confirmBooking() {
+            const name = document.getElementById('customerName').value.trim();
+            const phone = document.getElementById('customerPhone').value.trim();
+            
+            if (!name || !phone || !selectedDate || !selectedTime || !selectedService || !selectedBarber) {
+                alert('Por favor, preencha todos os campos e selecione todas as opções!');
                 return;
             }
 
-            const confirmBtn = document.getElementById('confirmBtn');
+            const confirmBtn = document.getElementById('confirmBookingBtn');
             confirmBtn.innerHTML = '<span class="loading"></span>Confirmando...';
             confirmBtn.disabled = true;
 
-            const appointmentData = {
+            // Dados para enviar ao webhook
+            const bookingData = {
                 nome: name,
                 telefone: phone,
                 data: formatDateToYYYYMMDD(selectedDate),
@@ -908,15 +815,27 @@
             };
 
             try {
-                const response = await fetch(WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(appointmentData)
-                });
+                let success = false;
 
-                if (response.ok) {
+                if (WEBHOOK_URL) {
+                    // Modo webhook real
+                    const response = await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(bookingData)
+                    });
+                    success = response.ok;
+                } else {
+                    // Modo simulação (para testes)
+                    console.log('📅 AGENDAMENTO SIMULADO:', bookingData);
+                    // Simula delay do servidor
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    success = true;
+                }
+
+                if (success) {
                     // Show success modal
                     const modal = document.getElementById('confirmationModal');
                     const modalDetails = document.getElementById('modalDetails');
@@ -961,10 +880,10 @@
                     
                     modal.classList.remove('hidden');
                     
-                    // Reset form
+                    // Reset form after showing modal
                     setTimeout(() => {
                         resetForm();
-                    }, 3000);
+                    }, 1000);
                 } else {
                     throw new Error('Erro na resposta do servidor');
                 }
@@ -978,40 +897,41 @@
         }
 
         function resetForm() {
-            document.getElementById('clientName').value = '';
-            document.getElementById('clientPhone').value = '';
+            // Reset dos campos
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerPhone').value = '';
             
+            // Remove seleções
             document.querySelectorAll('.service-item').forEach(s => s.classList.remove('selected'));
             document.querySelectorAll('.barber-item').forEach(s => s.classList.remove('selected'));
             
-            hideClientForm();
+            // Esconde formulário
+            hideCustomerForm();
+            
+            // Esconde seleção de barbeiro
             document.getElementById('barberSelection').style.display = 'none';
-            document.getElementById('timeSlotsContainer').innerHTML = '';
             
-            document.getElementById('confirmBtn').innerHTML = 'Confirmar Agendamento';
-            document.getElementById('confirmBtn').disabled = false;
+            // Esconde mensagem de sucesso
+            document.getElementById('successMessage').classList.remove('show');
             
+            // Reset do botão
+            document.getElementById('confirmBookingBtn').innerHTML = 'Confirmar Agendamento';
+            document.getElementById('confirmBookingBtn').disabled = false;
+            
+            // Reset das variáveis
             selectedService = null;
             selectedBarber = null;
             selectedDate = null;
             selectedTime = null;
             
+            // Limpa slots de tempo
+            document.getElementById('timeSlotsContainer').innerHTML = '';
+            
+            // Re-renderiza calendário
             renderCalendar();
         }
 
-        function formatDateToYYYYMMDD(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        function isTimeSlotPassed(date, time) {
-            const now = new Date();
-            const slotDateTime = new Date(date + 'T' + time);
-            return slotDateTime <= now;
-        }
-
+        // Navigation buttons
         document.getElementById('prevMonth').addEventListener('click', () => {
             currentDate.setMonth(currentDate.getMonth() - 1);
             renderCalendar();
@@ -1023,17 +943,8 @@
         });
 
         // Initialize app
-        async function initApp() {
-            await loadSettings();
-            await loadServices();
-            await loadBarbers();
-            renderCalendar();
-            updateStatusBadge();
-            setInterval(updateStatusBadge, 60000);
-        }
-
-        // Start the app
-        initApp();
+        loadMockData();
+        setInterval(updateStatusBadge, 60000);
     </script>
 </body>
 </html>
