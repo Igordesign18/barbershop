@@ -88,7 +88,56 @@
         .barber-details { padding-bottom: 10px; }
         .barber-details h1 { font-size: 32px; color: var(--baby-blue); margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); transition: color 0.3s; }
         .client-welcome { display: none !important; }
+        .social-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            align-items: center;
+        }
+        .social-link {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            background: transparent;
+        }
+        .social-link:hover {
+            transform: translateY(-5px) scale(1.15);
+            filter: drop-shadow(0 8px 15px rgba(0, 0, 0, 0.3));
+        }
+        .social-link:active {
+            transform: translateY(-2px) scale(1.1);
+        }
+        .social-link img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: all 0.3s;
+        }
+        .social-link:hover img {
+            transform: rotate(5deg);
+        }
         .barber-meta { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 8px; }
+        .status-info-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .status-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
         .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; background: rgba(0, 0, 0, 0.3); transition: all 0.3s; }
         [data-theme="light"] .status-badge { background: rgba(0, 0, 0, 0.05); }
         .status-badge.open { color: #4caf50; border: 2px solid #4caf50; }
@@ -212,6 +261,29 @@
         .card { background: var(--dark-card); padding: 30px; border-radius: 15px; box-shadow: 0 3px 20px rgba(0, 0, 0, 0.3); transition: all 0.3s; position: relative; overflow: hidden; }
         [data-theme="light"] .card { box-shadow: 0 3px 20px rgba(0, 0, 0, 0.1); border: 1px solid #e0e0e0; }
         .card h3 { color: var(--baby-blue); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--dark-bg);
+            border: 2px solid var(--baby-blue);
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.4s;
+        }
+        .card.completed .step-indicator {
+            background: var(--baby-blue);
+            color: #fff;
+            transform: scale(1.1);
+        }
+        .card.active {
+            animation: slideInUp 0.6s ease-out;
+            border: 2px solid var(--baby-blue);
+            box-shadow: 0 8px 30px rgba(135, 206, 235, 0.4);
+        }
         .expandable-bookings { display: none !important; }
         .service-item { background: var(--dark-bg); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 2px solid transparent; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; }
         .service-item:hover { border-color: var(--baby-blue); transform: translateX(5px) scale(1.02); box-shadow: 0 5px 20px rgba(135, 206, 235, 0.2); }
@@ -342,6 +414,24 @@
         .modal-close-btn:active {
             transform: translateY(-1px) scale(1);
         }
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
         @media (max-width: 768px) {
             .theme-toggle-fixed {
                 top: 12px;
@@ -349,6 +439,17 @@
                 width: 35px;
                 height: 35px;
                 font-size: 13px;
+            }
+            .social-links {
+                justify-content: center;
+            }
+            .social-link {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+            .status-info-container {
+                justify-content: center;
             }
             .header-cover { height: 150px; }
             .barber-photo { width: 100px; height: 100px; font-size: 40px; }
@@ -389,18 +490,34 @@
                         <div class="client-name" id="clientName">Cliente</div>
                     </div>
                     
-                    <div class="barber-meta">
-                        <span class="status-badge" id="statusBadge">
-                            <span class="status-dot"></span>
-                            <span id="statusText">Verificando...</span>
-                        </span>
-                        <a href="https://www.google.com/maps/search/?api=1&query=Rua+Antonio+Cordeiro+de+Freita,+1517,+Russas,+CE" 
-                           target="_blank" 
-                           class="location-badge"
-                           title="Abrir no Google Maps">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <span>Ver Localização</span>
+                    <div class="social-links">
+                        <a href="https://wa.me/5588999999999" target="_blank" class="social-link" title="WhatsApp">
+                            <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png" alt="WhatsApp">
                         </a>
+                        <a href="https://facebook.com/barbersync" target="_blank" class="social-link" title="Facebook">
+                            <img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook">
+                        </a>
+                        <a href="https://instagram.com/barbersync" target="_blank" class="social-link" title="Instagram">
+                            <img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram">
+                        </a>
+                    </div>
+                    
+                    <div class="barber-meta">
+                        <div class="status-info-container">
+                            <div class="status-group">
+                                <span class="status-badge" id="statusBadge">
+                                    <span class="status-dot"></span>
+                                    <span id="statusText">Verificando...</span>
+                                </span>
+                            </div>
+                            <a href="https://www.google.com/maps/search/?api=1&query=Rua+Antonio+Cordeiro+de+Freita,+1517,+Russas,+CE" 
+                               target="_blank" 
+                               class="location-badge"
+                               title="Abrir no Google Maps">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>Ver Localização</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -415,20 +532,29 @@
         <div class="expandable-bookings"></div> 
 
         <div class="dashboard" id="dashboardSection">
-            <div class="card">
-                <h3><i class="fas fa-cut"></i> Escolha o Serviço</h3>
+            <div class="card" id="serviceCard">
+                <h3>
+                    <span class="step-indicator">1</span>
+                    <i class="fas fa-cut"></i> Escolha o Serviço
+                </h3>
                 <div id="servicesList"></div>
             </div>
 
-            <div class="card">
-                <h3><i class="fas fa-calendar-alt"></i> Agendar Horário</h3>
-                
+            <div class="card" id="barberCard">
+                <h3>
+                    <span class="step-indicator">2</span>
+                    <i class="fas fa-user-tie"></i> Escolha o Barbeiro
+                </h3>
                 <div class="barber-selection" id="barberSelection" style="display: none;">
-                    <h4 style="color: var(--baby-blue); margin-bottom: 15px;">
-                        <i class="fas fa-user-tie"></i> Escolha o Barbeiro
-                    </h4>
                     <div class="barbers-grid" id="barbersList"></div>
                 </div>
+            </div>
+
+            <div class="card" id="scheduleCard">
+                <h3>
+                    <span class="step-indicator">3</span>
+                    <i class="fas fa-calendar-alt"></i> Agendar Horário
+                </h3>
                 
                 <div class="calendar">
                     <div class="calendar-header">
@@ -774,9 +900,21 @@
             selectedDate = null;
             selectedTime = null;
             
+            // Marca o card de serviço como completo
+            const serviceCard = document.getElementById('serviceCard');
+            serviceCard.classList.add('completed');
+            
+            // Ativa e exibe o card do barbeiro
+            const barberCard = document.getElementById('barberCard');
             const barberSelection = document.getElementById('barberSelection');
             barberSelection.style.display = 'block';
+            barberCard.classList.add('active');
             renderBarbers();
+            
+            // Scroll suave para o próximo passo
+            setTimeout(() => {
+                barberCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
             
             renderCalendar();
             document.getElementById('confirmBooking').classList.add('hidden');
@@ -795,6 +933,20 @@
             
             selectedDate = null;
             selectedTime = null;
+            
+            // Marca o card do barbeiro como completo
+            const barberCard = document.getElementById('barberCard');
+            barberCard.classList.add('completed');
+            barberCard.classList.remove('active');
+            
+            // Ativa o card de agendamento
+            const scheduleCard = document.getElementById('scheduleCard');
+            scheduleCard.classList.add('active');
+            
+            // Scroll suave para o calendário
+            setTimeout(() => {
+                scheduleCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
             
             renderCalendar();
             document.getElementById('confirmBooking').classList.add('hidden');
@@ -1003,6 +1155,12 @@
         function selectTime(time) {
             selectedTime = time;
             renderTimeSlots();
+            
+            // Marca o card de agendamento como completo
+            const scheduleCard = document.getElementById('scheduleCard');
+            scheduleCard.classList.add('completed');
+            scheduleCard.classList.remove('active');
+            
             showConfirmation();
         }
 
@@ -1031,7 +1189,11 @@
             document.getElementById('unverifiedUserFields').classList.remove('hidden'); 
             
             container.classList.remove('hidden');
-            container.scrollIntoView({ behavior: 'smooth' });
+            
+            // Scroll suave para a confirmação com efeito
+            setTimeout(() => {
+                container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
         }
 
         async function sendWebhook(bookingData, clientName, clientPhoneFormatted) {
@@ -1170,12 +1332,20 @@
                 selectedDate = null;
                 selectedTime = null;
                 
+                // Remove as classes de estado dos cards
+                document.getElementById('serviceCard').classList.remove('completed', 'active');
+                document.getElementById('barberCard').classList.remove('completed', 'active');
+                document.getElementById('scheduleCard').classList.remove('completed', 'active');
+                
                 document.querySelectorAll('.service-item').forEach(el => el.classList.remove('selected'));
                 document.querySelectorAll('.barber-item').forEach(el => el.classList.remove('selected'));
                 document.getElementById('confirmBooking').classList.add('hidden');
                 document.getElementById('barberSelection').style.display = 'none';
                 document.getElementById('timeSlotsContainer').innerHTML = '';
                 renderCalendar();
+                
+                // Scroll para o topo
+                window.scrollTo({ top: 0, behavior: 'smooth' });
                 
             } catch (error) {
                 alert('Erro ao confirmar agendamento: ' + error.message);
