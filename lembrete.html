@@ -158,7 +158,118 @@
             color: #888888;
             font-size: 12px;
         }
+        .booking-card {
+            background: #0a0a0a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            border-left: 4px solid #87ceeb;
+            transition: all 0.3s;
+        }
+        .booking-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(135, 206, 235, 0.2);
+        }
+        .booking-card.sent {
+            border-left-color: #4caf50;
+            opacity: 0.85;
+        }
+        .booking-card.pending {
+            border-left-color: #ff9800;
+        }
+        .booking-card.too-early {
+            border-left-color: #888888;
+            opacity: 0.6;
+        }
+        .booking-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .booking-client-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #87ceeb;
+            margin-bottom: 5px;
+        }
+        .booking-service {
+            color: #ffffff;
+            font-size: 14px;
+            margin-bottom: 3px;
+        }
+        .status-badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .status-sent {
+            background: #4caf50;
+            color: white;
+        }
+        .status-pending {
+            background: #ff9800;
+            color: white;
+        }
+        .status-too-early {
+            background: #888888;
+            color: white;
+        }
+        .booking-time-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #333;
+        }
+        .time-box {
+            background: rgba(135, 206, 235, 0.1);
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid rgba(135, 206, 235, 0.3);
+        }
+        .time-box.highlight {
+            border-color: #ff9800;
+            background: rgba(255, 152, 0, 0.1);
+        }
+        .time-label {
+            font-size: 11px;
+            color: #888888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        .time-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #87ceeb;
+        }
+        .time-value.highlight {
+            color: #ff9800;
+        }
+        .countdown {
+            font-size: 14px;
+            color: #888888;
+            margin-top: 5px;
+        }
+        .empty-bookings {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888888;
+        }
+        .empty-bookings i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
@@ -240,6 +351,26 @@
             <button class="btn btn-secondary" onclick="clearLogs()">
                 🗑️ Limpar Logs
             </button>
+        </div>
+
+        <div class="config-section">
+            <h2 style="color: #87ceeb; margin-bottom: 20px;">📅 Agendamentos Próximos</h2>
+            <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-secondary" onclick="refreshBookings()">
+                    🔄 Atualizar Lista
+                </button>
+                <select id="filterStatus" style="padding: 10px; background: #0a0a0a; border: 2px solid #333; border-radius: 8px; color: #ffffff;">
+                    <option value="all">Todos os Status</option>
+                    <option value="pending">Apenas Pendentes</option>
+                    <option value="sent">Apenas Enviados</option>
+                </select>
+            </div>
+            <div id="bookingsList" style="max-height: 600px; overflow-y: auto;">
+                <div style="text-align: center; padding: 40px; color: #888888;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 48px; margin-bottom: 15px;"></i>
+                    <p>Carregando agendamentos...</p>
+                </div>
+            </div>
         </div>
 
         <div class="log-container">
@@ -369,6 +500,7 @@
                     addLog('ℹ️ Nenhum agendamento confirmado para hoje');
                     updateLastCheck();
                     updateStats();
+                    await refreshBookings();
                     return;
                 }
 
@@ -395,6 +527,7 @@
 
                 updateLastCheck();
                 updateStats();
+                await refreshBookings();
 
             } catch (error) {
                 addLog(`❌ Erro ao verificar agendamentos: ${error.message}`, 'error');
@@ -534,9 +667,197 @@
             logContainer.innerHTML = '<div class="log-entry"><span class="timestamp">[Sistema]</span> Logs limpos</div>';
         }
 
+        async function refreshBookings() {
+            const container = document.getElementById('bookingsList');
+            const filterStatus = document.getElementById('filterStatus').value;
+            
+            container.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #888888;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 48px; margin-bottom: 15px;"></i>
+                    <p>Carregando agendamentos...</p>
+                </div>
+            `;
+
+            try {
+                const now = new Date();
+                const today = now.toISOString().split('T')[0];
+
+                const { data: bookings, error } = await supabase
+                    .from('bookings')
+                    .select('*, users(full_name, phone, email), services(name, price, duration), barbers(name)')
+                    .eq('booking_date', today)
+                    .eq('status', 'confirmed')
+                    .order('booking_time', { ascending: true });
+
+                if (error) throw error;
+
+                if (!bookings || bookings.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-bookings">
+                            <i class="fas fa-calendar-times"></i>
+                            <h3 style="color: #87ceeb; margin-bottom: 10px;">Nenhum Agendamento Hoje</h3>
+                            <p>Não há agendamentos confirmados para hoje</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Processar cada agendamento
+                const processedBookings = bookings.map(booking => {
+                    const bookingTime = new Date(`${booking.booking_date}T${booking.booking_time}`);
+                    const timeDiff = (bookingTime - now) / 60000; // diferença em minutos
+                    const reminderTime = new Date(bookingTime.getTime() - config.reminderTime * 60000);
+                    
+                    let status, statusText, statusClass;
+                    
+                    if (sentRemindersToday.has(booking.id)) {
+                        status = 'sent';
+                        statusText = '✅ Lembrete Enviado';
+                        statusClass = 'status-sent';
+                    } else if (timeDiff <= config.reminderTime && timeDiff > 0) {
+                        status = 'pending';
+                        statusText = '⏳ Aguardando Envio';
+                        statusClass = 'status-pending';
+                    } else if (timeDiff > config.reminderTime) {
+                        status = 'too-early';
+                        statusText = '⏰ Muito Cedo';
+                        statusClass = 'status-too-early';
+                    } else {
+                        status = 'passed';
+                        statusText = '⏱️ Horário Passou';
+                        statusClass = 'status-too-early';
+                    }
+
+                    return { ...booking, status, statusText, statusClass, bookingTime, reminderTime, timeDiff };
+                });
+
+                // Filtrar por status se necessário
+                let filteredBookings = processedBookings;
+                if (filterStatus !== 'all') {
+                    filteredBookings = processedBookings.filter(b => b.status === filterStatus);
+                }
+
+                if (filteredBookings.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-bookings">
+                            <i class="fas fa-filter"></i>
+                            <h3 style="color: #87ceeb; margin-bottom: 10px;">Nenhum Resultado</h3>
+                            <p>Não há agendamentos com o status selecionado</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Renderizar agendamentos
+                container.innerHTML = filteredBookings.map(booking => {
+                    const timeFormatted = booking.booking_time.substring(0, 5);
+                    const reminderTimeFormatted = booking.reminderTime.toLocaleTimeString('pt-BR', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+
+                    // Calcular countdown
+                    let countdownText = '';
+                    if (booking.timeDiff > 0) {
+                        const hours = Math.floor(booking.timeDiff / 60);
+                        const minutes = Math.floor(booking.timeDiff % 60);
+                        if (hours > 0) {
+                            countdownText = `em ${hours}h ${minutes}min`;
+                        } else {
+                            countdownText = `em ${minutes} minutos`;
+                        }
+                    } else {
+                        countdownText = 'já passou';
+                    }
+
+                    // Calcular tempo até o lembrete
+                    const timeUntilReminder = (booking.reminderTime - now) / 60000;
+                    let reminderCountdown = '';
+                    if (booking.status === 'too-early' && timeUntilReminder > 0) {
+                        const hours = Math.floor(timeUntilReminder / 60);
+                        const minutes = Math.floor(timeUntilReminder % 60);
+                        if (hours > 0) {
+                            reminderCountdown = `Lembrete em ${hours}h ${minutes}min`;
+                        } else {
+                            reminderCountdown = `Lembrete em ${minutes} minutos`;
+                        }
+                    }
+
+                    return `
+                        <div class="booking-card ${booking.status}">
+                            <div class="booking-header">
+                                <div>
+                                    <div class="booking-client-name">
+                                        <i class="fas fa-user"></i> ${booking.users?.full_name || 'Cliente'}
+                                    </div>
+                                    <div class="booking-service">
+                                        <i class="fas fa-cut"></i> ${booking.services?.name || 'Serviço'}
+                                    </div>
+                                    <div style="color: #888888; font-size: 13px; margin-top: 3px;">
+                                        <i class="fas fa-user-tie"></i> ${booking.barbers?.name || 'Barbeiro'}
+                                    </div>
+                                </div>
+                                <span class="status-badge ${booking.statusClass}">
+                                    ${booking.statusText}
+                                </span>
+                            </div>
+
+                            <div class="booking-time-info">
+                                <div class="time-box highlight">
+                                    <div class="time-label">🕐 Horário do Agendamento</div>
+                                    <div class="time-value highlight">${timeFormatted}</div>
+                                    <div class="countdown">${countdownText}</div>
+                                </div>
+
+                                <div class="time-box">
+                                    <div class="time-label">🔔 Previsão do Lembrete</div>
+                                    <div class="time-value">${reminderTimeFormatted}</div>
+                                    <div class="countdown">
+                                        ${booking.status === 'sent' ? 'Já enviado ✅' : 
+                                          booking.status === 'pending' ? 'Será enviado em breve ⏳' : 
+                                          booking.status === 'too-early' ? reminderCountdown : 
+                                          'Não será enviado'}
+                                    </div>
+                                </div>
+
+                                <div class="time-box">
+                                    <div class="time-label">📱 Contato</div>
+                                    <div class="time-value" style="font-size: 14px;">
+                                        ${booking.users?.phone || 'Sem telefone'}
+                                    </div>
+                                    <div class="countdown">
+                                        R$ ${booking.services?.price?.toFixed(2) || '0.00'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Erro ao carregar agendamentos:', error);
+                container.innerHTML = `
+                    <div class="empty-bookings">
+                        <i class="fas fa-exclamation-triangle" style="color: #ff4444;"></i>
+                        <h3 style="color: #ff4444; margin-bottom: 10px;">Erro ao Carregar</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Event listener para o filtro
+        document.addEventListener('DOMContentLoaded', () => {
+            const filterSelect = document.getElementById('filterStatus');
+            if (filterSelect) {
+                filterSelect.addEventListener('change', refreshBookings);
+            }
+        });
+
         // Inicializar ao carregar página
         window.addEventListener('load', () => {
             loadConfig();
+            refreshBookings();
             addLog('💡 Sistema carregado e pronto para uso');
             addLog(`⚙️ Configurado para enviar lembretes ${config.reminderTime} minutos antes`);
             
@@ -545,6 +866,13 @@
             if (autoStart === 'true') {
                 setTimeout(() => startSystem(), 2000);
             }
+
+            // Atualizar lista de agendamentos a cada 30 segundos
+            setInterval(() => {
+                if (systemRunning) {
+                    refreshBookings();
+                }
+            }, 30000);
         });
 
         // Resetar lembretes enviados à meia-noite
