@@ -27,37 +27,6 @@
         .barber-details { padding-bottom: 10px; }
         .barber-details h1 { font-size: 32px; color: var(--baby-blue); margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); }
         
-        /* Welcome message for client name */
-        .client-welcome { 
-            background: linear-gradient(135deg, var(--baby-blue-dark), var(--baby-blue)); 
-            color: white; 
-            padding: 15px 25px; 
-            border-radius: 25px; 
-            margin-top: 10px; 
-            box-shadow: 0 5px 20px rgba(70, 130, 180, 0.4);
-            border: 2px solid var(--baby-blue);
-            animation: welcomeGlow 3s ease-in-out infinite;
-        }
-        
-        @keyframes welcomeGlow {
-            0%, 100% { box-shadow: 0 5px 20px rgba(70, 130, 180, 0.4); }
-            50% { box-shadow: 0 8px 30px rgba(135, 206, 235, 0.6); }
-        }
-        
-        .client-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            margin: 0;
-        }
-        
-        .welcome-text {
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 5px;
-        }
-        
         .barber-meta { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 8px; }
         .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; background: rgba(0, 0, 0, 0.3); }
         .status-badge.open { color: #4caf50; border: 2px solid #4caf50; }
@@ -67,144 +36,16 @@
         .status-badge.closed .status-dot { background: #ff4444; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .location-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: var(--baby-blue); background: rgba(135, 206, 235, 0.1); border: 2px solid var(--baby-blue); }
-        .logout-btn { background: transparent; border: 2px solid var(--baby-blue); color: var(--baby-blue); padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; transition: all 0.4s; display: none; height: fit-content; position: relative; overflow: hidden; white-space: nowrap; }
-        .logout-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: var(--baby-blue); transition: left 0.4s; z-index: 0; }
-        .logout-btn:hover::before { left: 0; }
-        .logout-btn:hover { color: var(--dark-bg); transform: scale(1.05); box-shadow: 0 5px 20px rgba(135, 206, 235, 0.4); }
-        .logout-btn i, .logout-btn span { position: relative; z-index: 1; }
         .header-buttons { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
         
-        /* Auth Screen */
-        .auth-screen { display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 100px); }
-        .auth-card { background: var(--dark-card); padding: 40px; border-radius: 15px; box-shadow: 0 5px 30px rgba(135, 206, 235, 0.2); width: 100%; max-width: 450px; }
-        .auth-card h2 { text-align: center; margin-bottom: 30px; color: var(--baby-blue); }
-        .form-group { margin-bottom: 20px; animation: fadeInUp 0.5s; animation-fill-mode: both; }
-        .form-group:nth-child(1) { animation-delay: 0.1s; }
-        .form-group:nth-child(2) { animation-delay: 0.2s; }
-        .form-group:nth-child(3) { animation-delay: 0.3s; }
-        .form-group:nth-child(4) { animation-delay: 0.4s; }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .form-group label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 14px; transition: all 0.3s; }
-        .form-group:focus-within label { color: var(--baby-blue); transform: translateX(5px); }
-        .form-group input { width: 100%; padding: 12px; background: var(--dark-bg); border: 2px solid #333; border-radius: 5px; color: var(--text); font-size: 16px; transition: all 0.3s; position: relative; }
-        .form-group input:focus { outline: none; border-color: var(--baby-blue); box-shadow: 0 0 15px rgba(135, 206, 235, 0.3); transform: translateY(-2px); }
-        .btn { width: 100%; padding: 15px; background: var(--baby-blue); color: var(--dark-bg); border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; box-shadow: 0 4px 15px rgba(135, 206, 235, 0.3); }
-        .btn::before { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.3); transform: translate(-50%, -50%); transition: width 0.6s, height 0.6s; }
-        .btn:hover::before { width: 300px; height: 300px; }
-        .btn:hover { background: var(--baby-blue-dark); transform: translateY(-3px); box-shadow: 0 8px 25px rgba(135, 206, 235, 0.5); }
-        .btn:active { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(135, 206, 235, 0.3); }
-        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn span { position: relative; z-index: 1; }
-        .auth-toggle { text-align: center; margin-top: 20px; color: var(--text-muted); }
-        .auth-toggle button { background: transparent; border: none; color: var(--baby-blue); cursor: pointer; text-decoration: underline; font-size: 14px; transition: all 0.3s; padding: 5px 10px; border-radius: 3px; }
-        .auth-toggle button:hover { background: rgba(135, 206, 235, 0.1); transform: scale(1.05); text-decoration: none; }
-        .admin-link { display: inline-flex; align-items: center; gap: 8px; color: var(--baby-blue); text-decoration: none; font-size: 14px; transition: all 0.3s; padding: 8px 15px; border-radius: 5px; }
-        .admin-link:hover { background: rgba(135, 206, 235, 0.1); transform: scale(1.05); }
-        
         /* Main App */
-        .main-app { display: none; padding: 40px 20px; }
+        .main-app { padding: 40px 20px; }
         .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; }
         .card { background: var(--dark-card); padding: 30px; border-radius: 15px; box-shadow: 0 3px 20px rgba(0, 0, 0, 0.3); transition: all 0.3s; position: relative; overflow: hidden; }
         .card::before { content: ''; position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(135, 206, 235, 0.03), transparent); animation: cardGlow 15s infinite; }
         @keyframes cardGlow { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-20%, -20%); } }
         .card:hover { transform: translateY(-5px); box-shadow: 0 8px 30px rgba(135, 206, 235, 0.2); }
         .card h3 { color: var(--baby-blue); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-        
-        /* Expandable Bookings Section */
-        .expandable-bookings { 
-            background: var(--dark-card); 
-            border-radius: 15px; 
-            box-shadow: 0 3px 20px rgba(0, 0, 0, 0.3); 
-            margin-bottom: 30px; 
-            overflow: hidden; 
-            transition: all 0.3s ease; 
-        }
-        
-        .bookings-expand-button {
-            width: 100%;
-            background: linear-gradient(135deg, var(--baby-blue), var(--baby-blue-dark));
-            color: var(--dark-bg);
-            border: none;
-            padding: 20px 30px;
-            font-size: 1.2em;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .bookings-expand-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.6s;
-        }
-
-        .bookings-expand-button:hover::before {
-            left: 100%;
-        }
-
-        .bookings-expand-button:hover {
-            background: linear-gradient(135deg, var(--baby-blue-dark), #5a9fd4);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(135, 206, 235, 0.4);
-        }
-
-        .bookings-expand-icon {
-            font-size: 1.5em;
-            transition: transform 0.3s ease;
-        }
-
-        .bookings-expand-icon.rotated {
-            transform: rotate(180deg);
-        }
-
-        .bookings-expandable-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s ease;
-            background: var(--dark-card);
-        }
-
-        .bookings-expandable-content.expanded {
-            max-height: 2000px;
-        }
-
-        .bookings-inner-content {
-            padding: 30px;
-        }
-        
-        /* My Bookings */
-        .my-bookings { grid-column: 1 / -1; }
-        .bookings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-top: 20px; }
-        .booking-card { background: var(--dark-bg); padding: 20px; border-left: 4px solid var(--baby-blue); transition: all 0.3s; }
-        .booking-card:hover { transform: translateX(5px); box-shadow: 0 5px 20px rgba(135, 206, 235, 0.2); }
-        .booking-card.cancelled { border-left-color: var(--red); opacity: 0.7; }
-        .booking-card.completed { border-left-color: var(--text-muted); opacity: 0.7; }
-        .booking-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .booking-header h4 { color: var(--baby-blue); font-size: 18px; }
-        .booking-badge { padding: 4px 12px; border-radius: 15px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
-        .booking-badge.confirmed { background: var(--green); color: white; }
-        .booking-badge.cancelled { background: var(--red); color: white; }
-        .booking-badge.completed { background: var(--text-muted); color: white; }
-        .booking-info p { color: var(--text-muted); font-size: 14px; margin: 8px 0; display: flex; align-items: center; gap: 8px; }
-        .booking-info p i { color: var(--baby-blue); width: 16px; }
-        .booking-datetime { margin: 20px 0; padding: 20px; background: rgba(135, 206, 235, 0.05); border-radius: 10px; border: 2px solid rgba(135, 206, 235, 0.2); }
-        .booking-date-highlight { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; }
-        .booking-date-highlight i { font-size: 28px; color: var(--baby-blue); }
-        .booking-date-highlight span { font-size: 18px; font-weight: 600; color: var(--baby-blue); text-transform: capitalize; line-height: 1.4; }
-        .booking-time-highlight { display: flex; align-items: center; gap: 12px; }
-        .booking-time-highlight i { font-size: 32px; color: var(--baby-blue); }
-        .booking-time-highlight span { font-size: 32px; font-weight: bold; color: var(--baby-blue); letter-spacing: 2px; }
-        .booking-actions button { flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.3s; }
         
         .service-item { background: var(--dark-bg); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 2px solid transparent; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; }
         .service-item::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(135, 206, 235, 0.1), transparent); transition: left 0.5s; }
@@ -328,10 +169,120 @@
         .time-slot.selected { background: var(--baby-blue); color: var(--dark-bg); border-color: var(--baby-blue); transform: scale(1.08); box-shadow: 0 8px 20px rgba(135, 206, 235, 0.5); animation: selectTime 0.5s; }
         @keyframes selectTime { 0%, 100% { transform: scale(1.08); } 50% { transform: scale(1.15); } }
         .time-slot.disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
-        .confirm-booking { margin-top: 30px; padding: 20px; background: rgba(135, 206, 235, 0.1); border: 2px solid var(--baby-blue); border-radius: 10px; animation: slideInUp 0.5s; }
-        @keyframes slideInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        .confirm-booking h4 { color: var(--baby-blue); margin-bottom: 15px; animation: pulse 2s infinite; }
-        .booking-summary { margin-bottom: 15px; line-height: 1.8; }
+        
+        /* Client Form - Expandable */
+        .client-form {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(-20px);
+            margin-top: 30px;
+            background: rgba(135, 206, 235, 0.1);
+            border: 2px solid var(--baby-blue);
+            border-radius: 10px;
+        }
+
+        .client-form.expanded {
+            max-height: 500px;
+            opacity: 1;
+            transform: translateY(0);
+            padding: 30px;
+        }
+
+        .client-form h4 {
+            color: var(--baby-blue);
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.2em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--baby-blue);
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            background: var(--dark-bg);
+            border: 2px solid #333;
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--baby-blue);
+            box-shadow: 0 0 15px rgba(135, 206, 235, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .confirm-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, var(--baby-blue), var(--baby-blue-dark));
+            color: var(--dark-bg);
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .confirm-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(135, 206, 235, 0.4);
+        }
+
+        .confirm-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .success-message {
+            background: linear-gradient(45deg, #56ab2f, #a8e6cf);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+        }
+
+        .success-message.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         .hidden { display: none !important; }
         
         /* Modal */
@@ -361,34 +312,19 @@
             .barber-info { flex-direction: column; align-items: center; text-align: center; }
             .barber-meta { justify-content: center; }
             .header-buttons { width: 100%; justify-content: center; }
-            .logout-btn { padding: 8px 15px; font-size: 13px; }
-            .logout-btn .btn-text { display: none; }
-            .logout-btn i { margin: 0; font-size: 18px; }
             .dashboard { grid-template-columns: 1fr; }
             .calendar-grid { gap: 5px; }
             .calendar-day { font-size: 12px; padding: 5px; }
-            .bookings-grid { grid-template-columns: 1fr; }
             .container { padding: 10px; }
             .main-app { padding: 20px 10px; }
             .card { padding: 20px; }
-            .auth-card { padding: 30px 20px; }
             .time-slots { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
             .time-slot { padding: 10px; font-size: 14px; }
             .service-item { flex-direction: column; text-align: center; gap: 10px; }
             .service-price { font-size: 18px; }
-            .booking-card { padding: 15px; }
-            .booking-time-highlight span { font-size: 24px; }
-            .booking-date-highlight span { font-size: 16px; }
             .modal-content { padding: 30px 20px; width: 95%; }
-            .form-group input { font-size: 16px; }
             .calendar-header h4 { font-size: 16px; }
             .card h3 { font-size: 18px; }
-            .confirm-booking { padding: 15px; }
-            .booking-summary { font-size: 14px; }
-            .bookings-expand-button { padding: 15px 20px; font-size: 1.1em; }
-            .bookings-inner-content { padding: 20px; }
-            .client-name { font-size: 20px; }
-            .client-welcome { padding: 12px 20px; }
             .barbers-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; }
             .barber-photo-circle { width: 60px; height: 60px; font-size: 24px; }
             .barber-name { font-size: 14px; }
@@ -398,17 +334,11 @@
         @media (max-width: 480px) {
             .barber-details h1 { font-size: 20px; }
             .status-badge, .location-badge { font-size: 11px; padding: 4px 8px; }
-            .logout-btn { padding: 6px 12px; }
-            .logout-btn i { font-size: 16px; }
             .card { padding: 15px; }
             .card h3 { font-size: 16px; }
             .time-slots { grid-template-columns: repeat(3, 1fr); }
             .calendar-day { font-size: 11px; padding: 3px; }
             .service-item { padding: 12px; }
-            .booking-time-highlight span { font-size: 20px; }
-            .bookings-expand-button { padding: 12px 15px; font-size: 1em; }
-            .bookings-inner-content { padding: 15px; }
-            .client-name { font-size: 18px; }
             .barbers-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
             .barber-photo-circle { width: 50px; height: 50px; font-size: 20px; }
             .barber-name { font-size: 13px; }
@@ -429,11 +359,6 @@
                 <div class="barber-details">
                     <h1>BarberSync</h1>
                     
-                    <div class="client-welcome" id="clientWelcome" style="display: none;">
-                        <div class="welcome-text">Bem-vindo de volta!</div>
-                        <div class="client-name" id="clientName">Cliente</div>
-                    </div>
-                    
                     <div class="barber-meta">
                         <span class="status-badge" id="statusBadge">
                             <span class="status-dot"></span>
@@ -446,141 +371,11 @@
                     </div>
                 </div>
             </div>
-            <div class="header-buttons">
-                <button class="logout-btn" id="profileBtn" style="display: none;">
-                    <i class="fas fa-user-circle"></i> <span class="btn-text">Meu Perfil</span>
-                </button>
-                <button class="logout-btn" id="logoutBtn">
-                    <i class="fas fa-sign-out-alt"></i> <span class="btn-text">Sair</span>
-                </button>
-            </div>
         </div>
     </header>
 
-    <div class="auth-screen" id="authScreen">
-        <div class="auth-card">
-            <h2 id="authTitle">Login</h2>
-            <form id="authForm">
-                <div class="form-group hidden" id="nameGroup">
-                    <label for="fullName">Nome Completo</label>
-                    <input type="text" id="fullName" placeholder="Digite seu nome completo">
-                </div>
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" placeholder="seu@email.com" required>
-                </div>
-                <div class="form-group hidden" id="phoneGroup">
-                    <label for="phone">Telefone (WhatsApp)</label>
-                    <div style="position: relative;">
-                        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; z-index: 1;">
-                            🇧🇷 +55
-                        </span>
-                        <input type="tel" id="phone" placeholder="(88) 99999-9999" maxlength="15" style="padding-left: 70px;">
-                    </div>
-                    <small style="color: var(--text-muted); font-size: 12px; margin-top: 5px; display: block;">
-                        Digite apenas DDD + 9 dígitos (11 dígitos no total)
-                    </small>
-                </div>
-                <div class="form-group">
-                    <label for="password">Senha</label>
-                    <input type="password" id="password" placeholder="Digite sua senha" required>
-                </div>
-                <button type="submit" class="btn ripple" id="authBtn"><span>Entrar</span></button>
-                <div class="auth-toggle">
-                    <span id="toggleText">Não tem conta?</span>
-                    <button type="button" id="toggleAuth">Cadastre-se</button>
-                </div>
-                <div class="auth-toggle" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
-                    <a href="indexadm.html" 
-                       target="_self"
-                       class="admin-link">
-                        <i class="fas fa-user-shield"></i>
-                        <span>Entrar como Administrador</span>
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="main-app container" id="mainApp">
-        <div class="expandable-bookings">
-            <button class="bookings-expand-button" onclick="toggleBookings()">
-                <span><i class="fas fa-calendar-check"></i> Meus Agendamentos Futuros</span>
-                <span class="bookings-expand-icon" id="bookingsExpandIcon">▼</span>
-            </button>
-            <div class="bookings-expandable-content" id="bookingsExpandableContent">
-                <div class="bookings-inner-content">
-                    <div class="bookings-grid" id="myBookingsGrid">
-                        <p style="color: var(--text-muted); text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card my-bookings" id="profileSection" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3><i class="fas fa-user-circle"></i> Meu Perfil</h3>
-                <button onclick="toggleProfileSection()" style="background: transparent; border: 2px solid var(--baby-blue); color: var(--baby-blue); padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; transition: all 0.3s;">
-                    <i class="fas fa-arrow-left"></i> Voltar
-                </button>
-            </div>
-            <div style="max-width: 600px; margin: 20px auto;">
-                <form id="profileForm">
-                    <div class="form-group">
-                        <label for="profileName">Nome Completo</label>
-                        <input type="text" id="profileName" placeholder="Seu nome completo" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="profileEmail">Email</label>
-                        <input type="email" id="profileEmail" placeholder="seu@email.com" disabled style="opacity: 0.6; cursor: not-allowed;">
-                        <small style="color: var(--text-muted); font-size: 12px; margin-top: 5px; display: block;">
-                            O email não pode ser alterado
-                        </small>
-                    </div>
-                    <div class="form-group">
-                        <label for="profilePhone">Telefone (WhatsApp)</label>
-                        <div style="position: relative;">
-                            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; z-index: 1;">
-                                🇧🇷 +55
-                            </span>
-                            <input type="tel" id="profilePhone" placeholder="(88) 99999-9999" maxlength="15" style="padding-left: 70px;">
-                        </div>
-                        <small style="color: var(--text-muted); font-size: 12px; margin-top: 5px; display: block;">
-                            Digite apenas DDD + 9 dígitos (11 dígitos no total)
-                        </small>
-                    </div>
-                    <button type="submit" class="btn" id="saveProfileBtn">
-                        <span><i class="fas fa-save"></i> Salvar Alterações</span>
-                    </button>
-                </form>
-
-                <div style="margin-top: 40px; padding-top: 30px; border-top: 2px solid #333;">
-                    <h4 style="color: var(--baby-blue); margin-bottom: 20px;"><i class="fas fa-key"></i> Alterar Senha</h4>
-                    <form id="passwordForm">
-                        <div class="form-group">
-                            <label for="currentPassword">Senha Atual</label>
-                            <input type="password" id="currentPassword" placeholder="Digite sua senha atual" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="newPassword">Nova Senha</label>
-                            <input type="password" id="newPassword" placeholder="Digite a nova senha" required minlength="6">
-                            <small style="color: var(--text-muted); font-size: 12px; margin-top: 5px; display: block;">
-                                Mínimo de 6 caracteres
-                            </small>
-                        </div>
-                        <div class="form-group">
-                            <label for="confirmPassword">Confirmar Nova Senha</label>
-                            <input type="password" id="confirmPassword" placeholder="Confirme a nova senha" required minlength="6">
-                        </div>
-                        <button type="submit" class="btn" id="changePasswordBtn" style="background: #ff9800;">
-                            <span><i class="fas fa-lock"></i> Alterar Senha</span>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <div class="dashboard" id="dashboardSection">
+    <div class="main-app container">
+        <div class="dashboard">
             <div class="card">
                 <h3><i class="fas fa-cut"></i> Escolha o Serviço</h3>
                 <div id="servicesList"></div>
@@ -606,10 +401,26 @@
                     <div id="timeSlotsContainer"></div>
                 </div>
                 
-                <div class="confirm-booking hidden" id="confirmBooking">
-                    <h4><i class="fas fa-check-circle"></i> Confirmar Agendamento</h4>
-                    <div class="booking-summary" id="bookingSummary"></div>
-                    <button class="btn ripple" id="confirmBtn"><span>Confirmar Agendamento</span></button>
+                <div class="client-form" id="clientForm">
+                    <h4><i class="fas fa-user"></i> Seus Dados</h4>
+                    
+                    <div class="form-group">
+                        <label for="clientName">Nome Completo:</label>
+                        <input type="text" id="clientName" placeholder="Digite seu nome completo" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="clientPhone">Telefone:</label>
+                        <input type="tel" id="clientPhone" placeholder="(11) 99999-9999" required>
+                    </div>
+                    
+                    <button class="confirm-btn" id="confirmBtn" onclick="confirmAppointment()">
+                        Confirmar Agendamento
+                    </button>
+                </div>
+
+                <div class="success-message" id="successMessage">
+                    ✅ Agendamento confirmado com sucesso!
                 </div>
             </div>
         </div>
@@ -632,14 +443,12 @@
     </div>
 
     <script>
-        // NOVAS CREDENCIAIS SUPABASE
+        // CREDENCIAIS SUPABASE
         const SUPABASE_URL = 'https://huggzgfejtedacfyatke.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1Z2d6Z2ZlanRlZGFjZnlhdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NDk3ODYsImV4cCI6MjA3NjAyNTc4Nn0.aTrXAe7m1KsRNwH28LmBvcOlBjYI8C-2kvHYGdkUmv8';
-        const WEBHOOK_URL = 'https://n8n-n8n.rthuab.easypanel.host/webhook/barbearia';
+        const WEBHOOK_URL = 'https://seu-webhook-url.com/agendamento';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let isLogin = true;
-        let currentUser = null;
         let currentDate = new Date();
         let selectedService = null;
         let selectedBarber = null;
@@ -647,143 +456,24 @@
         let selectedTime = null;
         let services = [];
         let barbers = [];
-        let bookedSlots = {}; // Alterado para objeto para fácil consulta
+        let bookedSlots = {};
         let scheduleConfig = {};
         let intervalTime = 30;
 
-        const authScreen = document.getElementById('authScreen');
-        const mainApp = document.getElementById('mainApp');
-        const authForm = document.getElementById('authForm');
-        const toggleAuth = document.getElementById('toggleAuth');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const nameGroup = document.getElementById('nameGroup');
-        const phoneGroup = document.getElementById('phoneGroup');
-        const authTitle = document.getElementById('authTitle');
-        const authBtn = document.getElementById('authBtn');
-        const toggleText = document.getElementById('toggleText');
-        const phoneInput = document.getElementById('phone');
-        const profileBtn = document.getElementById('profileBtn');
+        // Definir data mínima como hoje
+        currentDate.setHours(0, 0, 0, 0);
 
-        // Função para verificar se um agendamento é futuro
-        function isFutureBooking(bookingDate, bookingTime) {
-            const now = new Date();
-            const bookingDateTime = new Date(bookingDate + 'T' + bookingTime);
-            return bookingDateTime > now;
+        function formatPhone(input) {
+            let value = input.value.replace(/\D/g, '');
+            value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+            value = value.replace(/(\d)(\d{4})$/, '$1-$2');
+            input.value = value;
         }
 
-        // Função para verificar se um horário já passou
-        function isTimeSlotPassed(date, time) {
-            const now = new Date();
-            const slotDateTime = new Date(date + 'T' + time);
-            return slotDateTime <= now;
-        }
-
-        // Toggle Bookings Function
-        function toggleBookings() {
-            const content = document.getElementById('bookingsExpandableContent');
-            const icon = document.getElementById('bookingsExpandIcon');
-            
-            if (content.classList.contains('expanded')) {
-                content.classList.remove('expanded');
-                icon.classList.remove('rotated');
-                icon.textContent = '▼';
-            } else {
-                content.classList.add('expanded');
-                icon.classList.add('rotated');
-                icon.textContent = '▲';
-            }
-        }
-
-        function toggleProfileSection() {
-            const profileSection = document.getElementById('profileSection');
-            const bookingsSection = document.querySelector('.expandable-bookings');
-            const dashboardSection = document.getElementById('dashboardSection');
-            
-            if (profileSection.style.display === 'none') {
-                profileSection.style.display = 'block';
-                bookingsSection.style.display = 'none';
-                dashboardSection.style.display = 'none';
-            } else {
-                profileSection.style.display = 'none';
-                bookingsSection.style.display = 'block';
-                dashboardSection.style.display = 'grid';
-            }
-        }
-
-        profileBtn.addEventListener('click', toggleProfileSection);
-
-        phoneInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            
-            if (value.length > 11) {
-                value = value.slice(0, 11);
-            }
-            
-            if (value.length > 0) {
-                if (value.length <= 2) {
-                    value = `(${value}`;
-                } else if (value.length <= 7) {
-                    value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
-                } else {
-                    value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
-                }
-            }
-            
-            e.target.value = value;
+        // Formatação automática do telefone
+        document.getElementById('clientPhone').addEventListener('input', function() {
+            formatPhone(this);
         });
-
-        const profilePhoneInput = document.getElementById('profilePhone');
-        
-        profilePhoneInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\D/g, '');
-            
-            if (value.length > 11) {
-                value = value.slice(0, 11);
-            }
-            
-            if (value.length > 0) {
-                if (value.length <= 2) {
-                    value = `(${value}`;
-                } else if (value.length <= 7) {
-                    value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
-                } else {
-                    value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
-                }
-            }
-            
-            e.target.value = value;
-        });
-
-        function formatDateToYYYYMMDD(date) {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        function validateEmail(email) {
-            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        }
-
-        function validatePhone(phone) {
-            const cleaned = phone.replace(/\D/g, '');
-            return cleaned.length === 11;
-        }
-
-        function formatPhoneToWhatsApp(phone) {
-            let cleaned = phone.replace(/\D/g, '');
-            
-            if (cleaned.length !== 11) {
-                throw new Error('Número de telefone inválido');
-            }
-            
-            return '55' + cleaned;
-        }
-
-        function sanitizeInput(input) {
-            if (typeof input !== 'string') return input;
-            return input.trim().substring(0, 255);
-        }
 
         function updateStatusBadge() {
             const statusBadge = document.getElementById('statusBadge');
@@ -834,330 +524,6 @@
 
         function closeModal() {
             document.getElementById('confirmationModal').classList.add('hidden');
-            loadMyBookings();
-        }
-
-        async function loadUserProfile() {
-            try {
-                const { data: userData, error } = await supabase
-                    .from('users')
-                    .select('full_name, email, phone')
-                    .eq('id', currentUser.id)
-                    .single();
-
-                if (error) throw error;
-
-                if (userData) {
-                    document.getElementById('profileName').value = userData.full_name || '';
-                    document.getElementById('profileEmail').value = userData.email || '';
-                    
-                    // Show welcome message with client name
-                    if (userData.full_name) {
-                        const clientWelcome = document.getElementById('clientWelcome');
-                        const clientName = document.getElementById('clientName');
-                        clientName.textContent = userData.full_name;
-                        clientWelcome.style.display = 'block';
-                    }
-                    
-                    if (userData.phone) {
-                        const phone = userData.phone.replace('55', '');
-                        if (phone.length === 11) {
-                            const formatted = `(${phone.slice(0, 2)}) ${phone.slice(2, 7)}-${phone.slice(7)}`;
-                            document.getElementById('profilePhone').value = formatted;
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Erro ao carregar perfil:', error);
-            }
-        }
-
-        document.getElementById('profileForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const btn = document.getElementById('saveProfileBtn');
-            const fullName = sanitizeInput(document.getElementById('profileName').value);
-            const phone = sanitizeInput(document.getElementById('profilePhone').value);
-
-            if (!fullName || fullName.length < 3) {
-                alert('Nome completo inválido!');
-                return;
-            }
-
-            if (!phone || !validatePhone(phone)) {
-                alert('Telefone inválido! Digite DDD + 9 dígitos\nExemplo: (88) 99999-9999');
-                return;
-            }
-
-            const whatsappPhone = formatPhoneToWhatsApp(phone);
-
-            try {
-                btn.disabled = true;
-                btn.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Salvando...</span>';
-
-                const { error } = await supabase
-                    .from('users')
-                    .update({
-                        full_name: fullName,
-                        phone: whatsappPhone
-                    })
-                    .eq('id', currentUser.id);
-
-                if (error) throw error;
-
-                // Update welcome message
-                const clientName = document.getElementById('clientName');
-                clientName.textContent = fullName;
-                document.getElementById('clientWelcome').style.display = 'block';
-
-                alert('✅ Perfil atualizado com sucesso!');
-            } catch (error) {
-                alert('Erro ao atualizar perfil: ' + error.message);
-                console.error('Erro:', error);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<span><i class="fas fa-save"></i> Salvar Alterações</span>';
-            }
-        });
-
-        document.getElementById('passwordForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const btn = document.getElementById('changePasswordBtn');
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-
-            if (newPassword.length < 6) {
-                alert('A nova senha deve ter no mínimo 6 caracteres!');
-                return;
-            }
-
-            if (newPassword !== confirmPassword) {
-                alert('As senhas não coincidem!');
-                return;
-            }
-
-            try {
-                btn.disabled = true;
-                btn.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Alterando...</span>';
-
-                const email = currentUser.email;
-                const { error: signInError } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: currentPassword
-                });
-
-                if (signInError) {
-                    throw new Error('Senha atual incorreta!');
-                }
-
-                const { error: updateError } = await supabase.auth.updateUser({
-                    password: newPassword
-                });
-
-                if (updateError) throw updateError;
-
-                alert('✅ Senha alterada com sucesso!');
-                document.getElementById('passwordForm').reset();
-            } catch (error) {
-                alert('Erro ao alterar senha: ' + error.message);
-                console.error('Erro:', error);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<span><i class="fas fa-lock"></i> Alterar Senha</span>';
-            }
-        });
-
-        toggleAuth.addEventListener('click', () => {
-            isLogin = !isLogin;
-            if (isLogin) {
-                authTitle.textContent = 'Login';
-                authBtn.innerHTML = '<span>Entrar</span>';
-                toggleText.textContent = 'Não tem conta?';
-                toggleAuth.textContent = 'Cadastre-se';
-                nameGroup.classList.add('hidden');
-                phoneGroup.classList.add('hidden');
-            } else {
-                authTitle.textContent = 'Cadastro';
-                authBtn.innerHTML = '<span>Cadastrar</span>';
-                toggleText.textContent = 'Já tem conta?';
-                toggleAuth.textContent = 'Fazer login';
-                nameGroup.classList.remove('hidden');
-                phoneGroup.classList.remove('hidden');
-            }
-        });
-
-        authForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const email = sanitizeInput(document.getElementById('email').value);
-            const password = document.getElementById('password').value;
-            
-            if (!validateEmail(email)) {
-                alert('Email inválido!');
-                return;
-            }
-            
-            if (isLogin) {
-                try {
-                    authBtn.disabled = true;
-                    authBtn.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Entrando...</span>';
-                    
-                    const { data, error } = await supabase.auth.signInWithPassword({
-                        email: email,
-                        password: password
-                    });
-
-                    if (error) throw error;
-
-                    currentUser = data.user;
-                    
-                    const { data: userData, error: userError } = await supabase
-                        .from('users')
-                        .select('id')
-                        .eq('id', currentUser.id)
-                        .single();
-                    
-                    if (userError || !userData) {
-                        console.log('Criando registro de usuário na tabela users...');
-                        const { error: insertError } = await supabase
-                            .from('users')
-                            .insert([{
-                                id: currentUser.id,
-                                email: currentUser.email,
-                                full_name: currentUser.user_metadata?.full_name || email.split('@')[0],
-                                phone: currentUser.user_metadata?.phone || ''
-                            }]);
-                        
-                        if (insertError) {
-                            console.error('Erro ao criar registro:', insertError);
-                        }
-                    }
-                    
-                    showApp();
-                } catch (error) {
-                    alert('Erro ao fazer login: ' + error.message);
-                } finally {
-                    authBtn.disabled = false;
-                    authBtn.innerHTML = '<span>Entrar</span>';
-                }
-            } else {
-                const fullName = sanitizeInput(document.getElementById('fullName').value);
-                const phone = sanitizeInput(document.getElementById('phone').value);
-
-                if (!fullName || fullName.length < 3) {
-                    alert('Nome completo inválido!');
-                    return;
-                }
-
-                if (!phone || !validatePhone(phone)) {
-                    alert('Telefone inválido! Digite DDD + 9 dígitos\nExemplo: (88) 99999-9999');
-                    return;
-                }
-
-                const whatsappPhone = formatPhoneToWhatsApp(phone);
-
-                try {
-                    authBtn.disabled = true;
-                    authBtn.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Cadastrando...</span>';
-                    
-                    const { data, error } = await supabase.auth.signUp({
-                        email: email,
-                        password: password,
-                        options: {
-                            emailRedirectTo: undefined,
-                            data: {
-                                full_name: fullName,
-                                phone: whatsappPhone
-                            }
-                        }
-                    });
-
-                    if (error) throw error;
-
-                    if (data.user) {
-                        let retries = 3;
-                        let insertSuccess = false;
-                        
-                        while (retries > 0 && !insertSuccess) {
-                            try {
-                                const { data: existingUser } = await supabase
-                                    .from('users')
-                                    .select('id')
-                                    .eq('id', data.user.id)
-                                    .single();
-                                
-                                if (!existingUser) {
-                                    const { error: insertError } = await supabase
-                                        .from('users')
-                                        .insert([{
-                                            id: data.user.id,
-                                            email: email,
-                                            full_name: fullName,
-                                            phone: whatsappPhone
-                                        }]);
-
-                                    if (insertError) {
-                                        console.error('Tentativa de inserir usuário falhou:', insertError);
-                                        retries--;
-                                        if (retries > 0) {
-                                            await new Promise(resolve => setTimeout(resolve, 1000));
-                                            continue;
-                                        }
-                                        throw insertError;
-                                    }
-                                }
-                                
-                                insertSuccess = true;
-                            } catch (err) {
-                                if (retries === 1) {
-                                    console.error('Erro ao inserir usuário após todas as tentativas:', err);
-                                    throw new Error('Não foi possível completar o cadastro. Tente fazer login.');
-                                }
-                                retries--;
-                                await new Promise(resolve => setTimeout(resolve, 1000));
-                            }
-                        }
-
-                        currentUser = data.user;
-                        alert('Cadastro realizado com sucesso!');
-                        showApp();
-                    }
-                } catch (error) {
-                    alert('Erro ao cadastrar: ' + error.message);
-                    await supabase.auth.signOut();
-                } finally {
-                    authBtn.disabled = false;
-                    authBtn.innerHTML = '<span>Cadastrar</span>';
-                }
-            }
-        });
-
-        logoutBtn.addEventListener('click', async () => {
-            await supabase.auth.signOut();
-            currentUser = null;
-            authScreen.style.display = 'flex';
-            mainApp.style.display = 'none';
-            logoutBtn.style.display = 'none';
-            profileBtn.style.display = 'none';
-            document.getElementById('clientWelcome').style.display = 'none';
-            authForm.reset();
-        });
-
-        async function showApp() {
-            authScreen.style.display = 'none';
-            mainApp.style.display = 'block';
-            logoutBtn.style.display = 'block';
-            profileBtn.style.display = 'block';
-            await loadSettings();
-            await loadServices();
-            await loadBarbers();
-            await loadMyBookings();
-            await loadUserProfile();
-            renderCalendar();
-            updateStatusBadge();
-            setInterval(updateStatusBadge, 60000);
         }
 
         async function loadSettings() {
@@ -1179,81 +545,6 @@
                 updateStatusBadge();
             } catch (error) {
                 console.error('Erro ao carregar configurações:', error);
-            }
-        }
-
-        async function loadMyBookings() {
-            const container = document.getElementById('myBookingsGrid');
-            container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Carregando...</p>';
-            
-            try {
-                const { data, error } = await supabase
-                    .from('bookings')
-                    .select('*, services(name, price, duration), barbers(name)')
-                    .eq('user_id', currentUser.id)
-                    .order('booking_date', { ascending: true })
-                    .order('booking_time', { ascending: true });
-
-                if (error) throw error;
-
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Você ainda não tem agendamentos</p>';
-                    return;
-                }
-
-                // Filtrar apenas agendamentos futuros
-                const futureBookings = data.filter(booking => 
-                    isFutureBooking(booking.booking_date, booking.booking_time) && 
-                    booking.status === 'confirmed'
-                );
-
-                if (futureBookings.length === 0) {
-                    container.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 20px;">Você não possui agendamentos futuros</p>';
-                    return;
-                }
-
-                container.innerHTML = futureBookings.map((booking) => {
-                    const dateFormatted = new Date(booking.booking_date + 'T12:00:00').toLocaleDateString('pt-BR', { 
-                        weekday: 'long', 
-                        day: 'numeric', 
-                        month: 'long', 
-                        year: 'numeric'
-                    });
-                    
-                    const timeFormatted = booking.booking_time.substring(0, 5);
-                    
-                    return `
-                        <div class="booking-card ${booking.status}">
-                            <div class="booking-header">
-                                <h4><i class="fas fa-scissors"></i> ${booking.services?.name || 'Serviço'}</h4>
-                                <span class="booking-badge ${booking.status}">
-                                    ${booking.status === 'confirmed' ? 'Confirmado' : 
-                                      booking.status === 'completed' ? 'Concluído' : 'Cancelado'}
-                                </span>
-                            </div>
-                            
-                            <div class="booking-datetime">
-                                <div class="booking-date-highlight">
-                                    <i class="fas fa-calendar-day"></i>
-                                    <span>${dateFormatted}</span>
-                                </div>
-                                <div class="booking-time-highlight">
-                                    <i class="fas fa-clock"></i>
-                                    <span>${timeFormatted}</span>
-                                </div>
-                            </div>
-                            
-                            <div class="booking-info">
-                                <p><i class="fas fa-user-tie"></i> Barbeiro: ${booking.barbers?.name || 'Não especificado'}</p>
-                                <p><i class="fas fa-hourglass-half"></i> ${booking.services?.duration || 0} minutos</p>
-                                <p><i class="fas fa-money-bill-wave"></i> R$ ${booking.services?.price?.toFixed(2) || '0.00'}</p>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } catch (error) {
-                console.error('Erro ao carregar agendamentos:', error);
-                container.innerHTML = '<p style="color: var(--red); text-align: center; padding: 20px;"><i class="fas fa-exclamation-triangle"></i> Erro ao carregar agendamentos</p>';
             }
         }
 
@@ -1282,7 +573,6 @@
 
                 if (error) throw error;
 
-                // REMOÇÃO DA OPÇÃO "QUALQUER BARBEIRO"
                 barbers = data || [];
             } catch (error) {
                 console.error('Erro ao carregar barbeiros:', error);
@@ -1312,7 +602,7 @@
             const container = document.getElementById('barbersList');
             
             if (barbers.length === 0) {
-                container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Nenhum barbeiro disponível. Cadastre um barbeiro no painel Admin.</p>';
+                container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Nenhum barbeiro disponível</p>';
                 return;
             }
 
@@ -1321,9 +611,7 @@
                     ? `<img src="${barber.photo_url}" alt="${barber.name}">` 
                     : '<i class="fas fa-user-tie"></i>';
                 
-                // ID é sempre um UUID string
                 const barberIdString = barber.id;
-                
                 const isSelected = selectedBarber && selectedBarber.id == barberIdString;
                 
                 return `
@@ -1356,21 +644,15 @@
             renderBarbers();
             
             renderCalendar();
-            document.getElementById('confirmBooking').classList.add('hidden');
+            hideClientForm();
         }
 
-        // FUNÇÃO OTIMIZADA PARA A SELEÇÃO DO BARBEIRO (SEM LÓGICA DE NULL)
         function selectBarber(id) {
-            // ID é sempre o UUID do barbeiro
             const barberId = id;
-            
-            // Encontra o objeto barbeiro
             selectedBarber = barbers.find(b => b.id == barberId);
             
-            // Remove a classe 'selected' de todos os itens
             document.querySelectorAll('.barber-item').forEach(el => el.classList.remove('selected'));
             
-            // Adiciona a classe 'selected' ao item clicado
             const targetElement = document.querySelector(`.barber-item[data-barber-id="${barberId}"]`);
             if (targetElement) {
                 targetElement.classList.add('selected');
@@ -1380,9 +662,8 @@
             selectedDate = null;
             selectedTime = null;
             
-            // Re-renderiza o calendário para limpar a seleção de date e hora
             renderCalendar();
-            document.getElementById('confirmBooking').classList.add('hidden');
+            hideClientForm();
         }
 
         function renderCalendar() {
@@ -1441,7 +722,6 @@
                 return;
             }
             
-            // SELEÇÃO DE BARBEIRO É OBRIGATÓRIA
             if (!selectedBarber) {
                 alert('Selecione um barbeiro primeiro!');
                 return;
@@ -1464,14 +744,13 @@
                     .eq('booking_date', dateStr)
                     .eq('status', 'confirmed');
 
-                // FILTRO OBRIGATÓRIO: Sempre filtra pelo barbeiro selecionado
                 query = query.eq('barber_id', selectedBarber.id);
 
                 const { data, error } = await query;
 
                 if (error) throw error;
 
-                const allBookedSlots = {}; // { time: [barber_id]}
+                const allBookedSlots = {};
                 
                 data.forEach(booking => {
                     const startTime = booking.booking_time.substring(0, 5);
@@ -1496,7 +775,6 @@
             }
         }
         
-        // Função auxiliar para gerar todos os slots bloqueados por uma reserva
         function generateBlockedTimes(startTime, duration, interval) {
             const slots = [];
             const [startHour, startMin] = startTime.split(':').map(Number);
@@ -1564,15 +842,11 @@
                     let isBlocked = isTimePassed;
 
                     if (!isBlocked && selectedService) {
-                        
-                        // 1. Geração de horários de bloqueio para o serviço (inclui slots seguintes)
                         const blockTimes = generateBlockedTimes(time, serviceDuration, intervalTime);
                         
                         for (let blockTime of blockTimes) {
                             const bookingsAtBlockTime = bookedSlots[blockTime] || [];
                             
-                            // Se um barbeiro ESPECÍFICO foi selecionado:
-                            // O slot está bloqueado SE o ID do barbeiro estiver na lista de bookingsAtBlockTime.
                             if (bookingsAtBlockTime.includes(selectedBarber.id)) {
                                 isBlocked = true;
                                 break;
@@ -1595,183 +869,148 @@
         function selectTime(time) {
             selectedTime = time;
             renderTimeSlots();
-            showConfirmation();
+            showClientForm();
         }
 
-        function showConfirmation() {
-            const container = document.getElementById('confirmBooking');
-            const summary = document.getElementById('bookingSummary');
-            
-            const dateFormatted = selectedDate.toLocaleDateString('pt-BR', { 
-                weekday: 'long', 
-                day: 'numeric', 
-                month: 'long', 
-                year: 'numeric'
-            });
-            
-            // Barbeiro é sempre selectedBarber.name
-            const barberName = selectedBarber.name;
-            
-            summary.innerHTML = `
-                <p><strong><i class="fas fa-scissors"></i> Serviço:</strong> ${selectedService.name}</p>
-                <p><strong><i class="fas fa-user-tie"></i> Barbeiro:</strong> ${barberName}</p>
-                <p><strong><i class="fas fa-calendar"></i> Data:</strong> ${dateFormatted}</p>
-                <p><strong><i class="fas fa-clock"></i> Horário:</strong> ${selectedTime}</p>
-                <p><strong><i class="fas fa-money-bill-wave"></i> Valor:</strong> R$ ${selectedService.price.toFixed(2)}</p>
-                <p><strong><i class="fas fa-hourglass-half"></i> Duração:</strong> ${selectedService.duration} minutos</p>
-            `;
-            
-            container.classList.remove('hidden');
+        function showClientForm() {
+            const clientForm = document.getElementById('clientForm');
+            clientForm.classList.add('expanded');
         }
 
-        document.getElementById('confirmBtn').addEventListener('click', async (e) => {
-            const btn = e.target.closest('button');
-            if (btn.disabled) return;
+        function hideClientForm() {
+            const clientForm = document.getElementById('clientForm');
+            clientForm.classList.remove('expanded');
+        }
+
+        async function confirmAppointment() {
+            const name = document.getElementById('clientName').value.trim();
+            const phone = document.getElementById('clientPhone').value.trim();
             
-            btn.disabled = true;
-            btn.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Confirmando...</span>';
-            
+            if (!name || !phone || !selectedDate || !selectedTime) {
+                alert('Por favor, preencha todos os campos!');
+                return;
+            }
+
+            const confirmBtn = document.getElementById('confirmBtn');
+            confirmBtn.innerHTML = '<span class="loading"></span>Confirmando...';
+            confirmBtn.disabled = true;
+
+            const appointmentData = {
+                nome: name,
+                telefone: phone,
+                data: formatDateToYYYYMMDD(selectedDate),
+                hora: selectedTime,
+                servico: selectedService.name,
+                barbeiro: selectedBarber.name,
+                preco: selectedService.price,
+                duracao: selectedService.duration,
+                timestamp: new Date().toISOString()
+            };
+
             try {
-                // ... (código de verificação de usuário omitido para brevidade)
-                const { data: userData, error: userError } = await supabase
-                    .from('users')
-                    .select('id')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                if (userError || !userData) {
-                    // ... (criação de usuário omitida para brevidade)
-                    const { data: authUser } = await supabase.auth.getUser();
-                    
-                    const { error: insertError } = await supabase
-                        .from('users')
-                        .insert([{
-                            id: currentUser.id,
-                            email: authUser.user.email,
-                            full_name: authUser.user.user_metadata?.full_name || 'Usuário',
-                            phone: authUser.user.user_metadata?.phone || ''
-                        }]);
-                    
-                    if (insertError) {
-                        throw new Error('Erro ao criar perfil de usuário. Tente fazer logout e login novamente.');
-                    }
-                    
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                }
-                
-                const dateStr = formatDateToYYYYMMDD(selectedDate);
-                
-                // ID do barbeiro a ser salvo (agora sempre um UUID válido)
-                const barberIdToSave = selectedBarber.id;
-                
-                const { data: bookingData, error } = await supabase
-                    .from('bookings')
-                    .insert([{
-                        user_id: currentUser.id,
-                        service_id: selectedService.id,
-                        // ID do barbeiro específico
-                        barber_id: barberIdToSave, 
-                        booking_date: dateStr,
-                        booking_time: selectedTime,
-                        status: 'confirmed'
-                    }])
-                    .select('*, services(name, price, duration), barbers(name)')
-                    .single();
-
-                if (error) throw error;
-
-                // ... (código de webhook omitido para brevidade)
-                try {
-                    const { data: userDataFull } = await supabase
-                        .from('users')
-                        .select('full_name, phone, email')
-                        .eq('id', currentUser.id)
-                        .single();
-
-                    await fetch(WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            type: 'new_booking',
-                            booking_id: bookingData.id,
-                            customer_name: userDataFull?.full_name || 'Cliente',
-                            customer_email: userDataFull?.email || '',
-                            customer_phone: userDataFull?.phone || '',
-                            service_name: selectedService.name,
-                            service_price: selectedService.price,
-                            service_duration: selectedService.duration,
-                            barber_name: selectedBarber.name, 
-                            booking_date: selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
-                            booking_time: selectedTime,
-                            status: 'confirmed'
-                        })
-                    });
-                } catch (webhookError) {
-                    console.error('Erro ao enviar webhook:', webhookError);
-                }
-
-                const modal = document.getElementById('confirmationModal');
-                const modalDetails = document.getElementById('modalDetails');
-                
-                const dateFormatted = selectedDate.toLocaleDateString('pt-BR', { 
-                    weekday: 'long', 
-                    day: 'numeric', 
-                    month: 'long', 
-                    year: 'numeric'
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(appointmentData)
                 });
 
-                const finalBarberName = selectedBarber.name;
-                
-                modalDetails.innerHTML = `
-                    <p>
-                        <strong><i class="fas fa-scissors"></i> Serviço:</strong>
-                        <span>${selectedService.name}</span>
-                    </p>
-                    <p>
-                        <strong><i class="fas fa-user-tie"></i> Barbeiro:</strong>
-                        <span>${finalBarberName}</span>
-                    </p>
-                    <p>
-                        <strong><i class="fas fa-calendar"></i> Data:</strong>
-                        <span>${dateFormatted}</span>
-                    </p>
-                    <p>
-                        <strong><i class="fas fa-clock"></i> Horário:</strong>
-                        <span>${selectedTime}</span>
-                    </p>
-                    <p>
-                        <strong><i class="fas fa-hourglass-half"></i> Duração:</strong>
-                        <span>${selectedService.duration} minutos</span>
-                    </p>
-                    <p>
-                        <strong><i class="fas fa-money-bill-wave"></i> Valor:</strong>
-                        <span>R$ ${selectedService.price.toFixed(2)}</span>
-                    </p>
-                `;
-                
-                modal.classList.remove('hidden');
-                
-                selectedService = null;
-                selectedBarber = null;
-                selectedDate = null;
-                selectedTime = null;
-                
-                document.querySelectorAll('.service-item').forEach(el => el.classList.remove('selected'));
-                document.querySelectorAll('.barber-item').forEach(el => el.classList.remove('selected'));
-                document.getElementById('confirmBooking').classList.add('hidden');
-                document.getElementById('barberSelection').style.display = 'none';
-                document.getElementById('timeSlotsContainer').innerHTML = '';
-                renderCalendar();
+                if (response.ok) {
+                    // Show success modal
+                    const modal = document.getElementById('confirmationModal');
+                    const modalDetails = document.getElementById('modalDetails');
+                    
+                    const dateFormatted = selectedDate.toLocaleDateString('pt-BR', { 
+                        weekday: 'long', 
+                        day: 'numeric', 
+                        month: 'long', 
+                        year: 'numeric'
+                    });
+
+                    modalDetails.innerHTML = `
+                        <p>
+                            <strong><i class="fas fa-user"></i> Nome:</strong>
+                            <span>${name}</span>
+                        </p>
+                        <p>
+                            <strong><i class="fas fa-phone"></i> Telefone:</strong>
+                            <span>${phone}</span>
+                        </p>
+                        <p>
+                            <strong><i class="fas fa-scissors"></i> Serviço:</strong>
+                            <span>${selectedService.name}</span>
+                        </p>
+                        <p>
+                            <strong><i class="fas fa-user-tie"></i> Barbeiro:</strong>
+                            <span>${selectedBarber.name}</span>
+                        </p>
+                        <p>
+                            <strong><i class="fas fa-calendar"></i> Data:</strong>
+                            <span>${dateFormatted}</span>
+                        </p>
+                        <p>
+                            <strong><i class="fas fa-clock"></i> Horário:</strong>
+                            <span>${selectedTime}</span>
+                        </p>
+                        <p>
+                            <strong><i class="fas fa-money-bill-wave"></i> Valor:</strong>
+                            <span>R$ ${selectedService.price.toFixed(2)}</span>
+                        </p>
+                    `;
+                    
+                    modal.classList.remove('hidden');
+                    
+                    // Reset form
+                    setTimeout(() => {
+                        resetForm();
+                    }, 3000);
+                } else {
+                    throw new Error('Erro na resposta do servidor');
+                }
             } catch (error) {
-                alert('Erro ao confirmar agendamento: ' + error.message);
-                console.error('Erro completo:', error);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<span>Confirmar Agendamento</span>';
+                console.error('Erro ao enviar agendamento:', error);
+                alert('Erro ao confirmar agendamento. Tente novamente.');
+                
+                confirmBtn.innerHTML = 'Confirmar Agendamento';
+                confirmBtn.disabled = false;
             }
-        });
+        }
+
+        function resetForm() {
+            document.getElementById('clientName').value = '';
+            document.getElementById('clientPhone').value = '';
+            
+            document.querySelectorAll('.service-item').forEach(s => s.classList.remove('selected'));
+            document.querySelectorAll('.barber-item').forEach(s => s.classList.remove('selected'));
+            
+            hideClientForm();
+            document.getElementById('barberSelection').style.display = 'none';
+            document.getElementById('timeSlotsContainer').innerHTML = '';
+            
+            document.getElementById('confirmBtn').innerHTML = 'Confirmar Agendamento';
+            document.getElementById('confirmBtn').disabled = false;
+            
+            selectedService = null;
+            selectedBarber = null;
+            selectedDate = null;
+            selectedTime = null;
+            
+            renderCalendar();
+        }
+
+        function formatDateToYYYYMMDD(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function isTimeSlotPassed(date, time) {
+            const now = new Date();
+            const slotDateTime = new Date(date + 'T' + time);
+            return slotDateTime <= now;
+        }
 
         document.getElementById('prevMonth').addEventListener('click', () => {
             currentDate.setMonth(currentDate.getMonth() - 1);
@@ -1783,31 +1022,18 @@
             renderCalendar();
         });
 
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                currentUser = session.user;
-                showApp();
-            } else {
-                loadSettings();
-                updateStatusBadge();
-            }
-        });
+        // Initialize app
+        async function initApp() {
+            await loadSettings();
+            await loadServices();
+            await loadBarbers();
+            renderCalendar();
+            updateStatusBadge();
+            setInterval(updateStatusBadge, 60000);
+        }
 
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' && session) {
-                currentUser = session.user;
-                showApp();
-            } else if (event === 'SIGNED_OUT') {
-                currentUser = null;
-                authScreen.style.display = 'flex';
-                mainApp.style.display = 'none';
-                logoutBtn.style.display = 'none';
-                document.getElementById('clientWelcome').style.display = 'none';
-                alert('Sessão encerrada.');
-            }
-        });
-
-        loadSettings();
+        // Start the app
+        initApp();
     </script>
 </body>
 </html>
