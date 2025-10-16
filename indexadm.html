@@ -27,7 +27,7 @@
             --orange: #ff9800; 
             --green: #4caf50;
             --whatsapp: #25D366;
-            --confirm: #1e90ff; /* Cor para o botão de confirmação */
+            --confirm: #1e90ff; 
             --border-radius: 8px;
             --transition: all 0.3s ease;
             --shadow: 0 3px 20px rgba(0, 0, 0, 0.3);
@@ -487,7 +487,7 @@
             box-shadow: 0 5px 20px rgba(135, 206, 235, 0.15); 
         }
         
-        /* Estilo para agendamentos PENDENTES (MANTIDO, mas não deve aparecer na prática) */
+        /* Estilo para agendamentos PENDENTES (Não deve mais ocorrer) */
         .booking-item.status-pending { 
             border-left-color: var(--orange); 
         }
@@ -1389,7 +1389,7 @@
                         <option value="all">Todos os Status</option>
                         <option value="completed">Concluídos</option>
                         <option value="cancelled">Cancelados</option>
-                        </select>
+                    </select>
                     <input type="date" id="filterDate" aria-label="Filtrar por data">
                     <button class="btn btn-secondary" onclick="loadBookings()">
                         <i class="fas fa-search" aria-hidden="true"></i> Filtrar
@@ -1742,7 +1742,7 @@
             realtimeChannel = supabase.channel('bookings-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
                     console.log('Mudança detectada:', payload);
-                    if (payload.eventType === 'INSERT') {
+                    if (payload.eventType === 'INSERT' && payload.new.status === 'confirmed') {
                          showNotification('Novo agendamento confirmado automaticamente!', 'success');
                     }
                     if (payload.eventType === 'DELETE') {
@@ -1890,7 +1890,7 @@
             }
         }
 
-        // Charts Functions (Mantidas)
+        // Charts Functions
         function initializeCharts() {
             if (chartsInitialized) return;
             
@@ -2043,6 +2043,103 @@
             updateCharts();
         }
 
+        async function updateCharts(customStart = null, customEnd = null) {
+            if (!chartsInitialized) return;
+
+            try {
+                const { startDate, endDate } = customStart && customEnd ? 
+                    { startDate: customStart, endDate: customEnd } : getPeriodDates();
+
+                // Buscar dados dos agendamentos
+                const { data: bookingsData } = await supabase
+                    .from('bookings')
+                    .select('*, services(name, price), users(full_name, phone)')
+                    .gte('booking_date', startDate)
+                    .lte('booking_date', endDate);
+
+                if (!bookingsData) return;
+
+                // Atualizar gráfico de dias
+                const daysCounts = [0, 0, 0, 0, 0, 0, 0];
+                bookingsData.forEach(booking => {
+                    const dayOfWeek = new Date(booking.booking_date + 'T12:00:00').getDay();
+                    daysCounts[dayOfWeek]++;
+                });
+                charts.daysChart.data.datasets[0].data = daysCounts;
+                charts.daysChart.update();
+
+                // Atualizar gráfico de horários
+                const hoursCounts = {};
+                bookingsData.forEach(booking => {
+                    const hour = booking.booking_time.substring(0, 2) + ':00';
+                    hoursCounts[hour] = (hoursCounts[hour] || 0) + 1;
+                });
+                const hoursData = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00']
+                    .map(hour => hoursCounts[hour] || 0);
+                charts.hoursChart.data.datasets[0].data = hoursData;
+                charts.hoursChart.update();
+
+                // Atualizar gráfico de serviços
+                const servicesCounts = {};
+                bookingsData.forEach(booking => {
+                    const serviceName = booking.services?.name || 'Desconhecido';
+                    servicesCounts[serviceName] = (servicesCounts[serviceName] || 0) + 1;
+                });
+                const topServices = Object.entries(servicesCounts).slice(0, 5);
+                charts.servicesChart.data.labels = topServices.map(([name]) => name);
+                charts.servicesChart.data.datasets[0].data = topServices.map(([, count]) => count);
+                charts.servicesChart.update();
+
+                // Atualizar gráfico de faturamento mensal
+                const monthlyRevenue = {};
+                bookingsData.forEach(booking => {
+                    if (booking.status === 'completed') {
+                        const month = booking.booking_date.substring(0, 7);
+                        monthlyRevenue[month] = (monthlyRevenue[month] || 0) + (booking.services?.price || 0);
+                    }
+                });
+                
+                const currentYear = new Date().getFullYear();
+                const revenueData = [];
+                for (let i = 0; i < 12; i++) {
+                    const month = `${currentYear}-${(i + 1).toString().padStart(2, '0')}`;
+                    revenueData.push(monthlyRevenue[month] || 0);
+                }
+                charts.revenueChart.data.datasets[0].data = revenueData;
+                charts.revenueChart.update();
+
+                // Atualizar gráfico de performance dos barbeiros
+                charts.barbersChart.data.datasets[0].data = [bookingsData.length];
+                charts.barbersChart.update();
+
+                // Atualizar gráfico de taxa de cancelamento
+                const cancellationData = {};
+                bookingsData.forEach(booking => {
+                    const month = booking.booking_date.substring(0, 7);
+                    if (!cancellationData[month]) {
+                        cancellationData[month] = { total: 0, cancelled: 0 };
+                    }
+                    cancellationData[month].total++;
+                    if (booking.status === 'cancelled') {
+                        cancellationData[month].cancelled++;
+                    }
+                });
+
+                const cancellationRates = [];
+                for (let i = 0; i < 6; i++) {
+                    const month = `${currentYear}-${(i + 1).toString().padStart(2, '0')}`;
+                    const data = cancellationData[month];
+                    const rate = data ? (data.cancelled / data.total * 100) : 0;
+                    cancellationRates.push(rate);
+                }
+                charts.cancellationChart.data.datasets[0].data = cancellationRates;
+                charts.cancellationChart.update();
+
+            } catch (error) {
+                console.error('Erro ao atualizar gráficos:', error);
+            }
+        }
+
         // Booking Management Functions
         async function loadBookings() {
             const container = document.getElementById('bookingsTable');
@@ -2061,7 +2158,8 @@
                 let query = supabase.from('bookings')
                     .select('*, users(full_name, phone, email), services(name, price, duration), barbers(name)')
                     .eq('booking_date', filterDate) 
-                    .order('booking_time', { ascending: true });
+                    // MUDANÇA: Ordena por horário (do mais recente/próximo para o mais antigo)
+                    .order('booking_time', { ascending: false }); 
                 
                 if (filterStatus !== 'all') query = query.eq('status', filterStatus);
                 
@@ -2149,8 +2247,6 @@
             }
         }
 
-        // Webhook é removido daqui e MOVIMENTADO para o index.html
-
         async function updateBookingStatus(bookingId, status) {
             if (!bookingId) { 
                 showNotification('ID inválido', 'error'); 
@@ -2161,7 +2257,7 @@
             if (!confirm(`Tem certeza que deseja ${actionText} este agendamento?`)) return;
             
             try {
-                // Não há mais chamada de webhook aqui
+                // Não há mais chamada de webhook aqui (movida para o index.html)
                 const { error } = await supabase.from('bookings')
                     .update({ status: status })
                     .eq('id', bookingId);
@@ -2349,64 +2445,6 @@
             } catch (error) {
                 console.error('Erro ao carregar barbeiros:', error);
                 showNotification('Erro ao carregar barbeiros', 'error');
-            }
-        }
-
-        async function addBarber() {
-            const name = document.getElementById('barberName').value.trim();
-            const specialty = document.getElementById('barberSpecialty').value.trim();
-            const photoFile = document.getElementById('barberPhoto').files[0];
-            
-            if (!name || name.length < 3) { 
-                showNotification('Nome do barbeiro inválido!', 'error'); 
-                return; 
-            }
-            
-            try {
-                let photoUrl = null;
-                
-                // Upload da foto se fornecida
-                if (photoFile) {
-                    if (photoFile.size > 2 * 1024 * 1024) { // 2MB
-                        showNotification('Arquivo muito grande! Máximo 2MB.', 'error');
-                        return;
-                    }
-                    
-                    const fileExt = photoFile.name.split('.').pop();
-                    const fileName = `${Math.random()}.${fileExt}`;
-                    
-                    const { data: uploadData, error: uploadError } = await supabase.storage
-                        .from('barber-photos')
-                        .upload(fileName, photoFile);
-                    
-                    if (uploadError) {
-                        console.error('Erro no upload:', uploadError);
-                        showNotification('Erro ao fazer upload da foto', 'error');
-                        return;
-                    }
-                    
-                    const { data: urlData } = supabase.storage
-                        .from('barber-photos')
-                        .getPublicUrl(fileName);
-                    
-                    photoUrl = urlData.publicUrl;
-                }
-                
-                const { error } = await supabase.from('barbers').insert([{ 
-                    name, 
-                    specialty: specialty || null,
-                    photo_url: photoUrl
-                }]);
-                
-                if (error) throw error;
-                
-                showNotification('Barbeiro adicionado com sucesso!', 'success');
-                document.getElementById('barberName').value = '';
-                document.getElementById('barberSpecialty').value = '';
-                document.getElementById('barberPhoto').value = '';
-                loadBarbers();
-            } catch (error) {
-                showNotification('Erro ao adicionar barbeiro: ' + error.message, 'error');
             }
         }
 
