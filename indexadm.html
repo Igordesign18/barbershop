@@ -27,6 +27,7 @@
             --orange: #ff9800; 
             --green: #4caf50;
             --whatsapp: #25D366;
+            --confirm: #1e90ff; /* Cor para o botão de confirmação */
             --border-radius: 8px;
             --transition: all 0.3s ease;
             --shadow: 0 3px 20px rgba(0, 0, 0, 0.3);
@@ -486,6 +487,18 @@
             box-shadow: 0 5px 20px rgba(135, 206, 235, 0.15); 
         }
         
+        /* Estilo para agendamentos PENDENTES */
+        .booking-item.status-pending { 
+            border-left-color: var(--orange); 
+            animation: pulse-pending 2s infinite; 
+        }
+        
+        @keyframes pulse-pending {
+            0% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 152, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); }
+        }
+
         .booking-main { 
             display: flex; 
             justify-content: space-between; 
@@ -574,6 +587,11 @@
             background: var(--red); 
             color: white; 
         }
+
+        .status-pending { 
+            background: var(--orange); 
+            color: white; 
+        }
         
         .status-completed { 
             background: var(--text-muted); 
@@ -609,6 +627,16 @@
             justify-content: center; 
             gap: 6px; 
             text-decoration: none;
+        }
+
+        .btn-confirm { 
+            background: var(--confirm); /* Azul */
+            color: white; 
+        }
+        
+        .btn-confirm:hover { 
+            background: #1c7ed6; 
+            transform: translateY(-2px); 
         }
         
         .btn-cancel { 
@@ -1361,11 +1389,12 @@
 
         <div class="content-grid">
             <div class="card full-width">
-                <h2><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agendamentos de Hoje</h2>
+                <h2><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agendamentos</h2>
                 <div class="filter-section">
                     <select id="filterStatus" aria-label="Filtrar por status">
-                        <option value="confirmed">Novos Agendamentos</option>
+                        <option value="pending">Novos Agendamentos</option>
                         <option value="all">Todos os Status</option>
+                        <option value="confirmed">Confirmados</option>
                         <option value="completed">Concluídos</option>
                         <option value="cancelled">Cancelados</option>
                     </select>
@@ -1539,6 +1568,7 @@
     <script>
         const SUPABASE_URL = 'https://huggzgfejtedacfyatke.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1Z2d6Z2ZlanRlZGFjZnlhdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NDk3ODYsImV4cCI6MjA3NjAyNTc4Nn0.aTrXAe7m1KsRNwH28LmBvcOlBjYI8C-2kvHYGdkUmv8';
+        const WEBHOOK_URL = 'https://n8n-n8n.rthuab.easypanel.host/webhook/barbearia'; // URL do Webhook
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         let currentAdmin = null;
@@ -1720,8 +1750,11 @@
             realtimeChannel = supabase.channel('bookings-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
                     console.log('Mudança detectada:', payload);
+                    if (payload.eventType === 'INSERT') {
+                         showNotification('Novo agendamento pendente de confirmação!', 'warning');
+                    }
                     if (payload.eventType === 'DELETE') {
-                        showNotification('Um agendamento foi cancelado pelo cliente!', 'warning');
+                        showNotification('Um agendamento foi cancelado/excluído!', 'warning');
                     }
                     loadBookings();
                     if (document.getElementById('dashboardContainer').classList.contains('active')) {
@@ -1781,6 +1814,7 @@
                 // Definir a data de hoje como padrão no filtro
                 const today = new Date().toISOString().split('T')[0];
                 document.getElementById('filterDate').value = today;
+                document.getElementById('filterStatus').value = 'pending'; // PADRÃO: NOVOS AGENDAMENTOS
                 
                 await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings()]);
             } catch (error) {
@@ -1789,31 +1823,34 @@
             }
         }
 
-        // Statistics Functions - MODIFICADO: Faturamento apenas com agendamentos concluídos
+        // Statistics Functions
         async function loadStats(customStart = null, customEnd = null) {
             try {
                 const { startDate, endDate } = customStart && customEnd ? 
                     { startDate: customStart, endDate: customEnd } : getPeriodDates();
                 
                 // Period bookings
+                // Ajustado para buscar users(full_name, phone) para clientes logados
                 const { data: periodData } = await supabase
                     .from('bookings')
-                    .select('*, services(name, price)')
+                    .select('*, services(name, price), users(full_name, phone)') 
                     .gte('booking_date', startDate)
                     .lte('booking_date', endDate);
                 
                 const confirmed = periodData?.filter(b => b.status === 'confirmed').length || 0;
                 const completed = periodData?.filter(b => b.status === 'completed').length || 0;
                 const cancelled = periodData?.filter(b => b.status === 'cancelled').length || 0;
+                const pending = periodData?.filter(b => b.status === 'pending').length || 0;
                 
                 document.getElementById('periodBookings').textContent = periodData?.length || 0;
                 document.getElementById('bookingsDetails').innerHTML = `
+                    <div class="detail-item"><span>Pendentes</span><span>${pending}</span></div>
                     <div class="detail-item"><span>Confirmados</span><span>${confirmed}</span></div>
                     <div class="detail-item"><span>Concluídos</span><span>${completed}</span></div>
                     <div class="detail-item"><span>Cancelados</span><span>${cancelled}</span></div>
                 `;
                 
-                // Revenue - MODIFICADO: Calcular apenas com agendamentos concluídos
+                // Revenue - Calcular apenas com agendamentos concluídos
                 const completedBookings = periodData?.filter(b => b.status === 'completed') || [];
                 
                 const revenue = completedBookings.reduce((sum, booking) => sum + (booking.services?.price || 0), 0);
@@ -1826,11 +1863,21 @@
                     <div class="detail-item"><span>Cancelados (Sem Faturamento)</span><span>${cancelled}</span></div>
                 `;
                 
-                // Unique clients
-                const uniqueClients = new Set(periodData?.map(b => b.user_id)).size;
+                // Unique clients (Prioriza user_id, mas conta customer_full_name se user_id for null)
+                const clientIdentifiers = new Set();
+                periodData?.forEach(booking => {
+                    if (booking.user_id) {
+                        clientIdentifiers.add(booking.user_id);
+                    } else if (booking.customer_phone) {
+                        // Usa o telefone como identificador para anônimos
+                        clientIdentifiers.add('anon:' + booking.customer_phone);
+                    }
+                });
+
+                const uniqueClients = clientIdentifiers.size;
                 document.getElementById('periodClients').textContent = uniqueClients;
                 document.getElementById('clientsDetails').innerHTML = `
-                    <div class="detail-item"><span>Total de Atendimentos</span><span>${periodData?.length || 0}</span></div>
+                    <div class="detail-item"><span>Total de Agendamentos</span><span>${periodData?.length || 0}</span></div>
                     <div class="detail-item"><span>Clientes Únicos</span><span>${uniqueClients}</span></div>
                     <div class="detail-item"><span>Média por Cliente</span><span>${uniqueClients ? (periodData.length / uniqueClients).toFixed(1) : 0}</span></div>
                 `;
@@ -1854,11 +1901,11 @@
             }
         }
 
-        // Charts Functions
+        // Charts Functions (Mantidas, mas atualizadas para incluir a busca de dados de cliente)
         function initializeCharts() {
             if (chartsInitialized) return;
             
-            // Configurações padrão dos gráficos
+            // Configurações padrão dos gráficos... (mantidas)
             const defaultOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -1950,7 +1997,7 @@
                 }
             });
 
-            // Gráfico de Faturamento Mensal - MODIFICADO: Apenas agendamentos concluídos
+            // Gráfico de Faturamento Mensal - Apenas agendamentos concluídos
             const revenueCtx = document.getElementById('revenueChart').getContext('2d');
             charts.revenueChart = new Chart(revenueCtx, {
                 type: 'line',
@@ -2014,16 +2061,16 @@
                 const { startDate, endDate } = customStart && customEnd ? 
                     { startDate: customStart, endDate: customEnd } : getPeriodDates();
 
-                // Buscar dados dos agendamentos
+                // Buscar dados dos agendamentos (incluindo campos de cliente)
                 const { data: bookingsData } = await supabase
                     .from('bookings')
-                    .select('*, services(name, price)')
+                    .select('*, services(name, price), users(full_name, phone)')
                     .gte('booking_date', startDate)
                     .lte('booking_date', endDate);
 
                 if (!bookingsData) return;
 
-                // Atualizar gráfico de dias
+                // Atualizar gráfico de dias (Lógica mantida)
                 const daysCounts = [0, 0, 0, 0, 0, 0, 0];
                 bookingsData.forEach(booking => {
                     const dayOfWeek = new Date(booking.booking_date + 'T12:00:00').getDay();
@@ -2032,7 +2079,7 @@
                 charts.daysChart.data.datasets[0].data = daysCounts;
                 charts.daysChart.update();
 
-                // Atualizar gráfico de horários
+                // Atualizar gráfico de horários (Lógica mantida)
                 const hoursCounts = {};
                 bookingsData.forEach(booking => {
                     const hour = booking.booking_time.substring(0, 2) + ':00';
@@ -2043,7 +2090,7 @@
                 charts.hoursChart.data.datasets[0].data = hoursData;
                 charts.hoursChart.update();
 
-                // Atualizar gráfico de serviços
+                // Atualizar gráfico de serviços (Lógica mantida)
                 const servicesCounts = {};
                 bookingsData.forEach(booking => {
                     const serviceName = booking.services?.name || 'Desconhecido';
@@ -2054,7 +2101,7 @@
                 charts.servicesChart.data.datasets[0].data = topServices.map(([, count]) => count);
                 charts.servicesChart.update();
 
-                // Atualizar gráfico de faturamento mensal - MODIFICADO: Apenas agendamentos concluídos
+                // Atualizar gráfico de faturamento mensal
                 const monthlyRevenue = {};
                 bookingsData.forEach(booking => {
                     if (booking.status === 'completed') {
@@ -2072,11 +2119,11 @@
                 charts.revenueChart.data.datasets[0].data = revenueData;
                 charts.revenueChart.update();
 
-                // Atualizar gráfico de performance dos barbeiros (assumindo apenas BarberSync)
+                // Atualizar gráfico de performance dos barbeiros (Lógica mantida)
                 charts.barbersChart.data.datasets[0].data = [bookingsData.length];
                 charts.barbersChart.update();
 
-                // Atualizar gráfico de taxa de cancelamento
+                // Atualizar gráfico de taxa de cancelamento (Lógica mantida)
                 const cancellationData = {};
                 bookingsData.forEach(booking => {
                     const month = booking.booking_date.substring(0, 7);
@@ -2104,7 +2151,7 @@
             }
         }
 
-        // Booking Management Functions - MODIFICADO: Filtrar por data atual por padrão
+        // Booking Management Functions - AJUSTADO
         async function loadBookings() {
             const container = document.getElementById('bookingsTable');
             container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><p>Carregando...</p></div>';
@@ -2113,16 +2160,16 @@
                 const filterStatus = document.getElementById('filterStatus').value;
                 let filterDate = document.getElementById('filterDate').value;
                 
-                // Se não há data selecionada, usar a data atual
                 if (!filterDate) {
                     const today = new Date().toISOString().split('T')[0];
                     filterDate = today;
                     document.getElementById('filterDate').value = today;
                 }
                 
+                // AJUSTE: Inclui os campos de cliente anônimo (customer_full_name, customer_phone)
                 let query = supabase.from('bookings')
                     .select('*, users(full_name, phone, email), services(name, price, duration), barbers(name)')
-                    .eq('booking_date', filterDate) // SEMPRE filtrar pela data
+                    .eq('booking_date', filterDate) 
                     .order('booking_time', { ascending: true });
                 
                 if (filterStatus !== 'all') query = query.eq('status', filterStatus);
@@ -2141,24 +2188,33 @@
                     const dateDayMonth = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
                     const timeFormatted = booking.booking_time.substring(0, 5);
                     
-                    // Formatar número de telefone para WhatsApp (remover caracteres especiais)
-                    const phoneNumber = booking.users?.phone ? booking.users.phone.replace(/\D/g, '') : '';
-                    const whatsappLink = phoneNumber ? 
-                        `https://wa.me/55${phoneNumber}?text=Olá ${booking.users?.full_name || 'cliente'}, aqui é da Barbearia BarberSync! Entrando em contato sobre seu agendamento de ${dateDayMonth} às ${timeFormatted}.` : 
+                    // LÓGICA DE CLIENTE AJUSTADA: Prioriza dados do usuário logado, mas usa campos anônimos (customer_...)
+                    const clientName = booking.users?.full_name || booking.customer_full_name || 'Cliente Anônimo';
+                    const clientPhone = booking.users?.phone || booking.customer_phone || 'Sem telefone';
+                    
+                    // Formatar número de telefone para WhatsApp
+                    const phoneNumberClean = clientPhone.replace(/\D/g, '');
+                    const whatsappLink = phoneNumberClean ? 
+                        `https://wa.me/55${phoneNumberClean}?text=Olá ${clientName.split(' ')[0]}, aqui é da Barbearia BarberSync! Entrando em contato sobre seu agendamento de ${dateDayMonth} às ${timeFormatted}.` : 
                         '#';
                     
+                    // Adicionar classe de estilo para agendamentos pendentes
+                    const itemClass = `booking-item status-${booking.status}`;
+
                     return `
-                        <div class="booking-item">
+                        <div class="${itemClass}">
                             <div class="booking-main">
                                 <div class="booking-client">
-                                    <h4><i class="fas fa-user" aria-hidden="true"></i> ${booking.users?.full_name || 'Cliente'}</h4>
+                                    <h4><i class="fas fa-user" aria-hidden="true"></i> ${clientName}</h4>
                                     <p><i class="fas fa-cut" aria-hidden="true"></i> ${booking.services?.name}</p>
                                     <p><i class="fas fa-user-tie" aria-hidden="true"></i> Barbeiro: ${booking.barbers?.name || 'Não especificado'}</p>
-                                    <p><i class="fas fa-phone" aria-hidden="true"></i> ${booking.users?.phone || 'Sem telefone'}</p>
+                                    <p><i class="fas fa-phone" aria-hidden="true"></i> ${clientPhone}</p>
                                     <p><i class="fas fa-dollar-sign" aria-hidden="true"></i> R$ ${booking.services?.price?.toFixed(2) || '0.00'} • <i class="fas fa-hourglass-half" aria-hidden="true"></i> ${booking.services?.duration || 0}min</p>
                                 </div>
                                 <span class="booking-status status-${booking.status}">
-                                    ${booking.status === 'confirmed' ? 'Confirmado' : booking.status === 'completed' ? 'Concluído' : 'Cancelado'}
+                                    ${booking.status === 'confirmed' ? 'Confirmado' : 
+                                      booking.status === 'completed' ? 'Concluído' : 
+                                      booking.status === 'pending' ? 'Pendente' : 'Cancelado'}
                                 </span>
                             </div>
                             
@@ -2176,7 +2232,14 @@
                             
                             <div class="booking-footer">
                                 <div class="booking-actions">
-                                    ${booking.status === 'confirmed' ? `
+                                    ${booking.status === 'pending' ? `
+                                        <button class="btn-confirm" onclick="updateBookingStatus('${booking.id}', 'confirmed')" aria-label="Confirmar agendamento">
+                                            <i class="fas fa-check-circle" aria-hidden="true"></i> Confirmar
+                                        </button>
+                                        <button class="btn-cancel" onclick="updateBookingStatus('${booking.id}', 'cancelled')" aria-label="Cancelar agendamento">
+                                            <i class="fas fa-times-circle" aria-hidden="true"></i> Cancelar
+                                        </button>
+                                    ` : booking.status === 'confirmed' ? `
                                         <button class="btn-cancel" onclick="updateBookingStatus('${booking.id}', 'cancelled')" aria-label="Cancelar agendamento">
                                             <i class="fas fa-times-circle" aria-hidden="true"></i> Cancelar
                                         </button>
@@ -2187,7 +2250,7 @@
                                     <button class="btn-delete" onclick="deleteBooking('${booking.id}')" aria-label="Excluir agendamento">
                                         <i class="fas fa-trash" aria-hidden="true"></i> Excluir
                                     </button>
-                                    ${phoneNumber ? `
+                                    ${phoneNumberClean ? `
                                         <a href="${whatsappLink}" class="btn-whatsapp" target="_blank" aria-label="Conversar no WhatsApp">
                                             <i class="fab fa-whatsapp" aria-hidden="true"></i> Chat
                                         </a>
@@ -2204,20 +2267,65 @@
             }
         }
 
+        async function sendWebhook(booking) {
+            try {
+                // Prepara os dados do cliente para o webhook (prioriza dados logados, mas usa campos de cliente se anônimo)
+                const clientName = booking.users?.full_name || booking.customer_full_name || 'Cliente Anônimo';
+                const clientPhone = booking.users?.phone || booking.customer_phone || '';
+                const clientEmail = booking.users?.email || '';
+
+                await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        type: 'booking_confirmed',
+                        booking_id: booking.id,
+                        customer_name: clientName,
+                        customer_phone: clientPhone,
+                        customer_email: clientEmail,
+                        service_name: booking.services?.name,
+                        service_price: booking.services?.price,
+                        service_duration: booking.services?.duration,
+                        barber_name: booking.barbers?.name, 
+                        booking_date: new Date(booking.booking_date + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+                        booking_time: booking.booking_time.substring(0, 5),
+                        status: 'confirmed'
+                    })
+                });
+                console.log('Webhook de confirmação enviado com sucesso.');
+            } catch (webhookError) {
+                console.error('Erro ao enviar webhook de confirmação:', webhookError);
+                showNotification('Erro ao notificar webhook (checar console)', 'warning');
+            }
+        }
+
         async function updateBookingStatus(bookingId, status) {
             if (!bookingId) { 
                 showNotification('ID inválido', 'error'); 
                 return; 
             }
             
-            const actionText = status === 'completed' ? 'concluir' : 'cancelar';
+            const actionText = status === 'completed' ? 'concluir' : status === 'cancelled' ? 'cancelar' : 'confirmar';
             if (!confirm(`Tem certeza que deseja ${actionText} este agendamento?`)) return;
             
             try {
-                const { error } = await supabase.from('bookings').update({ status: status }).eq('id', bookingId);
+                // 1. Atualiza o status
+                const { data, error } = await supabase.from('bookings')
+                    .update({ status: status })
+                    .eq('id', bookingId)
+                    .select('*, users(full_name, phone, email), services(name, price, duration), barbers(name)')
+                    .single();
+
                 if (error) throw error;
                 
-                showNotification(`Agendamento ${status === 'completed' ? 'concluído' : 'cancelado'} com sucesso!`, 'success');
+                // 2. Chama o webhook APENAS se o status for CONFIRMED
+                if (status === 'confirmed') {
+                    await sendWebhook(data);
+                }
+                
+                showNotification(`Agendamento ${actionText} com sucesso!`, 'success');
                 loadBookings();
                 if (document.getElementById('dashboardContainer').classList.contains('active')) {
                     loadStats();
@@ -2251,7 +2359,7 @@
             }
         }
 
-        // Service Management Functions
+        // Service Management Functions (Mantidas)
         async function loadServices() {
             try {
                 const { data, error } = await supabase.from('services').select('*').order('id', { ascending: true });
@@ -2358,7 +2466,7 @@
             }
         }
 
-        // Barber Management Functions
+        // Barber Management Functions (Mantidas)
         async function loadBarbers() {
             try {
                 const { data, error } = await supabase.from('barbers').select('*').order('id', { ascending: true });
@@ -2555,7 +2663,7 @@
             }
         }
 
-        // Client Management Functions
+        // Client Management Functions (Mantidas)
         async function loadClients() {
             const container = document.getElementById('clientsList');
             container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><p>Carregando clientes...</p></div>';
@@ -2714,7 +2822,7 @@
             }
         }
 
-        // Schedule Management Functions
+        // Schedule Management Functions (Mantidas)
         async function loadScheduleSettings() {
             try {
                 const { data } = await supabase.from('settings').select('*').in('key', ['schedule_config', 'interval_time']);
@@ -2893,4 +3001,3 @@
     </script>
 </body>
 </html>
-
