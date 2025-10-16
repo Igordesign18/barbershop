@@ -7,67 +7,73 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ... (CSS Mantido - Omitido para brevidade) ... */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --dark-bg: #0a0a0a; --dark-card: #1a1a1a; --baby-blue: #87ceeb; --baby-blue-dark: #4682b4;
             --text: #ffffff; --text-muted: #888888; --red: #ff4444; --green: #4caf50;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--dark-bg); color: var(--text); min-height: 100vh; }
+        
+        [data-theme="light"] {
+            --dark-bg: #f5f5f5; --dark-card: #ffffff; --baby-blue: #2196F3; --baby-blue-dark: #1976D2;
+            --text: #212121; --text-muted: #757575; --red: #f44336; --green: #4caf50;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--dark-bg); color: var(--text); min-height: 100vh; transition: background 0.3s, color 0.3s; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         
         /* Header */
-        header { background: var(--dark-card); box-shadow: 0 2px 10px rgba(135, 206, 235, 0.1); position: relative; overflow: hidden; }
-        .header-cover { width: 100%; height: 200px; background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); position: relative; overflow: hidden; }
+        header { background: var(--dark-card); box-shadow: 0 2px 10px rgba(135, 206, 235, 0.1); position: relative; overflow: hidden; transition: background 0.3s; }
+        .header-cover { width: 100%; height: 200px; background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); position: relative; overflow: hidden; transition: background 0.3s; }
+        [data-theme="light"] .header-cover { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); }
         .header-cover::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 200"><path d="M0,100 Q300,20 600,100 T1200,100 L1200,200 L0,200 Z" fill="%2387ceeb" opacity="0.1"/></svg>') no-repeat bottom; background-size: cover; }
         .header-cover img { width: 100%; height: 100%; object-fit: cover; opacity: 0.4; }
         .header-content { display: flex; align-items: flex-end; justify-content: space-between; max-width: 1200px; margin: -60px auto 0; padding: 0 20px 20px; position: relative; }
         .barber-info { display: flex; align-items: flex-end; gap: 20px; }
-        .barber-photo { width: 120px; height: 120px; border-radius: 50%; border: 5px solid var(--dark-card); background: var(--dark-bg); display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--baby-blue); box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5); flex-shrink: 0; }
+        .barber-photo { width: 120px; height: 120px; border-radius: 50%; border: 5px solid var(--dark-card); background: var(--dark-bg); display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--baby-blue); box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5); flex-shrink: 0; transition: all 0.3s; }
         .barber-photo img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
         .barber-details { padding-bottom: 10px; }
-        .barber-details h1 { font-size: 32px; color: var(--baby-blue); margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); }
+        .barber-details h1 { font-size: 32px; color: var(--baby-blue); margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); transition: color 0.3s; }
         .client-welcome { display: none !important; }
         .barber-meta { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 8px; }
-        .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; background: rgba(0, 0, 0, 0.3); }
+        .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; background: rgba(0, 0, 0, 0.3); transition: all 0.3s; }
+        [data-theme="light"] .status-badge { background: rgba(0, 0, 0, 0.05); }
         .status-badge.open { color: #4caf50; border: 2px solid #4caf50; }
         .status-badge.closed { color: #ff4444; border: 2px solid #ff4444; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 2s infinite; }
         .status-badge.open .status-dot { background: #4caf50; }
         .status-badge.closed .status-dot { background: #ff4444; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .location-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: var(--baby-blue); background: rgba(135, 206, 235, 0.1); border: 2px solid var(--baby-blue); }
+        .location-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: var(--baby-blue); background: rgba(135, 206, 235, 0.1); border: 2px solid var(--baby-blue); transition: all 0.3s; }
         .logout-btn, #profileBtn { display: none !important; }
         .header-buttons { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
-        .admin-link-btn {
-            background: transparent; 
-            border: 2px solid var(--baby-blue); 
-            color: var(--baby-blue); 
-            padding: 10px 20px; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            font-size: 14px; 
-            transition: all 0.4s; 
-            height: fit-content; 
-            position: relative; 
-            overflow: hidden; 
-            white-space: nowrap;
-            text-decoration: none;
+
+        
+        .theme-toggle-btn {
+            background: transparent;
+            border: 2px solid var(--baby-blue);
+            color: var(--baby-blue);
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.4s;
+            height: fit-content;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            min-width: 45px;
         }
-
-        .admin-link-btn:hover { 
+        
+        .theme-toggle-btn:hover {
             background: var(--baby-blue);
-            color: var(--dark-bg); 
-            transform: scale(1.05); 
-            box-shadow: 0 5px 20px rgba(135, 206, 235, 0.4); 
+            color: var(--dark-bg);
+            transform: scale(1.05) rotate(20deg);
+            box-shadow: 0 5px 20px rgba(135, 206, 235, 0.4);
         }
         .auth-screen { display: none !important; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 14px; transition: all 0.3s; }
         .form-group input { width: 100%; padding: 12px; background: var(--dark-bg); border: 2px solid #333; border-radius: 5px; color: var(--text); font-size: 16px; transition: all 0.3s; position: relative; }
+        [data-theme="light"] .form-group input { border-color: #ddd; }
         .form-group input:focus { outline: none; border-color: var(--baby-blue); box-shadow: 0 0 15px rgba(135, 206, 235, 0.3); transform: translateY(-2px); }
         .btn { width: 100%; padding: 15px; background: var(--baby-blue); color: var(--dark-bg); border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; box-shadow: 0 4px 15px rgba(135, 206, 235, 0.3); }
         .btn:hover { background: var(--baby-blue-dark); transform: translateY(-3px); box-shadow: 0 8px 25px rgba(135, 206, 235, 0.5); }
@@ -76,6 +82,7 @@
         .main-app { padding: 40px 20px; }
         .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; }
         .card { background: var(--dark-card); padding: 30px; border-radius: 15px; box-shadow: 0 3px 20px rgba(0, 0, 0, 0.3); transition: all 0.3s; position: relative; overflow: hidden; }
+        [data-theme="light"] .card { box-shadow: 0 3px 20px rgba(0, 0, 0, 0.1); border: 1px solid #e0e0e0; }
         .card h3 { color: var(--baby-blue); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
         .expandable-bookings { display: none !important; }
         .service-item { background: var(--dark-bg); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 2px solid transparent; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; }
@@ -96,11 +103,13 @@
         .calendar-header button:hover { color: var(--dark-bg); transform: scale(1.1); box-shadow: 0 5px 15px rgba(135, 206, 235, 0.3); }
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 20px; }
         .calendar-day { aspect-ratio: 1; background: var(--dark-bg); border: 2px solid #333; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-size: 14px; position: relative; overflow: hidden; }
+        [data-theme="light"] .calendar-day { border-color: #ddd; }
         .calendar-day:hover:not(.disabled) { border-color: var(--baby-blue); transform: scale(1.1); box-shadow: 0 5px 15px rgba(135, 206, 235, 0.3); z-index: 10; }
         .calendar-day.selected { background: var(--baby-blue); color: var(--dark-bg); border-color: var(--baby-blue); transform: scale(1.05); box-shadow: 0 8px 20px rgba(135, 206, 235, 0.5); }
         .calendar-day.disabled { opacity: 0.3; cursor: not-allowed; }
         .time-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 20px; }
         .time-slot { background: var(--dark-bg); border: 2px solid #333; padding: 12px; border-radius: 5px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        [data-theme="light"] .time-slot { border-color: #ddd; }
         .time-slot:hover:not(.disabled) { border-color: var(--baby-blue); color: var(--dark-bg); transform: translateY(-3px) scale(1.05); box-shadow: 0 5px 15px rgba(135, 206, 235, 0.4); }
         .time-slot.selected { background: var(--baby-blue); color: var(--dark-bg); border-color: var(--baby-blue); transform: scale(1.08); box-shadow: 0 8px 20px rgba(135, 206, 235, 0.5); }
         .time-slot.disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
@@ -116,10 +125,11 @@
         }
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { background: var(--dark-card); padding: 40px; border-radius: 15px; max-width: 500px; width: 90%; text-align: center; border: 3px solid var(--baby-blue); box-shadow: 0 10px 50px rgba(135, 206, 235, 0.3); }
+        [data-theme="light"] .modal-overlay { background: rgba(0, 0, 0, 0.5); }
+        .modal-content { background: var(--dark-card); padding: 40px; border-radius: 15px; max-width: 500px; width: 90%; text-align: center; border: 3px solid var(--baby-blue); box-shadow: 0 10px 50px rgba(135, 206, 235, 0.3); transition: background 0.3s; }
         .modal-icon { font-size: 64px; color: var(--green); margin-bottom: 20px; }
         .modal-content h2 { color: var(--baby-blue); margin-bottom: 20px; font-size: 28px; }
-        .modal-details { background: var(--dark-bg); padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; }
+        .modal-details { background: var(--dark-bg); padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; transition: background 0.3s; }
         .modal-details p { margin: 10px 0; display: flex; align-items: center; gap: 10px; font-size: 16px; }
         .modal-details strong { color: var(--baby-blue); min-width: 100px; }
         .modal-close-btn { width: 100%; padding: 15px; background: var(--baby-blue); color: var(--dark-bg); border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-top: 10px; }
@@ -172,9 +182,9 @@
                 </div>
             </div>
             <div class="header-buttons">
-                <a href="indexadm.html" class="admin-link-btn" target="_self">
-                    <i class="fas fa-user-shield"></i> <span>Admin</span>
-                </a>
+                <button class="theme-toggle-btn" id="themeToggle" title="Alternar tema">
+                    <i class="fas fa-moon"></i>
+                </button>
             </div>
         </div>
     </header>
@@ -279,6 +289,33 @@
         let intervalTime = 30;
 
         const mainApp = document.getElementById('mainApp');
+        
+        // Função de Tema
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+        
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+        
+        function updateThemeIcon(theme) {
+            const icon = document.querySelector('#themeToggle i');
+            if (theme === 'light') {
+                icon.className = 'fas fa-moon';
+            } else {
+                icon.className = 'fas fa-sun';
+            }
+        }
+        
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
         
         // Função para formatar telefone
         function formatPhoneInput(inputElement) {
@@ -393,6 +430,7 @@
         }
 
         async function initializeApp() {
+            initTheme();
             mainApp.style.display = 'block';
             
             await loadSettings();
@@ -615,7 +653,6 @@
             try {
                 const dateStr = formatDateToYYYYMMDD(selectedDate);
                 
-                // Bloqueia horários confirmados
                 let query = supabase
                     .from('bookings')
                     .select('booking_time, services(duration), barbers(id)') 
@@ -720,7 +757,6 @@
                     let isBlocked = isTimePassed;
 
                     if (!isBlocked && selectedService) {
-                        
                         const blockTimes = generateBlockedTimes(time, serviceDuration, intervalTime);
                         
                         for (let blockTime of blockTimes) {
@@ -773,14 +809,12 @@
                 <p><strong><i class="fas fa-hourglass-half"></i> Duração:</strong> ${selectedService.duration} minutos</p>
             `;
             
-            // Campos de contato SEMPRE VISÍVEIS para anônimos
             document.getElementById('unverifiedUserFields').classList.remove('hidden'); 
             
             container.classList.remove('hidden');
             container.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // FUNÇÃO DE ENVIO DO WEBHOOK MELHORADA COM LOGS E FORMATO DE TELEFONE CORRETO
         async function sendWebhook(bookingData, clientName, clientPhoneFormatted) {
              console.log('Tentando enviar webhook para:', WEBHOOK_URL);
              console.log('Número de telefone enviado (formato 55+DDD+9digitos):', clientPhoneFormatted);
@@ -794,7 +828,7 @@
                         type: 'booking_confirmed',
                         booking_id: bookingData.id,
                         customer_name: clientName,
-                        customer_phone: clientPhoneFormatted, // AQUI É USADO O FORMATO 55XXXXXXXXXXX
+                        customer_phone: clientPhoneFormatted,
                         customer_email: 'Cliente Anônimo',
                         service_name: selectedService.name,
                         service_price: selectedService.price,
@@ -818,7 +852,6 @@
                 alert('O agendamento foi confirmado, mas houve um erro de conexão ao tentar enviar a notificação. Verifique o console para detalhes.');
             }
         }
-
 
         document.getElementById('confirmBtn').addEventListener('click', async (e) => {
             const btn = e.target.closest('button');
@@ -844,19 +877,17 @@
                 return;
             }
             
-            const finalPhoneFormatted = formatPhoneToWhatsApp(bookingPhoneRaw); // Ex: 5588981841517
+            const finalPhoneFormatted = formatPhoneToWhatsApp(bookingPhoneRaw);
             const dateStr = formatDateToYYYYMMDD(selectedDate);
             const barberIdToSave = selectedBarber.id;
             
             try {
-                
-                // 1. Cria o agendamento COM STATUS 'confirmed'
                 const { data: bookingData, error } = await supabase
                     .from('bookings')
                     .insert([{
-                        user_id: null, // Anônimo
+                        user_id: null,
                         customer_full_name: bookingFullName,
-                        customer_phone: finalPhoneFormatted, // SALVA O FORMATO 55XXXXXXXXXXX NO BANCO
+                        customer_phone: finalPhoneFormatted,
                         service_id: selectedService.id,
                         barber_id: barberIdToSave, 
                         booking_date: dateStr,
@@ -868,10 +899,8 @@
 
                 if (error) throw error;
                 
-                // 2. Dispara o Webhook APÓS A CONFIRMAÇÃO AUTOMÁTICA
-                await sendWebhook(bookingData, bookingFullName, finalPhoneFormatted); // ENVIA O FORMATO 55XXXXXXXXXXX PARA O WEBHOOK
+                await sendWebhook(bookingData, bookingFullName, finalPhoneFormatted);
 
-                // 3. Exibe o modal
                 const modal = document.getElementById('confirmationModal');
                 const modalDetails = document.getElementById('modalDetails');
                 
@@ -917,7 +946,6 @@
                 
                 modal.classList.remove('hidden');
                 
-                // 4. Limpa as seleções
                 selectedService = null;
                 selectedBarber = null;
                 selectedDate = null;
