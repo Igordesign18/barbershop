@@ -424,7 +424,7 @@
             background: var(--dark-card);
             padding: 25px;
             border-radius: 15px;
-            box-shadow: var(--shadow);
+            box-shadow: var(--shadow); 
             border-left: 4px solid var(--lime);
         }
 
@@ -473,23 +473,19 @@
             margin-top: 20px; 
         }
         
+        /* REMOVENDO ESTILOS BASEADOS EM STATUS PARA MANTER COR PADRÃO */
         .booking-item { 
             background: var(--dark-bg); 
             padding: 20px; 
             border-radius: 10px; 
             margin-bottom: 15px; 
-            border-left: 4px solid var(--lime); 
+            border-left: 4px solid var(--lime); /* Linha de destaque mantida com a cor padrão (lime) */
             transition: var(--transition); 
         }
         
         .booking-item:hover { 
             transform: translateX(5px); 
             box-shadow: 0 5px 20px rgba(135, 206, 235, 0.15); 
-        }
-        
-        /* Estilo para agendamentos PENDENTES (Não deve mais ocorrer) */
-        .booking-item.status-pending { 
-            border-left-color: var(--orange); 
         }
         
         .booking-main { 
@@ -562,6 +558,7 @@
         }
         
         /* Status Badges */
+        /* Cores mantidas apenas para o texto do badge */
         .booking-status { 
             padding: 6px 16px; 
             border-radius: 20px; 
@@ -632,13 +629,14 @@
             transform: translateY(-2px); 
         }
         
+        /* AJUSTADO: COR DO BOTÃO CANCELAR PARA VERMELHO (EXCLUIR) */
         .btn-cancel { 
-            background: var(--orange); 
+            background: var(--red); 
             color: white; 
         }
         
         .btn-cancel:hover { 
-            background: #e68900; 
+            background: #cc0000; 
             transform: translateY(-2px); 
         }
         
@@ -1745,7 +1743,7 @@
                     if (payload.eventType === 'INSERT' && payload.new.status === 'confirmed') {
                          showNotification('Novo agendamento confirmado automaticamente!', 'success');
                     }
-                    if (payload.eventType === 'DELETE') {
+                    if (payload.eventType === 'DELETE' || (payload.eventType === 'UPDATE' && payload.new.status === 'cancelled')) {
                         showNotification('Um agendamento foi cancelado/excluído!', 'warning');
                     }
                     loadBookings();
@@ -1890,7 +1888,7 @@
             }
         }
 
-        // Charts Functions
+        // Charts Functions (Mantidas)
         function initializeCharts() {
             if (chartsInitialized) return;
             
@@ -2158,7 +2156,7 @@
                 let query = supabase.from('bookings')
                     .select('*, users(full_name, phone, email), services(name, price, duration), barbers(name)')
                     .eq('booking_date', filterDate) 
-                    // MUDANÇA: Ordena por horário (do mais recente/próximo para o mais antigo)
+                    // MUDANÇA: Ordena por horário decrescente (do mais próximo para o mais distante/novo)
                     .order('booking_time', { ascending: false }); 
                 
                 if (filterStatus !== 'all') query = query.eq('status', filterStatus);
@@ -2186,7 +2184,8 @@
                         `https://wa.me/55${phoneNumberClean}?text=Olá ${clientName.split(' ')[0]}, aqui é da Barbearia BarberSync! Entrando em contato sobre seu agendamento de ${dateDayMonth} às ${timeFormatted}.` : 
                         '#';
                     
-                    const itemClass = `booking-item status-${booking.status}`;
+                    // REMOVIDO: itemClass, mantendo o estilo padrão
+                    const itemClass = `booking-item`; 
 
                     return `
                         <div class="${itemClass}">
@@ -2220,16 +2219,17 @@
                             <div class="booking-footer">
                                 <div class="booking-actions">
                                     ${booking.status === 'confirmed' ? `
-                                        <button class="btn-cancel" onclick="updateBookingStatus('${booking.id}', 'cancelled')" aria-label="Cancelar agendamento">
+                                        <button class="btn-cancel" onclick="cancelAndDeleteBooking('${booking.id}')" aria-label="Excluir agendamento">
                                             <i class="fas fa-times-circle" aria-hidden="true"></i> Cancelar
                                         </button>
                                         <button class="btn-complete" onclick="updateBookingStatus('${booking.id}', 'completed')" aria-label="Concluir agendamento">
                                             <i class="fas fa-check" aria-hidden="true"></i> Concluir
                                         </button>
+                                    ` : booking.status === 'completed' || booking.status === 'cancelled' ? `
+                                        <button class="btn-delete" onclick="deleteBooking('${booking.id}')" aria-label="Excluir agendamento">
+                                            <i class="fas fa-trash" aria-hidden="true"></i> Excluir
+                                        </button>
                                     ` : ''}
-                                    <button class="btn-delete" onclick="deleteBooking('${booking.id}')" aria-label="Excluir agendamento">
-                                        <i class="fas fa-trash" aria-hidden="true"></i> Excluir
-                                    </button>
                                     ${phoneNumberClean ? `
                                         <a href="${whatsappLink}" class="btn-whatsapp" target="_blank" aria-label="Conversar no WhatsApp">
                                             <i class="fab fa-whatsapp" aria-hidden="true"></i> Chat
@@ -2247,6 +2247,31 @@
             }
         }
 
+        // Função para EXCLUIR agendamento ao invés de apenas cancelar o status
+        async function cancelAndDeleteBooking(bookingId) {
+             if (!bookingId) { 
+                showNotification('ID inválido', 'error'); 
+                return; 
+            }
+            if (!confirm(`Tem certeza que deseja CANCELAR e EXCLUIR este agendamento? Esta ação não pode ser desfeita.`)) return;
+
+            try {
+                // Remove o agendamento do banco
+                const { error } = await supabase.from('bookings').delete().eq('id', bookingId);
+                
+                if (error) throw error;
+                
+                showNotification(`Agendamento cancelado e excluído com sucesso!`, 'success');
+                loadBookings();
+                if (document.getElementById('dashboardContainer').classList.contains('active')) {
+                    loadStats();
+                    updateCharts();
+                }
+            } catch (error) {
+                showNotification('Erro ao cancelar e excluir: ' + error.message, 'error');
+            }
+        }
+        
         async function updateBookingStatus(bookingId, status) {
             if (!bookingId) { 
                 showNotification('ID inválido', 'error'); 
