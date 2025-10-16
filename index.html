@@ -7,47 +7,265 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ... (CSS Mantido - Omitido para brevidade) ... */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --dark-bg: #0a0a0a; --dark-card: #1a1a1a; --baby-blue: #87ceeb; --baby-blue-dark: #4682b4;
-            --text: #ffffff; --text-muted: #888888; --red: #ff4444; --green: #4caf50;
+            --dark-bg: #0a0a0a; 
+            --dark-card: #1a1a1a; 
+            --baby-blue: #87ceeb; 
+            --baby-blue-dark: #4682b4;
+            --text: #ffffff; 
+            --text-muted: #888888; 
+            --red: #ff4444; 
+            --green: #4caf50;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--dark-bg); color: var(--text); min-height: 100vh; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: var(--dark-bg); 
+            color: var(--text); 
+            min-height: 100vh; 
+        }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         
-        /* Header */
-        header { background: var(--dark-card); box-shadow: 0 2px 10px rgba(135, 206, 235, 0.1); position: relative; overflow: hidden; }
-        .header-cover { width: 100%; height: 200px; background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); position: relative; overflow: hidden; }
-        .header-cover::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 200"><path d="M0,100 Q300,20 600,100 T1200,100 L1200,200 L0,200 Z" fill="%2387ceeb" opacity="0.1"/></svg>') no-repeat bottom; background-size: cover; }
-        .header-cover img { width: 100%; height: 100%; object-fit: cover; opacity: 0.4; }
-        .header-content { display: flex; align-items: flex-end; justify-content: space-between; max-width: 1200px; margin: -60px auto 0; padding: 0 20px 20px; position: relative; }
-        .barber-info { display: flex; align-items: flex-end; gap: 20px; }
-        .barber-photo { width: 120px; height: 120px; border-radius: 50%; border: 5px solid var(--dark-card); background: var(--dark-bg); display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--baby-blue); box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5); flex-shrink: 0; }
-        .barber-photo img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
-        .barber-details { padding-bottom: 10px; }
-        .barber-details h1 { font-size: 32px; color: var(--baby-blue); margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); }
-        .client-welcome { display: none !important; }
-        .barber-meta { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 8px; }
-        .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; background: rgba(0, 0, 0, 0.3); }
-        .status-badge.open { color: #4caf50; border: 2px solid #4caf50; }
-        .status-badge.closed { color: #ff4444; border: 2px solid #ff4444; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 2s infinite; }
-        .status-badge.open .status-dot { background: #4caf50; }
-        .status-badge.closed .status-dot { background: #ff4444; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .location-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; color: var(--baby-blue); background: rgba(135, 206, 235, 0.1); border: 2px solid var(--baby-blue); }
-        .logout-btn, #profileBtn { display: none !important; }
-        .header-buttons { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        header {
+            background: transparent;
+            position: relative;
+            overflow: hidden;
+            padding-bottom: 30px; 
+        }
+
+        .header-cover {
+            width: 100%;
+            height: 250px; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            z-index: 0; 
+            
+            background-image: url('https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center; 
+            filter: grayscale(70%) brightness(40%); 
+        }
+        
+        .header-cover::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to top, rgba(10, 10, 10, 0.7) 0%, rgba(10, 10, 10, 0.9) 100%); 
+            opacity: 1;
+        }
+        .header-cover img { display: none; } 
+
+        .header-content {
+            position: relative;
+            z-index: 10;
+            max-width: 1200px;
+            margin: 30px auto 0; 
+            padding: 20px;
+            
+            background: rgba(26, 26, 26, 0.5); 
+            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid rgba(135, 206, 235, 0.3); 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); 
+            
+            display: flex;
+            align-items: center; 
+            justify-content: space-between;
+            gap: 30px;
+            transition: all 0.5s ease-in-out;
+        }
+        .header-content:hover {
+            box-shadow: 0 10px 40px 0 rgba(135, 206, 235, 0.4);
+        }
+
+        .barber-info { 
+            display: flex; 
+            align-items: center; 
+            gap: 20px; 
+            flex-grow: 1; 
+        }
+
+        .barber-photo { 
+            width: 100px; 
+            height: 100px; 
+            border-radius: 50%; 
+            border: 3px solid var(--baby-blue); 
+            background: linear-gradient(135deg, #1a1a1a 0%, #3a3a3a 100%); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 40px; 
+            color: var(--baby-blue); 
+            box-shadow: 0 0 25px rgba(135, 206, 235, 0.7); 
+            flex-shrink: 0; 
+            position: relative;
+            overflow: hidden;
+            animation: glow-pulse 3s infinite alternate; 
+        }
+
+        @keyframes glow-pulse {
+            from { box-shadow: 0 0 15px rgba(135, 206, 235, 0.5); }
+            to { box-shadow: 0 0 30px rgba(135, 206, 235, 1); }
+        }
+
+        .barber-photo img { 
+            width: 100%; 
+            height: 100%; 
+            border-radius: 50%; 
+            object-fit: cover; 
+            opacity: 0.8; 
+        }
+
+        .barber-details { padding: 0; }
+        .barber-details h1 { 
+            font-size: 48px; 
+            color: var(--baby-blue); 
+            margin-bottom: 8px; 
+            font-weight: 900;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(135, 206, 235, 1),
+                         0 0 40px rgba(135, 206, 235, 0.5),
+                         2px 2px 4px rgba(0, 0, 0, 0.8); 
+            background: linear-gradient(135deg, #87ceeb 0%, #4682b4 50%, #87ceeb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-shift 3s ease infinite;
+            position: relative;
+        }
+        
+        @keyframes gradient-shift {
+            0%, 100% { filter: hue-rotate(0deg) brightness(1); }
+            50% { filter: hue-rotate(10deg) brightness(1.2); }
+        }
+        
+        .barber-details h1 i {
+            -webkit-text-fill-color: var(--baby-blue);
+            filter: drop-shadow(0 0 10px rgba(135, 206, 235, 0.8));
+        }
+        
+        /* Galeria de Imagens Randômicas */
+        .random-images-gallery {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0 15px;
+            flex-wrap: wrap;
+        }
+        
+        .gallery-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid rgba(135, 206, 235, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .gallery-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, transparent 0%, rgba(135, 206, 235, 0.2) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .gallery-image:hover {
+            transform: translateY(-5px) scale(1.1);
+            border-color: var(--baby-blue);
+            box-shadow: 0 8px 25px rgba(135, 206, 235, 0.5);
+        }
+        
+        .gallery-image:hover::before {
+            opacity: 1;
+        }
+
+        .barber-meta { 
+            display: flex; 
+            gap: 15px; 
+            flex-wrap: wrap; 
+            margin-top: 5px;
+        }
+
+        .status-badge, .location-badge { 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+            padding: 4px 10px; 
+            border-radius: 5px; 
+            font-size: 13px; 
+            font-weight: 400;
+            color: var(--text);
+            background: rgba(135, 206, 235, 0.05); 
+            border: 1px solid rgba(135, 206, 235, 0.2);
+            transition: all 0.3s;
+        }
+
+        .status-badge.open { color: #50fa7b; border-color: #50fa7b; } 
+        .status-badge.closed { color: #ff5555; border-color: #ff5555; } 
+        .location-badge { color: var(--baby-blue); border-color: var(--baby-blue); }
+
+        .location-link {
+            color: var(--baby-blue);
+            text-decoration: none;
+            margin-left: 8px;
+            padding: 4px 8px;
+            border-radius: 5px;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .location-link:hover {
+            color: var(--dark-bg);
+            background: var(--baby-blue);
+            transform: scale(1.15) translateY(-2px);
+            box-shadow: 0 4px 12px rgba(135, 206, 235, 0.5);
+        }
+
+        .status-dot { 
+            width: 10px; 
+            height: 10px; 
+            border-radius: 50%; 
+            animation: pulse-dot 2s infinite; 
+        }
+        .status-badge.open .status-dot { 
+            background: #50fa7b; 
+            box-shadow: 0 0 12px #50fa7b, 0 0 24px #50fa7b;
+        }
+        .status-badge.closed .status-dot { 
+            background: #ff5555; 
+            box-shadow: 0 0 12px #ff5555, 0 0 24px #ff5555;
+        }
+        @keyframes pulse-dot { 
+            0%, 100% { opacity: 1; transform: scale(1); } 
+            50% { opacity: 0.6; transform: scale(0.9); } 
+        }
+
         .admin-link-btn {
-            background: transparent; 
+            background: transparent;
             border: 2px solid var(--baby-blue); 
             color: var(--baby-blue); 
             padding: 10px 20px; 
-            border-radius: 5px; 
+            border-radius: 8px; 
             cursor: pointer; 
             font-size: 14px; 
-            transition: all 0.4s; 
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1); 
             height: fit-content; 
             position: relative; 
             overflow: hidden; 
@@ -56,14 +274,55 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            background: rgba(135, 206, 235, 0.1);
+            box-shadow: 0 0 10px rgba(135, 206, 235, 0.3);
         }
 
         .admin-link-btn:hover { 
             background: var(--baby-blue);
             color: var(--dark-bg); 
-            transform: scale(1.05); 
-            box-shadow: 0 5px 20px rgba(135, 206, 235, 0.4); 
+            transform: scale(1.05) translateY(-2px); 
+            box-shadow: 0 5px 25px rgba(135, 206, 235, 0.7); 
         }
+
+        @media (max-width: 768px) {
+            .header-content { 
+                flex-direction: column; 
+                align-items: center; 
+                text-align: center;
+                margin: 25px auto 0;
+                padding: 30px 15px;
+            }
+            .barber-info { 
+                flex-direction: column; 
+                align-items: center; 
+                gap: 15px;
+                margin-bottom: 10px;
+            }
+            .barber-photo { 
+                width: 100px; 
+                height: 100px; 
+                font-size: 40px; 
+            }
+            .barber-details h1 { 
+                font-size: 36px; 
+                text-align: center;
+            }
+            .barber-meta { 
+                justify-content: center;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+            }
+            .header-cover {
+                height: 350px;
+            }
+            .gallery-image {
+                width: 70px;
+                height: 70px;
+            }
+        }
+
         .auth-screen { display: none !important; }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 14px; transition: all 0.3s; }
@@ -124,35 +383,26 @@
         .modal-details strong { color: var(--baby-blue); min-width: 100px; }
         .modal-close-btn { width: 100%; padding: 15px; background: var(--baby-blue); color: var(--dark-bg); border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; margin-top: 10px; }
         .modal-close-btn:hover { background: var(--baby-blue-dark); transform: translateY(-3px); }
-        @media (max-width: 768px) {
-            .header-cover { height: 150px; }
-            .barber-photo { width: 100px; height: 100px; font-size: 40px; }
-            .barber-details h1 { font-size: 24px; }
-            .header-content { flex-direction: column; align-items: center; gap: 15px; margin-top: -50px; }
-            .barber-info { flex-direction: column; align-items: center; text-align: center; }
-            .barber-meta { justify-content: center; }
-            .header-buttons { width: 100%; justify-content: center; }
-            .dashboard { grid-template-columns: 1fr; }
-            .container { padding: 10px; }
-            .main-app { padding: 20px 10px; }
-            .card { padding: 20px; }
-            .time-slots { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
-            .modal-content { padding: 30px 20px; width: 95%; }
-        }
     </style>
 </head>
 <body>
     <header>
-        <div class="header-cover">
-            <img src="https://png.pngtree.com/thumb_back/fh260/background/20230612/pngtree-some-pictures-of-an-antique-barber-shop-image_2906288.jpg" alt="Capa da Barbearia">
-        </div>
-        <div class="header-content">
+        <div class="header-cover"></div>
+        <div class="header-content container">
             <div class="barber-info">
                 <div class="barber-photo" id="barberPhoto">
                     <img src="https://alo-storage.nyc3.digitaloceanspaces.com/alo-laravel/public/images/p/muriloaloalobahia.jpg" alt="BarberSync">
                 </div>
                 <div class="barber-details">
-                    <h1>BarberSync</h1>
+                    <h1>BarberSync <i class="fas fa-diamond" style="font-size: 20px; margin-left: 5px;"></i></h1>
+                    
+                    <!-- Galeria de Imagens Randômicas -->
+                    <div class="random-images-gallery" id="randomGallery">
+                        <div class="gallery-image" data-index="0"></div>
+                        <div class="gallery-image" data-index="1"></div>
+                        <div class="gallery-image" data-index="2"></div>
+                        <div class="gallery-image" data-index="3"></div>
+                    </div>
                     
                     <div class="client-welcome" id="clientWelcome" style="display: none;">
                         <div class="welcome-text">Bem-vindo de volta!</div>
@@ -164,23 +414,21 @@
                             <span class="status-dot"></span>
                             <span id="statusText">Verificando...</span>
                         </span>
+                        
                         <span class="location-badge">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <span>Russas, CE</span>
+                            <i class="fas fa-map-marker-alt"></i> <span>Russas, CE | HQ</span>
+                            <a href="https://maps.app.goo.gl/seu-link-de-localizacao" class="location-link" target="_blank" title="Abrir no Google Maps">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
                         </span>
                     </div>
                 </div>
             </div>
-            <div class="header-buttons">
-                <a href="indexadm.html" class="admin-link-btn" target="_self">
-                    <i class="fas fa-user-shield"></i> <span>Admin</span>
-                </a>
-            </div>
+
         </div>
     </header>
 
     <div class="auth-screen hidden" id="authScreen"></div>
-
 
     <div class="main-app container" id="mainApp">
         <div class="expandable-bookings"></div> 
@@ -260,11 +508,38 @@
     </div>
 
     <script>
-        // NOVAS CREDENCIAIS SUPABASE
         const SUPABASE_URL = 'https://huggzgfejtedacfyatke.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1Z2d6Z2ZlanRlZGFjZnlhdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NDk3ODYsImV4cCI6MjA3NjAyNTc4Nn0.aTrXAe7m1KsRNwH28LmBvcOlBjYI8C-2kvHYGdkUmv8';
         const WEBHOOK_URL = 'https://n8n-n8n.rthuab.easypanel.host/webhook/barbearia';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Array de imagens aleatórias de barbearia
+        const barberImages = [
+            'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?q=80&w=2070&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=2074&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?q=80&w=2070&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1605497788044-5a32c7078486?q=80&w=2070&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1621605815971-fbc98d665033?q=80&w=2070&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1493256338651-d82f7acb2b00?q=80&w=2070&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?q=80&w=2071&auto=format&fit=crop',
+            'https://images.unsplash.com/photo-1621607512214-de628399589d?q=80&w=1974&auto=format&fit=crop'
+        ];
+
+        // Seleciona uma imagem aleatória ao carregar
+        function setRandomBarberImage() {
+            const randomImage = barberImages[Math.floor(Math.random() * barberImages.length)];
+            document.querySelector('.header-cover').style.backgroundImage = `url('${randomImage}')`;
+        }
+        
+        // Preenche a galeria com 4 imagens aleatórias diferentes
+        function setRandomGalleryImages() {
+            const galleryImages = document.querySelectorAll('.gallery-image');
+            const shuffled = [...barberImages].sort(() => Math.random() - 0.5);
+            
+            galleryImages.forEach((img, index) => {
+                img.style.backgroundImage = `url('${shuffled[index]}')`;
+            });
+        }
 
         let currentUser = null; 
         let currentDate = new Date();
@@ -280,7 +555,6 @@
 
         const mainApp = document.getElementById('mainApp');
         
-        // Função para formatar telefone
         function formatPhoneInput(inputElement) {
             if (!inputElement) return;
             inputElement.addEventListener('input', function(e) {
@@ -306,7 +580,6 @@
         
         formatPhoneInput(document.getElementById('bookingPhone'));
         
-        // Funções utilitárias
         function isTimeSlotPassed(date, time) {
             const now = new Date();
             const slotDateTime = new Date(date + 'T' + time);
@@ -394,6 +667,12 @@
 
         async function initializeApp() {
             mainApp.style.display = 'block';
+            
+            // Carrega imagem aleatória do cabeçalho
+            setRandomBarberImage();
+            
+            // Carrega galeria de imagens aleatórias
+            setRandomGalleryImages();
             
             await loadSettings();
             await loadServices();
@@ -615,7 +894,6 @@
             try {
                 const dateStr = formatDateToYYYYMMDD(selectedDate);
                 
-                // Bloqueia horários confirmados
                 let query = supabase
                     .from('bookings')
                     .select('booking_time, services(duration), barbers(id)') 
@@ -773,14 +1051,12 @@
                 <p><strong><i class="fas fa-hourglass-half"></i> Duração:</strong> ${selectedService.duration} minutos</p>
             `;
             
-            // Campos de contato SEMPRE VISÍVEIS para anônimos
             document.getElementById('unverifiedUserFields').classList.remove('hidden'); 
             
             container.classList.remove('hidden');
             container.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // FUNÇÃO DE ENVIO DO WEBHOOK MELHORADA COM LOGS E FORMATO DE TELEFONE CORRETO
         async function sendWebhook(bookingData, clientName, clientPhoneFormatted) {
              console.log('Tentando enviar webhook para:', WEBHOOK_URL);
              console.log('Número de telefone enviado (formato 55+DDD+9digitos):', clientPhoneFormatted);
@@ -794,7 +1070,7 @@
                         type: 'booking_confirmed',
                         booking_id: bookingData.id,
                         customer_name: clientName,
-                        customer_phone: clientPhoneFormatted, // AQUI É USADO O FORMATO 55XXXXXXXXXXX
+                        customer_phone: clientPhoneFormatted,
                         customer_email: 'Cliente Anônimo',
                         service_name: selectedService.name,
                         service_price: selectedService.price,
@@ -818,7 +1094,6 @@
                 alert('O agendamento foi confirmado, mas houve um erro de conexão ao tentar enviar a notificação. Verifique o console para detalhes.');
             }
         }
-
 
         document.getElementById('confirmBtn').addEventListener('click', async (e) => {
             const btn = e.target.closest('button');
@@ -844,19 +1119,18 @@
                 return;
             }
             
-            const finalPhoneFormatted = formatPhoneToWhatsApp(bookingPhoneRaw); // Ex: 5588981841517
+            const finalPhoneFormatted = formatPhoneToWhatsApp(bookingPhoneRaw);
             const dateStr = formatDateToYYYYMMDD(selectedDate);
             const barberIdToSave = selectedBarber.id;
             
             try {
                 
-                // 1. Cria o agendamento COM STATUS 'confirmed'
                 const { data: bookingData, error } = await supabase
                     .from('bookings')
                     .insert([{
-                        user_id: null, // Anônimo
+                        user_id: null,
                         customer_full_name: bookingFullName,
-                        customer_phone: finalPhoneFormatted, // SALVA O FORMATO 55XXXXXXXXXXX NO BANCO
+                        customer_phone: finalPhoneFormatted,
                         service_id: selectedService.id,
                         barber_id: barberIdToSave, 
                         booking_date: dateStr,
@@ -868,10 +1142,8 @@
 
                 if (error) throw error;
                 
-                // 2. Dispara o Webhook APÓS A CONFIRMAÇÃO AUTOMÁTICA
-                await sendWebhook(bookingData, bookingFullName, finalPhoneFormatted); // ENVIA O FORMATO 55XXXXXXXXXXX PARA O WEBHOOK
+                await sendWebhook(bookingData, bookingFullName, finalPhoneFormatted);
 
-                // 3. Exibe o modal
                 const modal = document.getElementById('confirmationModal');
                 const modalDetails = document.getElementById('modalDetails');
                 
@@ -917,7 +1189,6 @@
                 
                 modal.classList.remove('hidden');
                 
-                // 4. Limpa as seleções
                 selectedService = null;
                 selectedBarber = null;
                 selectedDate = null;
