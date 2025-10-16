@@ -372,6 +372,12 @@
             <button class="btn btn-secondary" onclick="clearLogs()">
                 🗑️ Limpar Logs
             </button>
+            <button class="btn btn-secondary" onclick="addDebugInfo()">
+                🐛 Info Debug
+            </button>
+            <button class="btn btn-secondary" onclick="testDirectQuery()">
+                🔬 Teste Direto
+            </button>
         </div>
 
         <div class="config-section">
@@ -415,9 +421,18 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5cmxtanJiZWNpZGJwdm9maXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMzE0NDQsImV4cCI6MjA3NTgwNzQ0NH0.80whwN7m1YbwuZ8WLzek-ctWd9KNn97EwUQRzOMAnak';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Adicionar botão de debug
+        function addDebugInfo() {
+            addLog(`🔧 DEBUG INFO:`, 'warning');
+            addLog(`   Supabase URL: ${SUPABASE_URL}`);
+            addLog(`   Data atual: ${new Date().toISOString()}`);
+            addLog(`   Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`);
+        }
+
         let systemRunning = false;
         let checkIntervalId = null;
         let sentRemindersToday = new Set();
+        let realtimeChannel = null; // Canal para realtime
         let config = {
             webhookUrl: 'https://n8n-n8n.rthuab.easypanel.host/webhook/lembrete',
             reminderTime: 60, // minutos
@@ -724,6 +739,78 @@
         function clearLogs() {
             const logContainer = document.getElementById('logEntries');
             logContainer.innerHTML = '<div class="log-entry"><span class="timestamp">[Sistema]</span> Logs limpos</div>';
+        }
+
+        async function testDirectQuery() {
+            addLog('🔬 TESTE DIRETO - Buscando TODOS os agendamentos...', 'warning');
+            
+            try {
+                // Busca simples sem filtros
+                const { data: allBookings, error } = await supabase
+                    .from('bookings')
+                    .select('id, booking_date, booking_time, status, user_id, service_id')
+                    .order('booking_date', { ascending: true });
+
+                if (error) {
+                    addLog(`❌ Erro na query: ${error.message}`, 'error');
+                    addLog(`   Código: ${error.code}`, 'error');
+                    addLog(`   Detalhes: ${JSON.stringify(error.details)}`, 'error');
+                    return;
+                }
+
+                addLog(`✅ TOTAL no banco: ${allBookings?.length || 0} agendamentos`);
+                
+                if (!allBookings || allBookings.length === 0) {
+                    addLog('⚠️ Nenhum agendamento encontrado no banco!', 'warning');
+                    return;
+                }
+
+                // Agrupar por status
+                const byStatus = {};
+                allBookings.forEach(b => {
+                    byStatus[b.status] = (byStatus[b.status] || 0) + 1;
+                });
+
+                addLog('📊 Por STATUS:');
+                Object.keys(byStatus).forEach(status => {
+                    addLog(`   - ${status}: ${byStatus[status]}`);
+                });
+
+                // Agrupar por data
+                const byDate = {};
+                allBookings.forEach(b => {
+                    byDate[b.booking_date] = (byDate[b.booking_date] || 0) + 1;
+                });
+
+                addLog('📅 Por DATA:');
+                Object.keys(byDate).sort().forEach(date => {
+                    addLog(`   - ${date}: ${byDate[date]} agendamento(s)`);
+                });
+
+                // Listar os 5 primeiros
+                addLog('📋 Primeiros 5 registros:');
+                allBookings.slice(0, 5).forEach((b, i) => {
+                    addLog(`   ${i+1}. Data: ${b.booking_date} ${b.booking_time} | Status: ${b.status} | ID: ${b.id.substring(0,8)}...`);
+                });
+
+                const today = new Date().toISOString().split('T')[0];
+                const todayBookings = allBookings.filter(b => b.booking_date === today);
+                addLog(`\n🎯 HOJE (${today}): ${todayBookings.length} agendamento(s)`);
+                
+                todayBookings.forEach((b, i) => {
+                    addLog(`   ${i+1}. ${b.booking_time} - Status: ${b.status}`);
+                });
+
+                const confirmedBookings = allBookings.filter(b => b.status === 'confirmed');
+                addLog(`\n✅ CONFIRMADOS: ${confirmedBookings.length} agendamento(s)`);
+
+                const futureBookings = allBookings.filter(b => b.booking_date >= today);
+                addLog(`\n📅 FUTUROS (>= ${today}): ${futureBookings.length} agendamento(s)`);
+
+            } catch (error) {
+                addLog(`❌ ERRO: ${error.message}`, 'error');
+                console.error('Erro completo:', error);
+            }
         }
 
         async function refreshBookings() {
