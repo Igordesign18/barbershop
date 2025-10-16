@@ -8,437 +8,95 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Arial, sans-serif;
             background: #0a0a0a;
-            color: #ffffff;
+            color: #fff;
             padding: 20px;
-            min-height: 100vh;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .header {
-            background: #1a1a1a;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 30px;
-            border-left: 4px solid #87ceeb;
-        }
-        .header h1 {
-            color: #87ceeb;
-            margin-bottom: 10px;
-        }
-        .status-card {
-            background: #1a1a1a;
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            border-left: 4px solid #4caf50;
-            position: relative;
-        }
-        .status-card.warning {
-            border-left-color: #ff9800;
-        }
-        .status-card.error {
-            border-left-color: #ff4444;
-        }
-        .realtime-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 15px;
-            background: rgba(76, 175, 80, 0.2);
-            border: 2px solid #4caf50;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-        .realtime-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #4caf50;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
-        }
-        .control-panel {
-            background: #1a1a1a;
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: #87ceeb; margin-bottom: 20px; }
         .btn {
-            padding: 12px 25px;
+            padding: 12px 24px;
             background: #87ceeb;
-            color: #0a0a0a;
+            color: #000;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
+            border-radius: 5px;
             cursor: pointer;
-            margin-right: 10px;
-            margin-bottom: 10px;
-            transition: all 0.3s;
-        }
-        .btn:hover {
-            background: #4682b4;
-            transform: translateY(-2px);
-        }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .btn-secondary {
-            background: transparent;
-            border: 2px solid #87ceeb;
-            color: #87ceeb;
-        }
-        .btn-secondary:hover {
-            background: rgba(135, 206, 235, 0.1);
-        }
-        .log-container {
-            background: #1a1a1a;
-            padding: 25px;
-            border-radius: 15px;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-        .log-entry {
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            border-left: 4px solid #87ceeb;
-            background: #0a0a0a;
-            font-size: 14px;
-            font-family: 'Courier New', monospace;
-        }
-        .log-entry.success {
-            border-left-color: #4caf50;
-        }
-        .log-entry.error {
-            border-left-color: #ff4444;
-        }
-        .log-entry.warning {
-            border-left-color: #ff9800;
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .stat-box {
-            background: #1a1a1a;
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            border-left: 4px solid #87ceeb;
-        }
-        .stat-value {
-            font-size: 36px;
-            font-weight: bold;
-            color: #87ceeb;
-            margin: 10px 0;
-        }
-        .stat-label {
-            color: #888888;
-            font-size: 14px;
-        }
-        .config-section {
-            background: #1a1a1a;
-            padding: 25px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #888888;
-            font-size: 14px;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            background: #0a0a0a;
-            border: 2px solid #333;
-            border-radius: 8px;
-            color: #ffffff;
             font-size: 16px;
+            margin: 5px;
         }
-        .form-group input:focus {
-            outline: none;
-            border-color: #87ceeb;
+        .btn:hover { background: #4682b4; }
+        .config { background: #1a1a1a; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .config input { 
+            width: 100%; 
+            padding: 10px; 
+            margin: 10px 0; 
+            background: #0a0a0a; 
+            border: 2px solid #333; 
+            color: #fff; 
+            border-radius: 5px;
         }
-        .timestamp {
-            color: #888888;
-            font-size: 12px;
-        }
-        .booking-card {
+        .bookings { background: #1a1a1a; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .booking-item {
             background: #0a0a0a;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 15px;
+            padding: 15px;
+            margin: 10px 0;
             border-left: 4px solid #87ceeb;
-            transition: all 0.3s;
+            border-radius: 5px;
         }
-        .booking-card:hover {
-            transform: translateX(5px);
-            box-shadow: 0 5px 20px rgba(135, 206, 235, 0.2);
-        }
-        .booking-card.sent {
-            border-left-color: #4caf50;
-            opacity: 0.85;
-        }
-        .booking-card.pending {
-            border-left-color: #ff9800;
-        }
-        .booking-card.too-early {
-            border-left-color: #888888;
-            opacity: 0.6;
-        }
-        .booking-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .booking-client-name {
-            font-size: 18px;
-            font-weight: bold;
-            color: #87ceeb;
-            margin-bottom: 5px;
-        }
-        .booking-service {
-            color: #ffffff;
+        .booking-item.sent { border-left-color: #4caf50; opacity: 0.7; }
+        .logs { background: #1a1a1a; padding: 20px; border-radius: 10px; max-height: 400px; overflow-y: auto; }
+        .log { 
+            padding: 8px; 
+            margin: 5px 0; 
+            background: #0a0a0a; 
+            border-radius: 3px; 
             font-size: 14px;
-            margin-bottom: 3px;
+            font-family: monospace;
         }
-        .status-badge {
-            padding: 6px 16px;
-            border-radius: 20px;
+        .log.success { color: #4caf50; }
+        .log.error { color: #ff4444; }
+        .log.warning { color: #ff9800; }
+        .status { 
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
             font-size: 12px;
             font-weight: bold;
-            text-transform: uppercase;
-            white-space: nowrap;
+            margin-left: 10px;
         }
-        .status-sent {
-            background: #4caf50;
-            color: white;
-        }
-        .status-pending {
-            background: #ff9800;
-            color: white;
-        }
-        .status-too-early {
-            background: #888888;
-            color: white;
-        }
-        .booking-time-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 2px solid #333;
-        }
-        .time-box {
-            background: rgba(135, 206, 235, 0.1);
-            padding: 12px;
-            border-radius: 8px;
-            border: 2px solid rgba(135, 206, 235, 0.3);
-        }
-        .time-box.highlight {
-            border-color: #ff9800;
-            background: rgba(255, 152, 0, 0.1);
-        }
-        .time-label {
-            font-size: 11px;
-            color: #888888;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 5px;
-        }
-        .time-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #87ceeb;
-        }
-        .time-value.highlight {
-            color: #ff9800;
-        }
-        .countdown {
-            font-size: 14px;
-            color: #888888;
-            margin-top: 5px;
-        }
-        .booking-date-badge {
-            display: inline-block;
-            background: rgba(135, 206, 235, 0.2);
-            color: #87ceeb;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            border: 2px solid rgba(135, 206, 235, 0.4);
-        }
-        .booking-date-badge.today {
-            background: rgba(76, 175, 80, 0.2);
-            color: #4caf50;
-            border-color: rgba(76, 175, 80, 0.4);
-        }
-        .booking-date-badge.tomorrow {
-            background: rgba(255, 152, 0, 0.2);
-            color: #ff9800;
-            border-color: rgba(255, 152, 0, 0.4);
-        }
-        .empty-bookings {
-            text-align: center;
-            padding: 60px 20px;
-            color: #888888;
-        }
-        .empty-bookings i {
-            font-size: 64px;
-            margin-bottom: 20px;
-            opacity: 0.3;
-        }
+        .status.sent { background: #4caf50; }
+        .status.pending { background: #ff9800; }
+        .status.waiting { background: #888; }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>🔔 Sistema de Lembretes Automáticos</h1>
-            <p style="color: #888888; margin-top: 10px;">
-                Envia lembretes automáticos para clientes com agendamentos nas próximas horas
-            </p>
+        <h1>🔔 Sistema de Lembretes - BarberSync</h1>
+        
+        <div class="config">
+            <h2>⚙️ Configuração</h2>
+            <label>URL do Webhook N8N:</label>
+            <input type="text" id="webhookUrl" value="https://n8n-n8n.rthuab.easypanel.host/webhook/lembrete">
+            
+            <label>Minutos de antecedência:</label>
+            <input type="number" id="reminderTime" value="60" min="15" max="1440">
+            
+            <button class="btn" onclick="saveConfig()">💾 Salvar</button>
+            <button class="btn" onclick="startSystem()">▶️ Iniciar</button>
+            <button class="btn" onclick="stopSystem()">⏹️ Parar</button>
+            <button class="btn" onclick="testConnection()">🔍 Testar Conexão</button>
         </div>
 
-        <div class="config-section">
-            <h2 style="color: #87ceeb; margin-bottom: 20px;">⚙️ Configurações</h2>
-            <div class="form-group">
-                <label for="webhookUrl">URL do Webhook N8N</label>
-                <input 
-                    type="url" 
-                    id="webhookUrl" 
-                    value="https://n8n-n8n.rthuab.easypanel.host/webhook/lembrete"
-                    placeholder="https://seu-n8n.com/webhook/lembretes">
-            </div>
-            <div class="form-group">
-                <label for="reminderTime">Tempo de Antecedência (minutos)</label>
-                <input 
-                    type="number" 
-                    id="reminderTime" 
-                    value="60"
-                    min="15"
-                    max="1440">
-                <small style="color: #888888; font-size: 12px; display: block; margin-top: 5px;">
-                    Padrão: 60 minutos (1 hora)
-                </small>
-            </div>
-            <div class="form-group">
-                <label for="checkInterval">Intervalo de Verificação (minutos)</label>
-                <input 
-                    type="number" 
-                    id="checkInterval" 
-                    value="15"
-                    min="5"
-                    max="60">
-                <small style="color: #888888; font-size: 12px; display: block; margin-top: 5px;">
-                    Com que frequência verificar novos agendamentos
-                </small>
-            </div>
-            <button class="btn" onclick="saveConfig()">💾 Salvar Configurações</button>
+        <div class="bookings">
+            <h2>📅 Agendamentos (Carregando...)</h2>
+            <div id="bookingsList"></div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-box">
-                <div class="stat-label">Lembretes Enviados Hoje</div>
-                <div class="stat-value" id="totalSent">0</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Agendamentos Pendentes Hoje</div>
-                <div class="stat-value" id="upcomingCount">0</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-label">Última Verificação</div>
-                <div class="stat-value" id="lastCheck" style="font-size: 18px;">--:--</div>
-            </div>
-        </div>
-
-        <div class="status-card" id="statusCard">
-            <h3 style="color: #4caf50; margin-bottom: 10px;">⏸️ Sistema Parado</h3>
-            <p id="statusText">Clique em "Iniciar Sistema" para começar a verificação automática</p>
-        </div>
-
-        <div class="control-panel">
-            <h2 style="color: #87ceeb; margin-bottom: 20px;">🎮 Controles</h2>
-            <button class="btn" onclick="startSystem()" id="startBtn">
-                ▶️ Iniciar Sistema
-            </button>
-            <button class="btn btn-secondary" onclick="stopSystem()" id="stopBtn" disabled>
-                ⏹️ Parar Sistema
-            </button>
-            <button class="btn btn-secondary" onclick="checkNow()">
-                🔍 Verificar Agora
-            </button>
-            <button class="btn btn-secondary" onclick="clearLogs()">
-                🗑️ Limpar Logs
-            </button>
-            <button class="btn btn-secondary" onclick="addDebugInfo()">
-                🐛 Info Debug
-            </button>
-            <button class="btn btn-secondary" onclick="testDirectQuery()">
-                🔬 Teste Direto
-            </button>
-            <button class="btn btn-secondary" onclick="compareQueries()">
-                🔄 Comparar Queries
-            </button>
-        </div>
-
-        <div class="config-section">
-            <h2 style="color: #87ceeb; margin-bottom: 20px;">📅 Agendamentos Próximos</h2>
-            <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-secondary" onclick="refreshBookings()">
-                    🔄 Atualizar Lista
-                </button>
-                <select id="filterStatus" style="padding: 10px; background: #0a0a0a; border: 2px solid #333; border-radius: 8px; color: #ffffff;">
-                    <option value="all">Todos os Status</option>
-                    <option value="pending">Apenas Pendentes</option>
-                    <option value="sent">Apenas Enviados</option>
-                </select>
-                <select id="filterDate" style="padding: 10px; background: #0a0a0a; border: 2px solid #333; border-radius: 8px; color: #ffffff;">
-                    <option value="today">Apenas Hoje</option>
-                    <option value="tomorrow">Amanhã</option>
-                    <option value="week">Próximos 7 dias</option>
-                    <option value="all">Todos os Agendamentos</option>
-                </select>
-            </div>
-            <div id="bookingsList" style="max-height: 600px; overflow-y: auto;">
-                <div style="text-align: center; padding: 40px; color: #888888;">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 48px; margin-bottom: 15px;"></i>
-                    <p>Carregando agendamentos...</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="log-container">
-            <h2 style="color: #87ceeb; margin-bottom: 20px;">📋 Logs do Sistema</h2>
-            <div id="logEntries">
-                <div class="log-entry">
-                    <span class="timestamp">[Sistema]</span> Aguardando início...
-                </div>
+        <div class="logs">
+            <h2>📋 Logs</h2>
+            <div id="logsList">
+                <div class="log">Sistema iniciado. Configure e clique em Iniciar.</div>
             </div>
         </div>
     </div>
@@ -448,955 +106,271 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5cmxtanJiZWNpZGJwdm9maXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMzE0NDQsImV4cCI6MjA3NTgwNzQ0NH0.80whwN7m1YbwuZ8WLzek-ctWd9KNn97EwUQRzOMAnak';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Adicionar botão de debug
-        function addDebugInfo() {
-            addLog(`🔧 DEBUG INFO:`, 'warning');
-            addLog(`   Supabase URL: ${SUPABASE_URL}`);
-            addLog(`   Data atual: ${new Date().toISOString()}`);
-            addLog(`   Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`);
-        }
-
-        let systemRunning = false;
-        let checkIntervalId = null;
-        let sentRemindersToday = new Set();
-        let realtimeChannel = null; // Canal para realtime
         let config = {
             webhookUrl: 'https://n8n-n8n.rthuab.easypanel.host/webhook/lembrete',
-            reminderTime: 60, // minutos
-            checkInterval: 15 // minutos
+            reminderTime: 60
         };
+        let intervalId = null;
+        let sentToday = new Set();
+        let realtimeChannel = null;
 
-        // Carregar configurações salvas
-        function loadConfig() {
-            const savedConfig = localStorage.getItem('reminderConfig');
-            if (savedConfig) {
-                config = JSON.parse(savedConfig);
-                document.getElementById('webhookUrl').value = config.webhookUrl;
-                document.getElementById('reminderTime').value = config.reminderTime;
-                document.getElementById('checkInterval').value = config.checkInterval;
-            }
-
-            const savedReminders = localStorage.getItem('sentRemindersToday');
-            if (savedReminders) {
-                const data = JSON.parse(savedReminders);
-                const today = new Date().toDateString();
-                if (data.date === today) {
-                    sentRemindersToday = new Set(data.reminders);
-                } else {
-                    localStorage.removeItem('sentRemindersToday');
-                }
-            }
-            updateStats();
+        function log(msg, type = 'info') {
+            const logs = document.getElementById('logsList');
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logs.insertBefore(div, logs.firstChild);
+            console.log(msg);
         }
 
         function saveConfig() {
             config.webhookUrl = document.getElementById('webhookUrl').value;
             config.reminderTime = parseInt(document.getElementById('reminderTime').value);
-            config.checkInterval = parseInt(document.getElementById('checkInterval').value);
-            
             localStorage.setItem('reminderConfig', JSON.stringify(config));
-            addLog('⚙️ Configurações salvas com sucesso!', 'success');
-
-            if (systemRunning) {
-                stopSystem();
-                setTimeout(() => startSystem(), 1000);
-                addLog('🔄 Sistema reiniciado com novas configurações', 'warning');
-            }
+            log('✅ Configuração salva!', 'success');
         }
 
-        function startSystem() {
-            if (systemRunning) return;
+        async function testConnection() {
+            log('🔍 Testando conexão com Supabase...', 'warning');
             
-            systemRunning = true;
-            document.getElementById('startBtn').disabled = true;
-            document.getElementById('stopBtn').disabled = false;
-            
-            updateStatus('running');
-            addLog('✅ Sistema iniciado', 'success');
-            
-            // Configurar Realtime
-            setupRealtimeListener();
-            
-            // Primeira verificação imediata
-            checkForReminders();
-            
-            // Configurar verificações periódicas
-            checkIntervalId = setInterval(() => {
-                checkForReminders();
-            }, config.checkInterval * 60 * 1000);
-        }
-
-        function stopSystem() {
-            if (!systemRunning) return;
-            
-            systemRunning = false;
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('stopBtn').disabled = true;
-            
-            if (checkIntervalId) {
-                clearInterval(checkIntervalId);
-                checkIntervalId = null;
-            }
-            
-            // Desconectar Realtime
-            if (realtimeChannel) {
-                supabase.removeChannel(realtimeChannel);
-                realtimeChannel = null;
-                addLog('🔌 Realtime desconectado', 'warning');
-            }
-            
-            updateStatus('stopped');
-            addLog('⏹️ Sistema parado', 'warning');
-        }
-
-        function setupRealtimeListener() {
-            // Remover canal existente se houver
-            if (realtimeChannel) {
-                supabase.removeChannel(realtimeChannel);
-            }
-
-            // Criar novo canal de realtime
-            realtimeChannel = supabase
-                .channel('bookings-realtime')
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'bookings'
-                    },
-                    (payload) => {
-                        handleRealtimeEvent(payload);
-                    }
-                )
-                .subscribe((status) => {
-                    if (status === 'SUBSCRIBED') {
-                        addLog('✅ Realtime conectado - Monitorando novos agendamentos', 'success');
-                    } else if (status === 'CHANNEL_ERROR') {
-                        addLog('❌ Erro ao conectar Realtime', 'error');
-                    }
-                });
-        }
-
-        function handleRealtimeEvent(payload) {
-            const eventType = payload.eventType;
-            const booking = payload.new || payload.old;
-            
-            if (eventType === 'INSERT') {
-                const dateFormatted = new Date(booking.booking_date + 'T12:00:00')
-                    .toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-                const timeFormatted = booking.booking_time.substring(0, 5);
-                
-                addLog(`🆕 NOVO AGENDAMENTO detectado!`, 'success');
-                addLog(`   📅 Data: ${dateFormatted} às ${timeFormatted}`, 'success');
-                addLog(`   📊 Status: ${booking.status}`, 'success');
-                
-                // Atualizar lista e estatísticas
-                refreshBookings();
-                updateStats();
-                
-                // Verificar se precisa enviar lembrete imediatamente
-                if (booking.status === 'confirmed') {
-                    const now = new Date();
-                    const bookingTime = new Date(`${booking.booking_date}T${booking.booking_time}`);
-                    const timeDiff = (bookingTime - now) / 60000;
-                    
-                    if (timeDiff <= config.reminderTime && timeDiff > 0) {
-                        addLog(`⚡ Agendamento dentro da janela de lembretes!`, 'warning');
-                        addLog(`   ⏰ Lembrete será enviado em breve`, 'warning');
-                    }
-                }
-                
-            } else if (eventType === 'UPDATE') {
-                addLog(`🔄 Agendamento ATUALIZADO`, 'warning');
-                addLog(`   🆔 ID: ${booking.id.substring(0, 8)}...`);
-                addLog(`   📊 Novo Status: ${booking.status}`);
-                
-                refreshBookings();
-                updateStats();
-                
-            } else if (eventType === 'DELETE') {
-                addLog(`🗑️ Agendamento CANCELADO/EXCLUÍDO`, 'warning');
-                
-                refreshBookings();
-                updateStats();
-                
-                // Remover do conjunto de lembretes enviados
-                if (sentRemindersToday.has(booking.id)) {
-                    sentRemindersToday.delete(booking.id);
-                    saveSentReminders();
-                }
-            }
-        }
-
-        function checkNow() {
-            addLog('🔍 Verificação manual iniciada...', 'warning');
-            checkForReminders();
-        }
-
-        async function checkForReminders() {
             try {
-                const now = new Date();
-                const checkTime = new Date(now.getTime() + config.reminderTime * 60000);
-                
-                // Formatar datas para busca
-                const today = now.toISOString().split('T')[0];
-                const checkTimeStr = checkTime.toTimeString().split(' ')[0].substring(0, 5);
-                
-                addLog(`🔎 Verificando agendamentos para ${checkTimeStr}...`);
-                
-                // Buscar agendamentos confirmados
-                const { data: bookings, error } = await supabase
+                const { data, error } = await supabase
                     .from('bookings')
-                    .select('*, users(full_name, phone, email), services(name, price, duration)')
-                    .eq('booking_date', today)
-                    .eq('status', 'confirmed')
-                    .order('booking_time', { ascending: true });
+                    .select('id, booking_date, booking_time, status')
+                    .limit(5);
 
-                if (error) throw error;
-
-                if (!bookings || bookings.length === 0) {
-                    addLog('ℹ️ Nenhum agendamento confirmado para hoje');
-                    updateLastCheck();
-                    updateStats();
-                    await refreshBookings();
+                if (error) {
+                    log(`❌ ERRO: ${error.message}`, 'error');
                     return;
                 }
 
-                // Filtrar agendamentos que precisam de lembrete
-                const bookingsToRemind = bookings.filter(booking => {
-                    const bookingTime = new Date(`${booking.booking_date}T${booking.booking_time}`);
-                    const timeDiff = (bookingTime - now) / 60000; // diferença em minutos
-                    
-                    // Verificar se está no intervalo de tempo para lembrete
-                    const inTimeWindow = timeDiff <= config.reminderTime && timeDiff > (config.reminderTime - config.checkInterval);
-                    
-                    // Verificar se já foi enviado lembrete
-                    const alreadySent = sentRemindersToday.has(booking.id);
-                    
-                    return inTimeWindow && !alreadySent;
-                });
-
-                addLog(`📊 ${bookingsToRemind.length} lembrete(s) para enviar`);
-
-                // Enviar lembretes
-                for (const booking of bookingsToRemind) {
-                    await sendReminder(booking);
+                log(`✅ Conexão OK! Encontrados ${data?.length || 0} agendamentos`, 'success');
+                
+                if (data && data.length > 0) {
+                    data.forEach(b => {
+                        log(`   - ${b.booking_date} ${b.booking_time} [${b.status}]`);
+                    });
                 }
 
-                updateLastCheck();
-                updateStats();
-                await refreshBookings();
+                await loadBookings();
+            } catch (err) {
+                log(`❌ Erro: ${err.message}`, 'error');
+            }
+        }
 
-            } catch (error) {
-                addLog(`❌ Erro ao verificar agendamentos: ${error.message}`, 'error');
-                console.error(error);
+        async function loadBookings() {
+            const container = document.getElementById('bookingsList');
+            container.innerHTML = '<p>Carregando...</p>';
+
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                
+                log(`📊 Buscando agendamentos a partir de ${today}...`);
+
+                const { data, error } = await supabase
+                    .from('bookings')
+                    .select(`
+                        id,
+                        booking_date,
+                        booking_time,
+                        status,
+                        users (full_name, phone),
+                        services (name, price)
+                    `)
+                    .eq('status', 'confirmed')
+                    .gte('booking_date', today)
+                    .order('booking_date', { ascending: true })
+                    .order('booking_time', { ascending: true });
+
+                if (error) {
+                    log(`❌ Erro ao buscar: ${error.message}`, 'error');
+                    container.innerHTML = `<p style="color: #ff4444;">Erro: ${error.message}</p>`;
+                    return;
+                }
+
+                log(`✅ Encontrados: ${data?.length || 0} agendamentos confirmados`);
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<p>Nenhum agendamento confirmado encontrado.</p>';
+                    return;
+                }
+
+                container.innerHTML = data.map(booking => {
+                    const now = new Date();
+                    const bookingTime = new Date(`${booking.booking_date}T${booking.booking_time}`);
+                    const diffMinutes = (bookingTime - now) / 60000;
+                    
+                    let statusClass = 'waiting';
+                    let statusText = 'Aguardando';
+                    
+                    if (sentToday.has(booking.id)) {
+                        statusClass = 'sent';
+                        statusText = '✅ Enviado';
+                    } else if (diffMinutes <= config.reminderTime && diffMinutes > 0) {
+                        statusClass = 'pending';
+                        statusText = '⏳ Pendente';
+                    }
+
+                    return `
+                        <div class="booking-item ${statusClass}">
+                            <strong>${booking.users?.full_name || 'Cliente'}</strong>
+                            <span class="status ${statusClass}">${statusText}</span>
+                            <br>
+                            📅 ${booking.booking_date} às ${booking.booking_time.substring(0,5)}
+                            <br>
+                            ✂️ ${booking.services?.name} - R$ ${booking.services?.price?.toFixed(2)}
+                            <br>
+                            📱 ${booking.users?.phone || 'Sem telefone'}
+                            <br>
+                            ⏰ Faltam ${Math.floor(diffMinutes)} minutos
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                log(`❌ Erro: ${err.message}`, 'error');
+                container.innerHTML = `<p style="color: #ff4444;">Erro: ${err.message}</p>`;
+            }
+        }
+
+        function setupRealtime() {
+            if (realtimeChannel) {
+                supabase.removeChannel(realtimeChannel);
+            }
+
+            realtimeChannel = supabase
+                .channel('bookings-changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'bookings'
+                }, (payload) => {
+                    log(`🔔 Mudança detectada: ${payload.eventType}`, 'warning');
+                    loadBookings();
+                })
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        log('✅ Realtime conectado!', 'success');
+                    }
+                });
+        }
+
+        async function checkReminders() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const now = new Date();
+
+                const { data, error } = await supabase
+                    .from('bookings')
+                    .select(`
+                        id,
+                        booking_date,
+                        booking_time,
+                        users (full_name, phone, email),
+                        services (name, price, duration)
+                    `)
+                    .eq('status', 'confirmed')
+                    .eq('booking_date', today);
+
+                if (error) {
+                    log(`❌ Erro: ${error.message}`, 'error');
+                    return;
+                }
+
+                if (!data || data.length === 0) return;
+
+                for (const booking of data) {
+                    if (sentToday.has(booking.id)) continue;
+
+                    const bookingTime = new Date(`${booking.booking_date}T${booking.booking_time}`);
+                    const diffMinutes = (bookingTime - now) / 60000;
+
+                    if (diffMinutes <= config.reminderTime && diffMinutes > 0) {
+                        await sendReminder(booking);
+                    }
+                }
+
+                await loadBookings();
+            } catch (err) {
+                log(`❌ Erro: ${err.message}`, 'error');
             }
         }
 
         async function sendReminder(booking) {
             try {
-                const dateFormatted = new Date(booking.booking_date + 'T12:00:00')
-                    .toLocaleDateString('pt-BR', { 
-                        weekday: 'long', 
-                        day: 'numeric', 
-                        month: 'long' 
-                    });
-                
-                const timeFormatted = booking.booking_time.substring(0, 5);
-
-                // Buscar informações do barbeiro se existir barber_id
-                let barberName = 'BarberSync';
-                if (booking.barber_id) {
-                    try {
-                        const { data: barberData } = await supabase
-                            .from('barbers')
-                            .select('name')
-                            .eq('id', booking.barber_id)
-                            .single();
-                        
-                        if (barberData) {
-                            barberName = barberData.name;
-                        }
-                    } catch (barberError) {
-                        console.log('Erro ao buscar barbeiro, usando padrão');
-                    }
-                }
-
                 const reminderData = {
                     type: 'reminder',
                     booking_id: booking.id,
                     customer_name: booking.users?.full_name || 'Cliente',
-                    customer_email: booking.users?.email || '',
                     customer_phone: booking.users?.phone || '',
-                    service_name: booking.services?.name || 'Serviço',
+                    customer_email: booking.users?.email || '',
+                    service_name: booking.services?.name || '',
                     service_price: booking.services?.price || 0,
-                    service_duration: booking.services?.duration || 0,
-                    barber_name: barberName,
-                    booking_date: dateFormatted,
-                    booking_time: timeFormatted,
-                    booking_datetime: `${booking.booking_date}T${booking.booking_time}`,
-                    minutes_before: config.reminderTime,
-                    status: 'confirmed'
+                    booking_date: booking.booking_date,
+                    booking_time: booking.booking_time.substring(0, 5),
+                    minutes_before: config.reminderTime
                 };
 
                 const response = await fetch(config.webhookUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(reminderData)
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Webhook retornou status ${response.status}`);
+                    throw new Error(`Webhook retornou ${response.status}`);
                 }
 
-                // Marcar como enviado
-                sentRemindersToday.add(booking.id);
-                saveSentReminders();
+                sentToday.add(booking.id);
+                log(`✅ Lembrete enviado: ${booking.users?.full_name}`, 'success');
 
-                addLog(
-                    `✅ Lembrete enviado: ${booking.users?.full_name} - ${timeFormatted}`, 
-                    'success'
-                );
-
-            } catch (error) {
-                addLog(
-                    `❌ Erro ao enviar lembrete para ${booking.users?.full_name}: ${error.message}`, 
-                    'error'
-                );
-                console.error('Erro ao enviar lembrete:', error);
+            } catch (err) {
+                log(`❌ Erro ao enviar: ${err.message}`, 'error');
             }
         }
 
-        function saveSentReminders() {
-            const data = {
-                date: new Date().toDateString(),
-                reminders: Array.from(sentRemindersToday)
-            };
-            localStorage.setItem('sentRemindersToday', JSON.stringify(data));
-        }
-
-        function updateStatus(status) {
-            const statusCard = document.getElementById('statusCard');
-            const statusText = document.getElementById('statusText');
-            
-            if (status === 'running') {
-                statusCard.className = 'status-card';
-                statusCard.innerHTML = `
-                    <h3 style="color: #4caf50; margin-bottom: 10px;">✅ Sistema Ativo</h3>
-                    <p id="statusText">Verificando agendamentos a cada ${config.checkInterval} minutos</p>
-                    <div class="realtime-indicator">
-                        <div class="realtime-dot"></div>
-                        <span>🔴 LIVE - Monitoramento em Tempo Real Ativo</span>
-                    </div>
-                `;
-            } else {
-                statusCard.className = 'status-card warning';
-                statusCard.innerHTML = `
-                    <h3 style="color: #ff9800; margin-bottom: 10px;">⏸️ Sistema Parado</h3>
-                    <p id="statusText">Clique em "Iniciar Sistema" para começar a verificação automática e monitoramento em tempo real</p>
-                `;
+        function startSystem() {
+            if (intervalId) {
+                log('⚠️ Sistema já está rodando!', 'warning');
+                return;
             }
+
+            log('▶️ Sistema iniciado!', 'success');
+            setupRealtime();
+            checkReminders();
+            intervalId = setInterval(checkReminders, 5 * 60 * 1000); // 5 minutos
+            loadBookings();
         }
 
-        function updateLastCheck() {
-            const now = new Date();
-            document.getElementById('lastCheck').textContent = 
-                now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        }
-
-        async function updateStats() {
-            document.getElementById('totalSent').textContent = sentRemindersToday.size;
-            
-            try {
-                const now = new Date();
-                const today = now.toISOString().split('T')[0];
-                
-                // Buscar todos os agendamentos futuros confirmados
-                const { data: upcomingBookings } = await supabase
-                    .from('bookings')
-                    .select('id, booking_date, booking_time')
-                    .gte('booking_date', today)
-                    .eq('status', 'confirmed');
-                
-                // Contar apenas os que estão dentro da janela de tempo para hoje
-                let todayPendingCount = 0;
-                if (upcomingBookings) {
-                    upcomingBookings.forEach(booking => {
-                        if (booking.booking_date === today) {
-                            const bookingTime = new Date(`${booking.booking_date}T${booking.booking_time}`);
-                            const timeDiff = (bookingTime - now) / 60000;
-                            if (timeDiff <= config.reminderTime && timeDiff > 0 && !sentRemindersToday.has(booking.id)) {
-                                todayPendingCount++;
-                            }
-                        }
-                    });
-                }
-                
-                document.getElementById('upcomingCount').textContent = todayPendingCount;
-            } catch (error) {
-                console.error('Erro ao atualizar estatísticas:', error);
+        function stopSystem() {
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
             }
+            if (realtimeChannel) {
+                supabase.removeChannel(realtimeChannel);
+                realtimeChannel = null;
+            }
+            log('⏹️ Sistema parado!', 'warning');
         }
 
-        function addLog(message, type = 'info') {
-            const logContainer = document.getElementById('logEntries');
-            const timestamp = new Date().toLocaleTimeString('pt-BR');
-            
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry ${type}`;
-            logEntry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
-            
-            logContainer.insertBefore(logEntry, logContainer.firstChild);
-            
-            // Manter apenas últimas 100 entradas
-            while (logContainer.children.length > 100) {
-                logContainer.removeChild(logContainer.lastChild);
-            }
-        }
-
-        function clearLogs() {
-            const logContainer = document.getElementById('logEntries');
-            logContainer.innerHTML = '<div class="log-entry"><span class="timestamp">[Sistema]</span> Logs limpos</div>';
-        }
-
-        async function testDirectQuery() {
-            addLog('🔬 TESTE DIRETO - Buscando TODOS os agendamentos...', 'warning');
-            
-            try {
-                // Busca simples sem filtros
-                const { data: allBookings, error } = await supabase
-                    .from('bookings')
-                    .select('id, booking_date, booking_time, status, user_id, service_id')
-                    .order('booking_date', { ascending: true });
-
-                if (error) {
-                    addLog(`❌ Erro na query: ${error.message}`, 'error');
-                    addLog(`   Código: ${error.code}`, 'error');
-                    addLog(`   Detalhes: ${JSON.stringify(error.details)}`, 'error');
-                    return;
-                }
-
-                addLog(`✅ TOTAL no banco: ${allBookings?.length || 0} agendamentos`);
-                
-                if (!allBookings || allBookings.length === 0) {
-                    addLog('⚠️ Nenhum agendamento encontrado no banco!', 'warning');
-                    return;
-                }
-
-                // Agrupar por status
-                const byStatus = {};
-                allBookings.forEach(b => {
-                    byStatus[b.status] = (byStatus[b.status] || 0) + 1;
-                });
-
-                addLog('📊 Por STATUS:');
-                Object.keys(byStatus).forEach(status => {
-                    addLog(`   - ${status}: ${byStatus[status]}`);
-                });
-
-                // Agrupar por data
-                const byDate = {};
-                allBookings.forEach(b => {
-                    byDate[b.booking_date] = (byDate[b.booking_date] || 0) + 1;
-                });
-
-                addLog('📅 Por DATA:');
-                Object.keys(byDate).sort().forEach(date => {
-                    addLog(`   - ${date}: ${byDate[date]} agendamento(s)`);
-                });
-
-                // Listar os 5 primeiros
-                addLog('📋 Primeiros 5 registros:');
-                allBookings.slice(0, 5).forEach((b, i) => {
-                    addLog(`   ${i+1}. Data: ${b.booking_date} ${b.booking_time} | Status: ${b.status} | ID: ${b.id.substring(0,8)}...`);
-                });
-
-                const today = new Date().toISOString().split('T')[0];
-                const todayBookings = allBookings.filter(b => b.booking_date === today);
-                addLog(`\n🎯 HOJE (${today}): ${todayBookings.length} agendamento(s)`);
-                
-                todayBookings.forEach((b, i) => {
-                    addLog(`   ${i+1}. ${b.booking_time} - Status: ${b.status}`);
-                });
-
-                const confirmedBookings = allBookings.filter(b => b.status === 'confirmed');
-                addLog(`\n✅ CONFIRMADOS: ${confirmedBookings.length} agendamento(s)`);
-
-                const futureBookings = allBookings.filter(b => b.booking_date >= today);
-                addLog(`\n📅 FUTUROS (>= ${today}): ${futureBookings.length} agendamento(s)`);
-
-            } catch (error) {
-                addLog(`❌ ERRO: ${error.message}`, 'error');
-                console.error('Erro completo:', error);
-            }
-        }
-
-        async function compareQueries() {
-            addLog('🔄 COMPARANDO QUERIES - Sistema Lembretes vs Painel Admin', 'warning');
-            
-            try {
-                const today = new Date().toISOString().split('T')[0];
-                
-                // Query 1: Sistema de Lembretes (atual)
-                addLog('\n📱 QUERY 1 - Sistema de Lembretes:');
-                const { data: remindersData, error: error1 } = await supabase
-                    .from('bookings')
-                    .select('*, users(full_name, phone, email), services(name, price, duration)')
-                    .eq('status', 'confirmed')
-                    .gte('booking_date', today)
-                    .order('booking_date', { ascending: true })
-                    .order('booking_time', { ascending: true });
-                
-                if (error1) {
-                    addLog(`❌ Erro: ${error1.message}`, 'error');
-                } else {
-                    addLog(`✅ Encontrados: ${remindersData?.length || 0} agendamentos`);
-                    if (remindersData && remindersData.length > 0) {
-                        remindersData.forEach((b, i) => {
-                            addLog(`   ${i+1}. ${b.booking_date} ${b.booking_time.substring(0,5)} - ${b.users?.full_name || 'Sem nome'}`);
-                        });
-                    }
-                }
-                
-                // Query 2: Painel Admin (como ele busca)
-                addLog('\n🖥️ QUERY 2 - Painel Admin (todos confirmados):');
-                const { data: adminData, error: error2 } = await supabase
-                    .from('bookings')
-                    .select('*, users(full_name, phone, email), services(name, price, duration)')
-                    .eq('status', 'confirmed')
-                    .order('booking_date', { ascending: true })
-                    .order('booking_time', { ascending: true });
-                
-                if (error2) {
-                    addLog(`❌ Erro: ${error2.message}`, 'error');
-                } else {
-                    addLog(`✅ Encontrados: ${adminData?.length || 0} agendamentos`);
-                    if (adminData && adminData.length > 0) {
-                        adminData.forEach((b, i) => {
-                            const isPast = b.booking_date < today;
-                            const emoji = isPast ? '⏱️' : '📅';
-                            addLog(`   ${emoji} ${i+1}. ${b.booking_date} ${b.booking_time.substring(0,5)} - ${b.users?.full_name || 'Sem nome'}`);
-                        });
-                    }
-                }
-                
-                // Comparação
-                addLog('\n📊 COMPARAÇÃO:');
-                addLog(`   Sistema Lembretes: ${remindersData?.length || 0} agendamentos`);
-                addLog(`   Painel Admin: ${adminData?.length || 0} agendamentos`);
-                addLog(`   Diferença: ${(adminData?.length || 0) - (remindersData?.length || 0)} agendamentos`);
-                
-                if (adminData && remindersData) {
-                    const pastBookings = adminData.filter(b => b.booking_date < today);
-                    if (pastBookings.length > 0) {
-                        addLog(`\n⚠️ ATENÇÃO: ${pastBookings.length} agendamento(s) com data passada:`);
-                        pastBookings.forEach((b, i) => {
-                            addLog(`   ${i+1}. ${b.booking_date} ${b.booking_time.substring(0,5)} - ${b.users?.full_name || 'Sem nome'}`);
-                        });
-                        addLog(`\n💡 SOLUÇÃO: O sistema de lembretes filtra apenas agendamentos FUTUROS`);
-                        addLog(`   Para ver agendamentos antigos, use o filtro "Todos os Agendamentos"`);
-                    }
-                }
-                
-            } catch (error) {
-                addLog(`❌ ERRO: ${error.message}`, 'error');
-                console.error('Erro completo:', error);
-            }
-        }
-
-        async function refreshBookings() {
-            const container = document.getElementById('bookingsList');
-            const filterStatus = document.getElementById('filterStatus').value;
-            const filterDate = document.getElementById('filterDate').value;
-            
-            container.innerHTML = `
-                <div style="text-align: center; padding: 40px; color: #888888;">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 48px; margin-bottom: 15px;"></i>
-                    <p>Carregando agendamentos...</p>
-                </div>
-            `;
-
-            try {
-                const now = new Date();
-                const today = now.toISOString().split('T')[0];
-                
-                addLog(`🔍 Buscando agendamentos... Filtro Data: ${filterDate}, Status: ${filterStatus}`);
-                
-                // Primeiro: buscar TODOS os agendamentos sem filtro para debug
-                const { data: allData, error: debugError } = await supabase
-                    .from('bookings')
-                    .select('id, booking_date, booking_time, status')
-                    .order('booking_date', { ascending: true });
-                
-                if (!debugError && allData) {
-                    addLog(`🔍 DEBUG: Total de agendamentos no banco: ${allData.length}`);
-                    const confirmedCount = allData.filter(b => b.status === 'confirmed').length;
-                    addLog(`🔍 DEBUG: Confirmados: ${confirmedCount}`);
-                    
-                    const todayCount = allData.filter(b => b.booking_date === today).length;
-                    addLog(`🔍 DEBUG: Hoje (${today}): ${todayCount}`);
-                }
-                
-                // Calcular range de datas baseado no filtro
-                let dateFilter = {};
-                if (filterDate === 'today') {
-                    dateFilter = { eq: today };
-                    addLog(`📅 Buscando apenas para hoje: ${today}`);
-                } else if (filterDate === 'tomorrow') {
-                    const tomorrow = new Date(now);
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    dateFilter = { eq: tomorrow.toISOString().split('T')[0] };
-                    addLog(`📅 Buscando apenas para amanhã: ${dateFilter.eq}`);
-                } else if (filterDate === 'week') {
-                    const weekLater = new Date(now);
-                    weekLater.setDate(weekLater.getDate() + 7);
-                    dateFilter = { 
-                        gte: today, 
-                        lte: weekLater.toISOString().split('T')[0] 
-                    };
-                    addLog(`📅 Buscando próximos 7 dias: ${dateFilter.gte} até ${dateFilter.lte}`);
-                }
-
-                // Montar query
-                let query = supabase
-                    .from('bookings')
-                    .select('*, users(full_name, phone, email), services(name, price, duration)')
-                    .eq('status', 'confirmed')
-                    .order('booking_date', { ascending: true })
-                    .order('booking_time', { ascending: true });
-
-                // Aplicar filtro de data
-                if (filterDate === 'today' || filterDate === 'tomorrow') {
-                    query = query.eq('booking_date', dateFilter.eq);
-                } else if (filterDate === 'week') {
-                    query = query.gte('booking_date', dateFilter.gte).lte('booking_date', dateFilter.lte);
-                } else {
-                    // Para 'all', buscar agendamentos futuros (a partir de hoje)
-                    query = query.gte('booking_date', today);
-                    addLog(`📅 Buscando todos agendamentos a partir de: ${today}`);
-                }
-
-                const { data: bookings, error } = await query;
-
-                if (error) {
-                    addLog(`❌ Erro na consulta: ${error.message}`, 'error');
-                    throw error;
-                }
-
-                addLog(`✅ Encontrados ${bookings?.length || 0} agendamentos confirmados`);
-
-                if (!bookings || bookings.length === 0) {
-                    const filterText = {
-                        'today': 'hoje',
-                        'tomorrow': 'amanhã',
-                        'week': 'nos próximos 7 dias',
-                        'all': 'futuros'
-                    }[filterDate] || 'no período selecionado';
-
-                    container.innerHTML = `
-                        <div class="empty-bookings">
-                            <i class="fas fa-calendar-times"></i>
-                            <h3 style="color: #87ceeb; margin-bottom: 10px;">Nenhum Agendamento</h3>
-                            <p>Não há agendamentos confirmados ${filterText}</p>
-                            <p style="margin-top: 15px; font-size: 12px; color: #888888;">
-                                Data de hoje: ${today}<br>
-                                Verifique se existem agendamentos com status "confirmed" no banco
-                            </p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                addLog(`📊 Processando ${bookings.length} agendamento(s)...`);
-
-                // Processar cada agendamento
-                const processedBookings = await Promise.all(bookings.map(async (booking) => {
-                    const bookingTime = new Date(`${booking.booking_date}T${booking.booking_time}`);
-                    const timeDiff = (bookingTime - now) / 60000; // diferença em minutos
-                    const reminderTime = new Date(bookingTime.getTime() - config.reminderTime * 60000);
-                    
-                    // Determinar se é hoje, amanhã ou outro dia
-                    const bookingDateOnly = booking.booking_date;
-                    const tomorrow = new Date(now);
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    const tomorrowStr = tomorrow.toISOString().split('T')[0];
-                    
-                    let dayBadge = '';
-                    let dayClass = '';
-                    if (bookingDateOnly === today) {
-                        dayBadge = 'Hoje';
-                        dayClass = 'today';
-                    } else if (bookingDateOnly === tomorrowStr) {
-                        dayBadge = 'Amanhã';
-                        dayClass = 'tomorrow';
-                    } else {
-                        const bookingDateObj = new Date(bookingDateOnly + 'T12:00:00');
-                        dayBadge = bookingDateObj.toLocaleDateString('pt-BR', { 
-                            weekday: 'short', 
-                            day: '2-digit', 
-                            month: 'short' 
-                        });
-                        dayClass = '';
-                    }
-                    
-                    // Buscar nome do barbeiro se existir
-                    let barberName = 'BarberSync';
-                    if (booking.barber_id) {
-                        try {
-                            const { data: barberData } = await supabase
-                                .from('barbers')
-                                .select('name')
-                                .eq('id', booking.barber_id)
-                                .single();
-                            
-                            if (barberData) {
-                                barberName = barberData.name;
-                            }
-                        } catch (barberError) {
-                            console.log('Usando nome padrão do barbeiro');
-                        }
-                    }
-                    
-                    let status, statusText, statusClass;
-                    
-                    if (sentRemindersToday.has(booking.id)) {
-                        status = 'sent';
-                        statusText = '✅ Lembrete Enviado';
-                        statusClass = 'status-sent';
-                    } else if (bookingDateOnly === today && timeDiff <= config.reminderTime && timeDiff > 0) {
-                        status = 'pending';
-                        statusText = '⏳ Aguardando Envio';
-                        statusClass = 'status-pending';
-                    } else if (timeDiff > config.reminderTime) {
-                        status = 'too-early';
-                        statusText = '⏰ Muito Cedo';
-                        statusClass = 'status-too-early';
-                    } else if (timeDiff <= 0) {
-                        status = 'passed';
-                        statusText = '⏱️ Horário Passou';
-                        statusClass = 'status-too-early';
-                    } else {
-                        status = 'too-early';
-                        statusText = '⏰ Muito Cedo';
-                        statusClass = 'status-too-early';
-                    }
-
-                    addLog(`  → ${booking.users?.full_name}: ${bookingDateOnly} ${booking.booking_time.substring(0,5)} - Status: ${statusText}`);
-
-                    return { 
-                        ...booking, 
-                        barberName, 
-                        dayBadge, 
-                        dayClass, 
-                        status, 
-                        statusText, 
-                        statusClass, 
-                        bookingTime, 
-                        reminderTime, 
-                        timeDiff 
-                    };
-                }));
-
-                // Filtrar por status se necessário
-                let filteredBookings = processedBookings;
-                if (filterStatus !== 'all') {
-                    filteredBookings = processedBookings.filter(b => b.status === filterStatus);
-                    addLog(`🔍 Após filtro de status "${filterStatus}": ${filteredBookings.length} agendamento(s)`);
-                }
-
-                if (filteredBookings.length === 0) {
-                    container.innerHTML = `
-                        <div class="empty-bookings">
-                            <i class="fas fa-filter"></i>
-                            <h3 style="color: #87ceeb; margin-bottom: 10px;">Nenhum Resultado</h3>
-                            <p>Não há agendamentos com o status selecionado</p>
-                            <p style="margin-top: 15px; font-size: 12px; color: #888888;">
-                                Total encontrado: ${bookings.length}<br>
-                                Após filtro: ${filteredBookings.length}
-                            </p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                addLog(`✅ Exibindo ${filteredBookings.length} agendamento(s)`, 'success');
-
-                // Renderizar agendamentos
-                container.innerHTML = filteredBookings.map(booking => {
-                    const timeFormatted = booking.booking_time.substring(0, 5);
-                    const reminderTimeFormatted = booking.reminderTime.toLocaleTimeString('pt-BR', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                    });
-
-                    const fullDateFormatted = new Date(booking.booking_date + 'T12:00:00')
-                        .toLocaleDateString('pt-BR', { 
-                            day: '2-digit', 
-                            month: 'long', 
-                            year: 'numeric' 
-                        });
-
-                    // Calcular countdown
-                    let countdownText = '';
-                    if (booking.timeDiff > 0) {
-                        const hours = Math.floor(booking.timeDiff / 60);
-                        const minutes = Math.floor(booking.timeDiff % 60);
-                        if (hours > 24) {
-                            const days = Math.floor(hours / 24);
-                            countdownText = `em ${days} dia${days > 1 ? 's' : ''}`;
-                        } else if (hours > 0) {
-                            countdownText = `em ${hours}h ${minutes}min`;
-                        } else {
-                            countdownText = `em ${minutes} minutos`;
-                        }
-                    } else {
-                        countdownText = 'já passou';
-                    }
-
-                    // Calcular tempo até o lembrete
-                    const timeUntilReminder = (booking.reminderTime - now) / 60000;
-                    let reminderCountdown = '';
-                    if (booking.status === 'too-early' && timeUntilReminder > 0) {
-                        const hours = Math.floor(timeUntilReminder / 60);
-                        const minutes = Math.floor(timeUntilReminder % 60);
-                        if (hours > 24) {
-                            const days = Math.floor(hours / 24);
-                            reminderCountdown = `Lembrete em ${days} dia${days > 1 ? 's' : ''}`;
-                        } else if (hours > 0) {
-                            reminderCountdown = `Lembrete em ${hours}h ${minutes}min`;
-                        } else {
-                            reminderCountdown = `Lembrete em ${minutes} minutos`;
-                        }
-                    }
-
-                    return `
-                        <div class="booking-card ${booking.status}">
-                            <div class="booking-date-badge ${booking.dayClass}">
-                                📅 ${booking.dayBadge.toUpperCase()} - ${fullDateFormatted}
-                            </div>
-                            
-                            <div class="booking-header">
-                                <div>
-                                    <div class="booking-client-name">
-                                        <i class="fas fa-user"></i> ${booking.users?.full_name || 'Cliente'}
-                                    </div>
-                                    <div class="booking-service">
-                                        <i class="fas fa-cut"></i> ${booking.services?.name || 'Serviço'}
-                                    </div>
-                                    <div style="color: #888888; font-size: 13px; margin-top: 3px;">
-                                        <i class="fas fa-user-tie"></i> ${booking.barberName || 'BarberSync'}
-                                    </div>
-                                </div>
-                                <span class="status-badge ${booking.statusClass}">
-                                    ${booking.statusText}
-                                </span>
-                            </div>
-
-                            <div class="booking-time-info">
-                                <div class="time-box highlight">
-                                    <div class="time-label">🕐 Horário do Agendamento</div>
-                                    <div class="time-value highlight">${timeFormatted}</div>
-                                    <div class="countdown">${countdownText}</div>
-                                </div>
-
-                                <div class="time-box">
-                                    <div class="time-label">🔔 Previsão do Lembrete</div>
-                                    <div class="time-value">${reminderTimeFormatted}</div>
-                                    <div class="countdown">
-                                        ${booking.status === 'sent' ? 'Já enviado ✅' : 
-                                          booking.status === 'pending' ? 'Será enviado em breve ⏳' : 
-                                          booking.status === 'too-early' ? reminderCountdown : 
-                                          'Não será enviado'}
-                                    </div>
-                                </div>
-
-                                <div class="time-box">
-                                    <div class="time-label">📱 Contato</div>
-                                    <div class="time-value" style="font-size: 14px;">
-                                        ${booking.users?.phone || 'Sem telefone'}
-                                    </div>
-                                    <div class="countdown">
-                                        R$ ${booking.services?.price?.toFixed(2) || '0.00'}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-            } catch (error) {
-                console.error('Erro ao carregar agendamentos:', error);
-                addLog(`❌ ERRO: ${error.message}`, 'error');
-                container.innerHTML = `
-                    <div class="empty-bookings">
-                        <i class="fas fa-exclamation-triangle" style="color: #ff4444;"></i>
-                        <h3 style="color: #ff4444; margin-bottom: 10px;">Erro ao Carregar</h3>
-                        <p>${error.message}</p>
-                        <p style="margin-top: 15px; font-size: 12px;">
-                            Verifique o console do navegador (F12) para mais detalhes
-                        </p>
-                    </div>
-                `;
-            }
-        }
-
-        // Event listener para o filtro
-        document.addEventListener('DOMContentLoaded', () => {
-            const filterSelect = document.getElementById('filterStatus');
-            const filterDateSelect = document.getElementById('filterDate');
-            
-            if (filterSelect) {
-                filterSelect.addEventListener('change', refreshBookings);
-            }
-            
-            if (filterDateSelect) {
-                filterDateSelect.addEventListener('change', refreshBookings);
-            }
-        });
-
-        // Inicializar ao carregar página
+        // Inicializar
         window.addEventListener('load', () => {
-            loadConfig();
-            refreshBookings();
-            addLog('💡 Sistema carregado e pronto para uso');
-            addLog(`⚙️ Configurado para enviar lembretes ${config.reminderTime} minutos antes`);
+            const saved = localStorage.getItem('reminderConfig');
+            if (saved) {
+                config = JSON.parse(saved);
+                document.getElementById('webhookUrl').value = config.webhookUrl;
+                document.getElementById('reminderTime').value = config.reminderTime;
+            }
             
-            // Verificar se deve iniciar automaticamente
-            const autoStart = localStorage.getItem('autoStartReminders');
-            if (autoStart === 'true') {
-                setTimeout(() => startSystem(), 2000);
-            }
-
-            // Atualizar lista de agendamentos a cada 30 segundos
-            setInterval(() => {
-                if (systemRunning) {
-                    refreshBookings();
-                }
-            }, 30000);
+            log('💡 Sistema pronto! Clique em "Testar Conexão" primeiro.');
+            loadBookings();
         });
 
-        // Resetar lembretes enviados à meia-noite
+        // Atualizar lista a cada 30 segundos
         setInterval(() => {
-            const now = new Date();
-            if (now.getHours() === 0 && now.getMinutes() === 0) {
-                sentRemindersToday.clear();
-                localStorage.removeItem('sentRemindersToday');
-                addLog('🔄 Contador de lembretes resetado para novo dia', 'warning');
-                updateStats();
-            }
-        }, 60000); // Verificar a cada minuto
-
-        // Salvar estado antes de sair
-        window.addEventListener('beforeunload', () => {
-            if (systemRunning) {
-                localStorage.setItem('autoStartReminders', 'true');
-            } else {
-                localStorage.removeItem('autoStartReminders');
-            }
-        });
+            if (!intervalId) loadBookings();
+        }, 30000);
     </script>
 </body>
 </html>
