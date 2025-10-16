@@ -35,12 +35,36 @@
             border-radius: 15px;
             margin-bottom: 20px;
             border-left: 4px solid #4caf50;
+            position: relative;
         }
         .status-card.warning {
             border-left-color: #ff9800;
         }
         .status-card.error {
             border-left-color: #ff4444;
+        }
+        .realtime-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: rgba(76, 175, 80, 0.2);
+            border: 2px solid #4caf50;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .realtime-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4caf50;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
         }
         .control-panel {
             background: #1a1a1a;
@@ -378,6 +402,9 @@
             <button class="btn btn-secondary" onclick="testDirectQuery()">
                 🔬 Teste Direto
             </button>
+            <button class="btn btn-secondary" onclick="compareQueries()">
+                🔄 Comparar Queries
+            </button>
         </div>
 
         <div class="config-section">
@@ -487,6 +514,9 @@
             updateStatus('running');
             addLog('✅ Sistema iniciado', 'success');
             
+            // Configurar Realtime
+            setupRealtimeListener();
+            
             // Primeira verificação imediata
             checkForReminders();
             
@@ -508,8 +538,95 @@
                 checkIntervalId = null;
             }
             
+            // Desconectar Realtime
+            if (realtimeChannel) {
+                supabase.removeChannel(realtimeChannel);
+                realtimeChannel = null;
+                addLog('🔌 Realtime desconectado', 'warning');
+            }
+            
             updateStatus('stopped');
             addLog('⏹️ Sistema parado', 'warning');
+        }
+
+        function setupRealtimeListener() {
+            // Remover canal existente se houver
+            if (realtimeChannel) {
+                supabase.removeChannel(realtimeChannel);
+            }
+
+            // Criar novo canal de realtime
+            realtimeChannel = supabase
+                .channel('bookings-realtime')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'bookings'
+                    },
+                    (payload) => {
+                        handleRealtimeEvent(payload);
+                    }
+                )
+                .subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        addLog('✅ Realtime conectado - Monitorando novos agendamentos', 'success');
+                    } else if (status === 'CHANNEL_ERROR') {
+                        addLog('❌ Erro ao conectar Realtime', 'error');
+                    }
+                });
+        }
+
+        function handleRealtimeEvent(payload) {
+            const eventType = payload.eventType;
+            const booking = payload.new || payload.old;
+            
+            if (eventType === 'INSERT') {
+                const dateFormatted = new Date(booking.booking_date + 'T12:00:00')
+                    .toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+                const timeFormatted = booking.booking_time.substring(0, 5);
+                
+                addLog(`🆕 NOVO AGENDAMENTO detectado!`, 'success');
+                addLog(`   📅 Data: ${dateFormatted} às ${timeFormatted}`, 'success');
+                addLog(`   📊 Status: ${booking.status}`, 'success');
+                
+                // Atualizar lista e estatísticas
+                refreshBookings();
+                updateStats();
+                
+                // Verificar se precisa enviar lembrete imediatamente
+                if (booking.status === 'confirmed') {
+                    const now = new Date();
+                    const bookingTime = new Date(`${booking.booking_date}T${booking.booking_time}`);
+                    const timeDiff = (bookingTime - now) / 60000;
+                    
+                    if (timeDiff <= config.reminderTime && timeDiff > 0) {
+                        addLog(`⚡ Agendamento dentro da janela de lembretes!`, 'warning');
+                        addLog(`   ⏰ Lembrete será enviado em breve`, 'warning');
+                    }
+                }
+                
+            } else if (eventType === 'UPDATE') {
+                addLog(`🔄 Agendamento ATUALIZADO`, 'warning');
+                addLog(`   🆔 ID: ${booking.id.substring(0, 8)}...`);
+                addLog(`   📊 Novo Status: ${booking.status}`);
+                
+                refreshBookings();
+                updateStats();
+                
+            } else if (eventType === 'DELETE') {
+                addLog(`🗑️ Agendamento CANCELADO/EXCLUÍDO`, 'warning');
+                
+                refreshBookings();
+                updateStats();
+                
+                // Remover do conjunto de lembretes enviados
+                if (sentRemindersToday.has(booking.id)) {
+                    sentRemindersToday.delete(booking.id);
+                    saveSentReminders();
+                }
+            }
         }
 
         function checkNow() {
@@ -670,12 +787,16 @@
                 statusCard.innerHTML = `
                     <h3 style="color: #4caf50; margin-bottom: 10px;">✅ Sistema Ativo</h3>
                     <p id="statusText">Verificando agendamentos a cada ${config.checkInterval} minutos</p>
+                    <div class="realtime-indicator">
+                        <div class="realtime-dot"></div>
+                        <span>🔴 LIVE - Monitoramento em Tempo Real Ativo</span>
+                    </div>
                 `;
             } else {
                 statusCard.className = 'status-card warning';
                 statusCard.innerHTML = `
                     <h3 style="color: #ff9800; margin-bottom: 10px;">⏸️ Sistema Parado</h3>
-                    <p id="statusText">Clique em "Iniciar Sistema" para começar a verificação automática</p>
+                    <p id="statusText">Clique em "Iniciar Sistema" para começar a verificação automática e monitoramento em tempo real</p>
                 `;
             }
         }
@@ -813,6 +934,79 @@
             }
         }
 
+        async function compareQueries() {
+            addLog('🔄 COMPARANDO QUERIES - Sistema Lembretes vs Painel Admin', 'warning');
+            
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                
+                // Query 1: Sistema de Lembretes (atual)
+                addLog('\n📱 QUERY 1 - Sistema de Lembretes:');
+                const { data: remindersData, error: error1 } = await supabase
+                    .from('bookings')
+                    .select('*, users(full_name, phone, email), services(name, price, duration)')
+                    .eq('status', 'confirmed')
+                    .gte('booking_date', today)
+                    .order('booking_date', { ascending: true })
+                    .order('booking_time', { ascending: true });
+                
+                if (error1) {
+                    addLog(`❌ Erro: ${error1.message}`, 'error');
+                } else {
+                    addLog(`✅ Encontrados: ${remindersData?.length || 0} agendamentos`);
+                    if (remindersData && remindersData.length > 0) {
+                        remindersData.forEach((b, i) => {
+                            addLog(`   ${i+1}. ${b.booking_date} ${b.booking_time.substring(0,5)} - ${b.users?.full_name || 'Sem nome'}`);
+                        });
+                    }
+                }
+                
+                // Query 2: Painel Admin (como ele busca)
+                addLog('\n🖥️ QUERY 2 - Painel Admin (todos confirmados):');
+                const { data: adminData, error: error2 } = await supabase
+                    .from('bookings')
+                    .select('*, users(full_name, phone, email), services(name, price, duration)')
+                    .eq('status', 'confirmed')
+                    .order('booking_date', { ascending: true })
+                    .order('booking_time', { ascending: true });
+                
+                if (error2) {
+                    addLog(`❌ Erro: ${error2.message}`, 'error');
+                } else {
+                    addLog(`✅ Encontrados: ${adminData?.length || 0} agendamentos`);
+                    if (adminData && adminData.length > 0) {
+                        adminData.forEach((b, i) => {
+                            const isPast = b.booking_date < today;
+                            const emoji = isPast ? '⏱️' : '📅';
+                            addLog(`   ${emoji} ${i+1}. ${b.booking_date} ${b.booking_time.substring(0,5)} - ${b.users?.full_name || 'Sem nome'}`);
+                        });
+                    }
+                }
+                
+                // Comparação
+                addLog('\n📊 COMPARAÇÃO:');
+                addLog(`   Sistema Lembretes: ${remindersData?.length || 0} agendamentos`);
+                addLog(`   Painel Admin: ${adminData?.length || 0} agendamentos`);
+                addLog(`   Diferença: ${(adminData?.length || 0) - (remindersData?.length || 0)} agendamentos`);
+                
+                if (adminData && remindersData) {
+                    const pastBookings = adminData.filter(b => b.booking_date < today);
+                    if (pastBookings.length > 0) {
+                        addLog(`\n⚠️ ATENÇÃO: ${pastBookings.length} agendamento(s) com data passada:`);
+                        pastBookings.forEach((b, i) => {
+                            addLog(`   ${i+1}. ${b.booking_date} ${b.booking_time.substring(0,5)} - ${b.users?.full_name || 'Sem nome'}`);
+                        });
+                        addLog(`\n💡 SOLUÇÃO: O sistema de lembretes filtra apenas agendamentos FUTUROS`);
+                        addLog(`   Para ver agendamentos antigos, use o filtro "Todos os Agendamentos"`);
+                    }
+                }
+                
+            } catch (error) {
+                addLog(`❌ ERRO: ${error.message}`, 'error');
+                console.error('Erro completo:', error);
+            }
+        }
+
         async function refreshBookings() {
             const container = document.getElementById('bookingsList');
             const filterStatus = document.getElementById('filterStatus').value;
@@ -830,6 +1024,21 @@
                 const today = now.toISOString().split('T')[0];
                 
                 addLog(`🔍 Buscando agendamentos... Filtro Data: ${filterDate}, Status: ${filterStatus}`);
+                
+                // Primeiro: buscar TODOS os agendamentos sem filtro para debug
+                const { data: allData, error: debugError } = await supabase
+                    .from('bookings')
+                    .select('id, booking_date, booking_time, status')
+                    .order('booking_date', { ascending: true });
+                
+                if (!debugError && allData) {
+                    addLog(`🔍 DEBUG: Total de agendamentos no banco: ${allData.length}`);
+                    const confirmedCount = allData.filter(b => b.status === 'confirmed').length;
+                    addLog(`🔍 DEBUG: Confirmados: ${confirmedCount}`);
+                    
+                    const todayCount = allData.filter(b => b.booking_date === today).length;
+                    addLog(`🔍 DEBUG: Hoje (${today}): ${todayCount}`);
+                }
                 
                 // Calcular range de datas baseado no filtro
                 let dateFilter = {};
