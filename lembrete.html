@@ -489,7 +489,7 @@
                 // Buscar agendamentos confirmados
                 const { data: bookings, error } = await supabase
                     .from('bookings')
-                    .select('*, users(full_name, phone, email), services(name, price, duration), barbers(name)')
+                    .select('*, users(full_name, phone, email), services(name, price, duration)')
                     .eq('booking_date', today)
                     .eq('status', 'confirmed')
                     .order('booking_time', { ascending: true });
@@ -546,6 +546,24 @@
                 
                 const timeFormatted = booking.booking_time.substring(0, 5);
 
+                // Buscar informações do barbeiro se existir barber_id
+                let barberName = 'BarberSync';
+                if (booking.barber_id) {
+                    try {
+                        const { data: barberData } = await supabase
+                            .from('barbers')
+                            .select('name')
+                            .eq('id', booking.barber_id)
+                            .single();
+                        
+                        if (barberData) {
+                            barberName = barberData.name;
+                        }
+                    } catch (barberError) {
+                        console.log('Erro ao buscar barbeiro, usando padrão');
+                    }
+                }
+
                 const reminderData = {
                     type: 'reminder',
                     booking_id: booking.id,
@@ -555,7 +573,7 @@
                     service_name: booking.services?.name || 'Serviço',
                     service_price: booking.services?.price || 0,
                     service_duration: booking.services?.duration || 0,
-                    barber_name: booking.barbers?.name || 'Barbeiro',
+                    barber_name: barberName,
                     booking_date: dateFormatted,
                     booking_time: timeFormatted,
                     booking_datetime: `${booking.booking_date}T${booking.booking_time}`,
@@ -684,7 +702,7 @@
 
                 const { data: bookings, error } = await supabase
                     .from('bookings')
-                    .select('*, users(full_name, phone, email), services(name, price, duration), barbers(name)')
+                    .select('*, users(full_name, phone, email), services(name, price, duration)')
                     .eq('booking_date', today)
                     .eq('status', 'confirmed')
                     .order('booking_time', { ascending: true });
@@ -703,10 +721,28 @@
                 }
 
                 // Processar cada agendamento
-                const processedBookings = bookings.map(booking => {
+                const processedBookings = await Promise.all(bookings.map(async (booking) => {
                     const bookingTime = new Date(`${booking.booking_date}T${booking.booking_time}`);
                     const timeDiff = (bookingTime - now) / 60000; // diferença em minutos
                     const reminderTime = new Date(bookingTime.getTime() - config.reminderTime * 60000);
+                    
+                    // Buscar nome do barbeiro se existir
+                    let barberName = 'BarberSync';
+                    if (booking.barber_id) {
+                        try {
+                            const { data: barberData } = await supabase
+                                .from('barbers')
+                                .select('name')
+                                .eq('id', booking.barber_id)
+                                .single();
+                            
+                            if (barberData) {
+                                barberName = barberData.name;
+                            }
+                        } catch (barberError) {
+                            console.log('Usando nome padrão do barbeiro');
+                        }
+                    }
                     
                     let status, statusText, statusClass;
                     
@@ -728,8 +764,8 @@
                         statusClass = 'status-too-early';
                     }
 
-                    return { ...booking, status, statusText, statusClass, bookingTime, reminderTime, timeDiff };
-                });
+                    return { ...booking, barberName, status, statusText, statusClass, bookingTime, reminderTime, timeDiff };
+                }));
 
                 // Filtrar por status se necessário
                 let filteredBookings = processedBookings;
@@ -794,7 +830,7 @@
                                         <i class="fas fa-cut"></i> ${booking.services?.name || 'Serviço'}
                                     </div>
                                     <div style="color: #888888; font-size: 13px; margin-top: 3px;">
-                                        <i class="fas fa-user-tie"></i> ${booking.barbers?.name || 'Barbeiro'}
+                                        <i class="fas fa-user-tie"></i> ${booking.barberName || 'BarberSync'}
                                     </div>
                                 </div>
                                 <span class="status-badge ${booking.statusClass}">
