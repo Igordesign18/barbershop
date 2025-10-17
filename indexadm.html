@@ -16,6 +16,7 @@
             box-sizing: border-box; 
         }
         
+        /* Dark Theme (Default) */
         :root {
             --dark-bg: #0a0a0a; 
             --dark-card: #1a1a1a; 
@@ -33,6 +34,23 @@
             --shadow: 0 3px 20px rgba(0, 0, 0, 0.3);
             --shadow-hover: 0 5px 30px rgba(135, 206, 235, 0.2);
         }
+
+        /* Light Theme */
+        [data-theme="light"] {
+            --dark-bg: #f5f5f5; 
+            --dark-card: #ffffff; 
+            --lime: #2196F3; 
+            --lime-dark: #1976D2;
+            --text: #212121; 
+            --text-muted: #757575; 
+            --red: #f44336; 
+            --orange: #ff9800; 
+            --green: #4caf50;
+            --whatsapp: #25D366;
+            --confirm: #2196F3; 
+            --shadow: 0 3px 20px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 5px 30px rgba(33, 150, 243, 0.3);
+        }
         
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -40,6 +58,7 @@
             color: var(--text); 
             min-height: 100vh; 
             line-height: 1.6;
+            transition: background 0.3s ease, color 0.3s ease;
         }
         
         /* Header Styles */
@@ -93,6 +112,31 @@
             font-size: 12px; 
             font-weight: bold; 
             margin-left: 10px; 
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle-btn {
+            background: transparent;
+            border: 2px solid var(--lime);
+            color: var(--lime);
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 18px;
+            transition: var(--transition);
+            margin-right: 10px;
+        }
+
+        .theme-toggle-btn:hover {
+            background: var(--lime);
+            color: var(--dark-bg);
+            transform: translateY(-2px);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
         .logout-btn { 
@@ -165,6 +209,11 @@
             color: var(--text); 
             font-size: 16px; 
             transition: var(--transition); 
+        }
+
+        [data-theme="light"] .form-group input,
+        [data-theme="light"] .form-group select {
+            border-color: #ddd;
         }
         
         .form-group input:focus, 
@@ -300,6 +349,10 @@
             align-items: center;
             gap: 8px;
         }
+
+        [data-theme="light"] .period-btn {
+            border-color: #ddd;
+        }
         
         .period-btn.active { 
             background: var(--lime); 
@@ -389,6 +442,10 @@
             padding-top: 20px; 
             border-top: 2px solid #333; 
         }
+
+        [data-theme="light"] .stat-card.expanded .stat-details {
+            border-top-color: #ddd;
+        }
         
         .detail-item { 
             display: flex; 
@@ -473,13 +530,12 @@
             margin-top: 20px; 
         }
         
-        /* REMOVENDO ESTILOS BASEADOS EM STATUS PARA MANTER COR PADRÃO */
         .booking-item { 
             background: var(--dark-bg); 
             padding: 20px; 
             border-radius: 10px; 
             margin-bottom: 15px; 
-            border-left: 4px solid var(--lime); /* Linha de destaque mantida com a cor padrão (lime) */
+            border-left: 4px solid var(--lime); 
             transition: var(--transition); 
         }
         
@@ -558,7 +614,6 @@
         }
         
         /* Status Badges */
-        /* Cores mantidas apenas para o texto do badge */
         .booking-status { 
             padding: 6px 16px; 
             border-radius: 20px; 
@@ -629,7 +684,6 @@
             transform: translateY(-2px); 
         }
         
-        /* AJUSTADO: COR DO BOTÃO CANCELAR PARA VERMELHO (EXCLUIR) */
         .btn-cancel { 
             background: var(--red); 
             color: white; 
@@ -841,6 +895,10 @@
             border: 2px solid #333; 
             transition: var(--transition);
         }
+
+        [data-theme="light"] .day-card {
+            border-color: #ddd;
+        }
         
         .day-card.active { 
             border-color: var(--lime); 
@@ -904,6 +962,10 @@
             border-radius: var(--border-radius); 
             color: var(--text); 
             font-size: 14px; 
+        }
+
+        [data-theme="light"] .time-period input {
+            border-color: #ddd;
         }
         
         .time-period input:focus { 
@@ -1103,8 +1165,12 @@
                 flex-direction: column; 
                 text-align: center; 
             }
+            .header-actions {
+                width: 100%;
+                justify-content: center;
+            }
             .logout-btn { 
-                width: 100%; 
+                width: auto; 
             }
             .stats-grid { 
                 grid-template-columns: 1fr; 
@@ -1222,9 +1288,14 @@
                     <p style="color: var(--text-muted); font-size: 14px;">Painel Administrativo</p>
                 </div>
             </div>
-            <button class="logout-btn hidden" onclick="logout()" aria-label="Sair do sistema">
-                <i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sair
-            </button>
+            <div class="header-actions">
+                <button class="theme-toggle-btn hidden" onclick="toggleTheme()" aria-label="Alternar tema">
+                    <i class="fas fa-moon" id="themeIcon" aria-hidden="true"></i>
+                </button>
+                <button class="logout-btn hidden" onclick="logout()" aria-label="Sair do sistema">
+                    <i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sair
+                </button>
+            </div>
         </div>
     </header>
 
@@ -1383,8 +1454,8 @@
                 <h2><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agendamentos</h2>
                 <div class="filter-section">
                     <select id="filterStatus" aria-label="Filtrar por status">
-                        <option value="confirmed">Confirmados</option>
                         <option value="all">Todos os Status</option>
+                        <option value="confirmed">Confirmados</option>
                         <option value="completed">Concluídos</option>
                         <option value="cancelled">Cancelados</option>
                     </select>
@@ -1558,7 +1629,7 @@
     <script>
         const SUPABASE_URL = 'https://huggzgfejtedacfyatke.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1Z2d6Z2ZlanRlZGFjZnlhdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NDk3ODYsImV4cCI6MjA3NjAyNTc4Nn0.aTrXAe7m1KsRNwH28LmBvcOlBjYI8C-2kvHYGdkUmv8';
-        const WEBHOOK_URL = 'https://n8n-n8n.rthuab.easypanel.host/webhook/barbearia'; // URL do Webhook
+        const WEBHOOK_URL = 'https://n8n-n8n.rthuab.easypanel.host/webhook/barbearia';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         let currentAdmin = null;
@@ -1575,9 +1646,57 @@
         };
         const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
-        // Variáveis para os gráficos
         let chartsInitialized = false;
         let charts = {};
+
+        // Theme Management
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            const themeIcon = document.getElementById('themeIcon');
+            themeIcon.className = newTheme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+            
+            // Update charts colors if initialized
+            if (chartsInitialized) {
+                updateChartsTheme();
+            }
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            const themeIcon = document.getElementById('themeIcon');
+            if (themeIcon) {
+                themeIcon.className = savedTheme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        }
+
+        function updateChartsTheme() {
+            const theme = document.documentElement.getAttribute('data-theme');
+            const textColor = theme === 'light' ? '#212121' : '#ffffff';
+            const gridColor = theme === 'light' ? '#e0e0e0' : '#333333';
+            const mutedColor = theme === 'light' ? '#757575' : '#888888';
+
+            Object.values(charts).forEach(chart => {
+                if (chart.options.plugins && chart.options.plugins.legend) {
+                    chart.options.plugins.legend.labels.color = textColor;
+                }
+                if (chart.options.scales) {
+                    if (chart.options.scales.x) {
+                        chart.options.scales.x.ticks.color = mutedColor;
+                        chart.options.scales.x.grid.color = gridColor;
+                    }
+                    if (chart.options.scales.y) {
+                        chart.options.scales.y.ticks.color = mutedColor;
+                        chart.options.scales.y.grid.color = gridColor;
+                    }
+                }
+                chart.update();
+            });
+        }
 
         // Utility Functions
         function showNotification(message, type = 'info') {
@@ -1623,7 +1742,6 @@
             btn.classList.toggle('active');
             btn.setAttribute('aria-expanded', !isActive);
             
-            // Load statistics and charts only when opening for the first time
             if (!isActive && !container.dataset.loaded) {
                 loadStats();
                 initializeCharts();
@@ -1690,7 +1808,6 @@
             `;
             document.body.appendChild(modal);
             
-            // Focus management
             const firstInput = modal.querySelector('input');
             firstInput.focus();
             
@@ -1783,6 +1900,7 @@
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('mainContent').style.display = 'block';
             document.querySelector('.logout-btn').classList.remove('hidden');
+            document.querySelector('.theme-toggle-btn').classList.remove('hidden');
             setupRealtimeListener();
             loadDashboard();
         }
@@ -1795,16 +1913,16 @@
                 document.getElementById('loginScreen').classList.remove('hidden');
                 document.getElementById('mainContent').style.display = 'none';
                 document.querySelector('.logout-btn').classList.add('hidden');
+                document.querySelector('.theme-toggle-btn').classList.add('hidden');
                 showNotification('Logout realizado com sucesso!', 'info');
             }
         }
 
         async function loadDashboard() {
             try {
-                // Definir a data de hoje como padrão no filtro
                 const today = new Date().toISOString().split('T')[0];
                 document.getElementById('filterDate').value = today;
-                document.getElementById('filterStatus').value = 'confirmed'; // PADRÃO: Confirmados
+                document.getElementById('filterStatus').value = 'all';
                 
                 await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings()]);
             } catch (error) {
@@ -1819,7 +1937,6 @@
                 const { startDate, endDate } = customStart && customEnd ? 
                     { startDate: customStart, endDate: customEnd } : getPeriodDates();
                 
-                // Period bookings
                 const { data: periodData } = await supabase
                     .from('bookings')
                     .select('*, services(name, price), users(full_name, phone)') 
@@ -1838,7 +1955,6 @@
                     <div class="detail-item"><span>Cancelados</span><span>${cancelled}</span></div>
                 `;
                 
-                // Revenue - Calcular apenas com agendamentos concluídos
                 const completedBookings = periodData?.filter(b => b.status === 'completed') || [];
                 
                 const revenue = completedBookings.reduce((sum, booking) => sum + (booking.services?.price || 0), 0);
@@ -1851,7 +1967,6 @@
                     <div class="detail-item"><span>Cancelados (Sem Faturamento)</span><span>${cancelled}</span></div>
                 `;
                 
-                // Unique clients 
                 const clientIdentifiers = new Set();
                 periodData?.forEach(booking => {
                     if (booking.user_id) {
@@ -1869,7 +1984,6 @@
                     <div class="detail-item"><span>Média por Cliente</span><span>${uniqueClients ? (periodData.length / uniqueClients).toFixed(1) : 0}</span></div>
                 `;
                 
-                // Most popular services
                 const serviceCount = {};
                 periodData?.forEach(booking => {
                     const serviceName = booking.services?.name || 'Desconhecido';
@@ -1888,35 +2002,38 @@
             }
         }
 
-        // Charts Functions (Mantidas)
+        // Charts Functions
         function initializeCharts() {
             if (chartsInitialized) return;
             
-            // Configurações padrão dos gráficos... (mantidas)
+            const theme = document.documentElement.getAttribute('data-theme');
+            const textColor = theme === 'light' ? '#212121' : '#ffffff';
+            const gridColor = theme === 'light' ? '#e0e0e0' : '#333333';
+            const mutedColor = theme === 'light' ? '#757575' : '#888888';
+
             const defaultOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
                         labels: {
-                            color: '#ffffff'
+                            color: textColor
                         }
                     }
                 },
                 scales: {
                     x: {
-                        ticks: { color: '#888888' },
-                        grid: { color: '#333333' }
+                        ticks: { color: mutedColor },
+                        grid: { color: gridColor }
                     },
                     y: {
-                        ticks: { color: '#888888' },
-                        grid: { color: '#333333' },
+                        ticks: { color: mutedColor },
+                        grid: { color: gridColor },
                         beginAtZero: true
                     }
                 }
             };
 
-            // Gráfico de Dias Mais Agendados
             const daysCtx = document.getElementById('daysChart').getContext('2d');
             charts.daysChart = new Chart(daysCtx, {
                 type: 'bar',
@@ -1933,7 +2050,6 @@
                 options: defaultOptions
             });
 
-            // Gráfico de Horários Mais Procurados
             const hoursCtx = document.getElementById('hoursChart').getContext('2d');
             charts.hoursChart = new Chart(hoursCtx, {
                 type: 'line',
@@ -1952,7 +2068,6 @@
                 options: defaultOptions
             });
 
-            // Gráfico de Serviços Mais Solicitados
             const servicesCtx = document.getElementById('servicesChart').getContext('2d');
             charts.servicesChart = new Chart(servicesCtx, {
                 type: 'doughnut',
@@ -1977,14 +2092,13 @@
                         legend: {
                             position: 'bottom',
                             labels: {
-                                color: '#ffffff'
+                                color: textColor
                             }
                         }
                     }
                 }
             });
 
-            // Gráfico de Faturamento Mensal 
             const revenueCtx = document.getElementById('revenueChart').getContext('2d');
             charts.revenueChart = new Chart(revenueCtx, {
                 type: 'line',
@@ -2003,7 +2117,6 @@
                 options: defaultOptions
             });
 
-            // Gráfico de Performance dos Barbeiros
             const barbersCtx = document.getElementById('barbersChart').getContext('2d');
             charts.barbersChart = new Chart(barbersCtx, {
                 type: 'bar',
@@ -2020,7 +2133,6 @@
                 options: defaultOptions
             });
 
-            // Gráfico de Taxa de Cancelamento
             const cancellationCtx = document.getElementById('cancellationChart').getContext('2d');
             charts.cancellationChart = new Chart(cancellationCtx, {
                 type: 'bar',
@@ -2048,7 +2160,6 @@
                 const { startDate, endDate } = customStart && customEnd ? 
                     { startDate: customStart, endDate: customEnd } : getPeriodDates();
 
-                // Buscar dados dos agendamentos
                 const { data: bookingsData } = await supabase
                     .from('bookings')
                     .select('*, services(name, price), users(full_name, phone)')
@@ -2057,7 +2168,6 @@
 
                 if (!bookingsData) return;
 
-                // Atualizar gráfico de dias
                 const daysCounts = [0, 0, 0, 0, 0, 0, 0];
                 bookingsData.forEach(booking => {
                     const dayOfWeek = new Date(booking.booking_date + 'T12:00:00').getDay();
@@ -2066,7 +2176,6 @@
                 charts.daysChart.data.datasets[0].data = daysCounts;
                 charts.daysChart.update();
 
-                // Atualizar gráfico de horários
                 const hoursCounts = {};
                 bookingsData.forEach(booking => {
                     const hour = booking.booking_time.substring(0, 2) + ':00';
@@ -2077,7 +2186,6 @@
                 charts.hoursChart.data.datasets[0].data = hoursData;
                 charts.hoursChart.update();
 
-                // Atualizar gráfico de serviços
                 const servicesCounts = {};
                 bookingsData.forEach(booking => {
                     const serviceName = booking.services?.name || 'Desconhecido';
@@ -2088,7 +2196,6 @@
                 charts.servicesChart.data.datasets[0].data = topServices.map(([, count]) => count);
                 charts.servicesChart.update();
 
-                // Atualizar gráfico de faturamento mensal
                 const monthlyRevenue = {};
                 bookingsData.forEach(booking => {
                     if (booking.status === 'completed') {
@@ -2106,11 +2213,9 @@
                 charts.revenueChart.data.datasets[0].data = revenueData;
                 charts.revenueChart.update();
 
-                // Atualizar gráfico de performance dos barbeiros
                 charts.barbersChart.data.datasets[0].data = [bookingsData.length];
                 charts.barbersChart.update();
 
-                // Atualizar gráfico de taxa de cancelamento
                 const cancellationData = {};
                 bookingsData.forEach(booking => {
                     const month = booking.booking_date.substring(0, 7);
@@ -2147,26 +2252,24 @@
                 const filterStatus = document.getElementById('filterStatus').value;
                 let filterDate = document.getElementById('filterDate').value;
                 
-                if (!filterDate) {
-                    const today = new Date().toISOString().split('T')[0];
-                    filterDate = today;
-                    document.getElementById('filterDate').value = today;
-                }
-                
                 let query = supabase.from('bookings')
                     .select('*, users(full_name, phone, email), services(name, price, duration), barbers(name)')
-                    .eq('booking_date', filterDate) 
-                    // MUDANÇA: Ordena por horário decrescente (do mais próximo para o mais distante/novo)
-                    .order('booking_time', { ascending: false }); 
+                    .order('booking_date', { ascending: false })
+                    .order('booking_time', { ascending: false });
                 
-                if (filterStatus !== 'all') query = query.eq('status', filterStatus);
+                if (filterDate) {
+                    query = query.eq('booking_date', filterDate);
+                }
+                
+                if (filterStatus !== 'all') {
+                    query = query.eq('status', filterStatus);
+                }
                 
                 const { data, error } = await query;
                 if (error) throw error;
                 
                 if (!data || data.length === 0) {
-                    const dateFormatted = new Date(filterDate + 'T12:00:00').toLocaleDateString('pt-BR');
-                    container.innerHTML = `<div class="empty-state"><i class="fas fa-calendar" aria-hidden="true"></i><p>Nenhum agendamento encontrado para ${dateFormatted}</p></div>`;
+                    container.innerHTML = `<div class="empty-state"><i class="fas fa-calendar" aria-hidden="true"></i><p>Nenhum agendamento encontrado</p></div>`;
                     return;
                 }
                 
@@ -2175,7 +2278,6 @@
                     const dateDayMonth = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
                     const timeFormatted = booking.booking_time.substring(0, 5);
                     
-                    // LÓGICA DE CLIENTE AJUSTADA: Prioriza dados logados, usa campos anônimos se user_id for null
                     const clientName = booking.users?.full_name || booking.customer_full_name || 'Cliente Anônimo';
                     const clientPhone = booking.users?.phone || booking.customer_phone || 'Sem telefone';
                     
@@ -2184,8 +2286,7 @@
                         `https://wa.me/55${phoneNumberClean}?text=Olá ${clientName.split(' ')[0]}, aqui é da Barbearia BarberSync! Entrando em contato sobre seu agendamento de ${dateDayMonth} às ${timeFormatted}.` : 
                         '#';
                     
-                    // REMOVIDO: itemClass, mantendo o estilo padrão
-                    const itemClass = `booking-item`; 
+                    const itemClass = `booking-item`;
 
                     return `
                         <div class="${itemClass}">
@@ -2247,7 +2348,6 @@
             }
         }
 
-        // Função para EXCLUIR agendamento ao invés de apenas cancelar o status
         async function cancelAndDeleteBooking(bookingId) {
              if (!bookingId) { 
                 showNotification('ID inválido', 'error'); 
@@ -2256,7 +2356,6 @@
             if (!confirm(`Tem certeza que deseja CANCELAR e EXCLUIR este agendamento? Esta ação não pode ser desfeita.`)) return;
 
             try {
-                // Remove o agendamento do banco
                 const { error } = await supabase.from('bookings').delete().eq('id', bookingId);
                 
                 if (error) throw error;
@@ -2282,7 +2381,6 @@
             if (!confirm(`Tem certeza que deseja ${actionText} este agendamento?`)) return;
             
             try {
-                // Não há mais chamada de webhook aqui (movida para o index.html)
                 const { error } = await supabase.from('bookings')
                     .update({ status: status })
                     .eq('id', bookingId);
@@ -2323,7 +2421,7 @@
             }
         }
 
-        // Service Management Functions (Mantidas)
+        // Service Management Functions
         async function loadServices() {
             try {
                 const { data, error } = await supabase.from('services').select('*').order('id', { ascending: true });
@@ -2430,7 +2528,7 @@
             }
         }
 
-        // Barber Management Functions (Mantidas)
+        // Barber Management Functions
         async function loadBarbers() {
             try {
                 const { data, error } = await supabase.from('barbers').select('*').order('id', { ascending: true });
@@ -2473,6 +2571,63 @@
             }
         }
 
+        async function addBarber() {
+            const name = document.getElementById('barberName').value.trim();
+            const specialty = document.getElementById('barberSpecialty').value.trim();
+            const photoFile = document.getElementById('barberPhoto').files[0];
+            
+            if (!name || name.length < 3) { 
+                showNotification('Nome deve ter pelo menos 3 caracteres!', 'error'); 
+                return; 
+            }
+            
+            try {
+                let photoUrl = null;
+                
+                if (photoFile) {
+                    if (photoFile.size > 2 * 1024 * 1024) {
+                        showNotification('Arquivo muito grande! Máximo 2MB.', 'error');
+                        return;
+                    }
+                    
+                    const fileExt = photoFile.name.split('.').pop();
+                    const fileName = `${Math.random()}.${fileExt}`;
+                    
+                    const { data: uploadData, error: uploadError } = await supabase.storage
+                        .from('barber-photos')
+                        .upload(fileName, photoFile);
+                    
+                    if (uploadError) {
+                        console.error('Erro no upload:', uploadError);
+                        showNotification('Erro ao fazer upload da foto', 'error');
+                        return;
+                    }
+                    
+                    const { data: urlData } = supabase.storage
+                        .from('barber-photos')
+                        .getPublicUrl(fileName);
+                    
+                    photoUrl = urlData.publicUrl;
+                }
+                
+                const { error } = await supabase.from('barbers').insert([{ 
+                    name: name, 
+                    specialty: specialty || null,
+                    photo_url: photoUrl
+                }]);
+                
+                if (error) throw error;
+                
+                showNotification('Barbeiro adicionado com sucesso!', 'success');
+                document.getElementById('barberName').value = '';
+                document.getElementById('barberSpecialty').value = '';
+                document.getElementById('barberPhoto').value = '';
+                loadBarbers();
+            } catch (error) {
+                showNotification('Erro ao adicionar barbeiro: ' + error.message, 'error');
+            }
+        }
+
         async function openEditBarberModal(barberId) {
             try {
                 const { data: barber, error } = await supabase.from('barbers').select('*').eq('id', barberId).single();
@@ -2485,7 +2640,6 @@
                 const modal = document.getElementById('editBarberModal');
                 modal.classList.remove('hidden');
                 
-                // Focus management
                 const firstInput = modal.querySelector('input[type="text"]');
                 firstInput.focus();
             } catch (error) {
@@ -2516,9 +2670,8 @@
                     specialty: specialty || null
                 };
                 
-                // Upload nova foto se fornecida
                 if (photoFile) {
-                    if (photoFile.size > 2 * 1024 * 1024) { // 2MB
+                    if (photoFile.size > 2 * 1024 * 1024) {
                         showNotification('Arquivo muito grande! Máximo 2MB.', 'error');
                         return;
                     }
@@ -2569,7 +2722,7 @@
             }
         }
 
-        // Client Management Functions (Mantidas)
+        // Client Management Functions
         async function loadClients() {
             const container = document.getElementById('clientsList');
             container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><p>Carregando clientes...</p></div>';
@@ -2653,7 +2806,6 @@
                 const modal = document.getElementById('editClientModal');
                 modal.classList.remove('hidden');
                 
-                // Focus management
                 const firstInput = modal.querySelector('input[type="text"]');
                 firstInput.focus();
             } catch (error) {
@@ -2728,7 +2880,7 @@
             }
         }
 
-        // Schedule Management Functions (Mantidas)
+        // Schedule Management Functions
         async function loadScheduleSettings() {
             try {
                 const { data } = await supabase.from('settings').select('*').in('key', ['schedule_config', 'interval_time']);
@@ -2868,6 +3020,8 @@
         }
 
         // Initialize Application
+        loadTheme();
+
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 currentAdmin = session.user;
@@ -2886,7 +3040,6 @@
 
         // Keyboard Navigation
         document.addEventListener('keydown', (e) => {
-            // Close modal with Escape key
             if (e.key === 'Escape') {
                 const modal = document.querySelector('.modal:not(.hidden)');
                 if (modal) {
@@ -2895,7 +3048,6 @@
             }
         });
 
-        // Add keyboard support for stat cards
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 if (e.target.classList.contains('stat-card')) {
