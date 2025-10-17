@@ -16,7 +16,7 @@
             box-sizing: border-box; 
         }
         
-        /* Dark Theme (Default) */
+        /*  Adicionando variáveis para tema claro e escuro */
         :root {
             --dark-bg: #0a0a0a; 
             --dark-card: #1a1a1a; 
@@ -35,21 +35,14 @@
             --shadow-hover: 0 5px 30px rgba(135, 206, 235, 0.2);
         }
 
-        /* Light Theme */
+        /* Tema Claro */
         [data-theme="light"] {
-            --dark-bg: #f5f5f5; 
-            --dark-card: #ffffff; 
-            --lime: #2196F3; 
-            --lime-dark: #1976D2;
-            --text: #212121; 
-            --text-muted: #757575; 
-            --red: #f44336; 
-            --orange: #ff9800; 
-            --green: #4caf50;
-            --whatsapp: #25D366;
-            --confirm: #2196F3; 
+            --dark-bg: #f5f5f5;
+            --dark-card: #ffffff;
+            --text: #1a1a1a;
+            --text-muted: #666666;
             --shadow: 0 3px 20px rgba(0, 0, 0, 0.1);
-            --shadow-hover: 0 5px 30px rgba(33, 150, 243, 0.3);
+            --shadow-hover: 0 5px 30px rgba(135, 206, 235, 0.3);
         }
         
         body { 
@@ -58,7 +51,6 @@
             color: var(--text); 
             min-height: 100vh; 
             line-height: 1.6;
-            transition: background 0.3s ease, color 0.3s ease;
         }
         
         /* Header Styles */
@@ -114,7 +106,13 @@
             margin-left: 10px; 
         }
 
-        /* Theme Toggle Button */
+        /*  Adicionando estilos para o botão de alternância de tema */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
         .theme-toggle-btn {
             background: transparent;
             border: 2px solid var(--lime);
@@ -124,19 +122,15 @@
             cursor: pointer;
             font-size: 18px;
             transition: var(--transition);
-            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .theme-toggle-btn:hover {
             background: var(--lime);
             color: var(--dark-bg);
             transform: translateY(-2px);
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
         }
         
         .logout-btn { 
@@ -535,7 +529,7 @@
             padding: 20px; 
             border-radius: 10px; 
             margin-bottom: 15px; 
-            border-left: 4px solid var(--lime); 
+            border-left: 4px solid var(--lime);
             transition: var(--transition); 
         }
         
@@ -1170,7 +1164,7 @@
                 justify-content: center;
             }
             .logout-btn { 
-                width: auto; 
+                width: 100%; 
             }
             .stats-grid { 
                 grid-template-columns: 1fr; 
@@ -1288,11 +1282,12 @@
                     <p style="color: var(--text-muted); font-size: 14px;">Painel Administrativo</p>
                 </div>
             </div>
-            <div class="header-actions">
-                <button class="theme-toggle-btn hidden" onclick="toggleTheme()" aria-label="Alternar tema">
-                    <i class="fas fa-moon" id="themeIcon" aria-hidden="true"></i>
+            <!--  Adicionando botão de alternância de tema e agrupando com logout -->
+            <div class="header-actions hidden">
+                <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Alternar tema" title="Alternar tema">
+                    <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
                 </button>
-                <button class="logout-btn hidden" onclick="logout()" aria-label="Sair do sistema">
+                <button class="logout-btn" onclick="logout()" aria-label="Sair do sistema">
                     <i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sair
                 </button>
             </div>
@@ -1452,6 +1447,7 @@
         <div class="content-grid">
             <div class="card full-width">
                 <h2><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agendamentos</h2>
+                <!--  Alterando valor padrão do filtro de status para "all" -->
                 <div class="filter-section">
                     <select id="filterStatus" aria-label="Filtrar por status">
                         <option value="all">Todos os Status</option>
@@ -1649,36 +1645,37 @@
         let chartsInitialized = false;
         let charts = {};
 
-        // Theme Management
-        function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            
-            const themeIcon = document.getElementById('themeIcon');
-            themeIcon.className = newTheme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
-            
-            // Update charts colors if initialized
-            if (chartsInitialized) {
-                updateChartsTheme();
-            }
-        }
-
-        function loadTheme() {
+        //  Adicionando funções para gerenciar o tema
+        function initTheme() {
             const savedTheme = localStorage.getItem('theme') || 'dark';
             document.documentElement.setAttribute('data-theme', savedTheme);
-            const themeIcon = document.getElementById('themeIcon');
-            if (themeIcon) {
-                themeIcon.className = savedTheme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+            updateThemeIcon(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+            
+            // Atualizar cores dos gráficos se estiverem inicializados
+            if (chartsInitialized) {
+                updateChartsTheme(newTheme);
             }
         }
 
-        function updateChartsTheme() {
-            const theme = document.documentElement.getAttribute('data-theme');
-            const textColor = theme === 'light' ? '#212121' : '#ffffff';
-            const gridColor = theme === 'light' ? '#e0e0e0' : '#333333';
-            const mutedColor = theme === 'light' ? '#757575' : '#888888';
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('themeIcon');
+            if (icon) {
+                icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        }
+
+        function updateChartsTheme(theme) {
+            const textColor = theme === 'dark' ? '#ffffff' : '#1a1a1a';
+            const gridColor = theme === 'dark' ? '#333333' : '#e0e0e0';
+            const mutedColor = theme === 'dark' ? '#888888' : '#666666';
 
             Object.values(charts).forEach(chart => {
                 if (chart.options.plugins && chart.options.plugins.legend) {
@@ -1698,7 +1695,9 @@
             });
         }
 
-        // Utility Functions
+        // Inicializar tema ao carregar a página
+        initTheme();
+
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
             notification.style.cssText = `
@@ -1871,7 +1870,6 @@
                 }).subscribe();
         }
 
-        // Authentication Functions
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');
@@ -1899,8 +1897,7 @@
         function showAdminPanel() {
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('mainContent').style.display = 'block';
-            document.querySelector('.logout-btn').classList.remove('hidden');
-            document.querySelector('.theme-toggle-btn').classList.remove('hidden');
+            document.querySelector('.header-actions').classList.remove('hidden');
             setupRealtimeListener();
             loadDashboard();
         }
@@ -1912,18 +1909,13 @@
                 currentAdmin = null;
                 document.getElementById('loginScreen').classList.remove('hidden');
                 document.getElementById('mainContent').style.display = 'none';
-                document.querySelector('.logout-btn').classList.add('hidden');
-                document.querySelector('.theme-toggle-btn').classList.add('hidden');
+                document.querySelector('.header-actions').classList.add('hidden');
                 showNotification('Logout realizado com sucesso!', 'info');
             }
         }
 
         async function loadDashboard() {
             try {
-                const today = new Date().toISOString().split('T')[0];
-                document.getElementById('filterDate').value = today;
-                document.getElementById('filterStatus').value = 'all';
-                
                 await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings()]);
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
@@ -1931,7 +1923,6 @@
             }
         }
 
-        // Statistics Functions
         async function loadStats(customStart = null, customEnd = null) {
             try {
                 const { startDate, endDate } = customStart && customEnd ? 
@@ -2002,14 +1993,13 @@
             }
         }
 
-        // Charts Functions
         function initializeCharts() {
             if (chartsInitialized) return;
             
             const theme = document.documentElement.getAttribute('data-theme');
-            const textColor = theme === 'light' ? '#212121' : '#ffffff';
-            const gridColor = theme === 'light' ? '#e0e0e0' : '#333333';
-            const mutedColor = theme === 'light' ? '#757575' : '#888888';
+            const textColor = theme === 'dark' ? '#ffffff' : '#1a1a1a';
+            const gridColor = theme === 'dark' ? '#333333' : '#e0e0e0';
+            const mutedColor = theme === 'dark' ? '#888888' : '#666666';
 
             const defaultOptions = {
                 responsive: true,
@@ -2243,26 +2233,28 @@
             }
         }
 
-        // Booking Management Functions
+        //  Modificando loadBookings para remover filtros padrão e mostrar todos os agendamentos
         async function loadBookings() {
             const container = document.getElementById('bookingsTable');
             container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><p>Carregando...</p></div>';
             
             try {
                 const filterStatus = document.getElementById('filterStatus').value;
-                let filterDate = document.getElementById('filterDate').value;
+                const filterDate = document.getElementById('filterDate').value;
                 
+                // Buscar todos os agendamentos sem filtro padrão
                 let query = supabase.from('bookings')
                     .select('*, users(full_name, phone, email), services(name, price, duration), barbers(name)')
                     .order('booking_date', { ascending: false })
                     .order('booking_time', { ascending: false });
                 
-                if (filterDate) {
-                    query = query.eq('booking_date', filterDate);
-                }
-                
+                // Aplicar filtros apenas se especificados pelo usuário
                 if (filterStatus !== 'all') {
                     query = query.eq('status', filterStatus);
+                }
+                
+                if (filterDate) {
+                    query = query.eq('booking_date', filterDate);
                 }
                 
                 const { data, error } = await query;
@@ -2285,11 +2277,9 @@
                     const whatsappLink = phoneNumberClean ? 
                         `https://wa.me/55${phoneNumberClean}?text=Olá ${clientName.split(' ')[0]}, aqui é da Barbearia BarberSync! Entrando em contato sobre seu agendamento de ${dateDayMonth} às ${timeFormatted}.` : 
                         '#';
-                    
-                    const itemClass = `booking-item`;
 
                     return `
-                        <div class="${itemClass}">
+                        <div class="booking-item">
                             <div class="booking-main">
                                 <div class="booking-client">
                                     <h4><i class="fas fa-user" aria-hidden="true"></i> ${clientName}</h4>
@@ -2421,7 +2411,6 @@
             }
         }
 
-        // Service Management Functions
         async function loadServices() {
             try {
                 const { data, error } = await supabase.from('services').select('*').order('id', { ascending: true });
@@ -2528,7 +2517,6 @@
             }
         }
 
-        // Barber Management Functions
         async function loadBarbers() {
             try {
                 const { data, error } = await supabase.from('barbers').select('*').order('id', { ascending: true });
@@ -2611,7 +2599,7 @@
                 }
                 
                 const { error } = await supabase.from('barbers').insert([{ 
-                    name: name, 
+                    name, 
                     specialty: specialty || null,
                     photo_url: photoUrl
                 }]);
@@ -2722,7 +2710,6 @@
             }
         }
 
-        // Client Management Functions
         async function loadClients() {
             const container = document.getElementById('clientsList');
             container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><p>Carregando clientes...</p></div>';
@@ -2880,7 +2867,6 @@
             }
         }
 
-        // Schedule Management Functions
         async function loadScheduleSettings() {
             try {
                 const { data } = await supabase.from('settings').select('*').in('key', ['schedule_config', 'interval_time']);
@@ -3019,9 +3005,6 @@
             }
         }
 
-        // Initialize Application
-        loadTheme();
-
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 currentAdmin = session.user;
@@ -3038,7 +3021,6 @@
             }
         });
 
-        // Keyboard Navigation
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 const modal = document.querySelector('.modal:not(.hidden)');
