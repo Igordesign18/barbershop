@@ -1913,20 +1913,44 @@
             const password = document.getElementById('adminPassword').value;
             
             try {
+                console.log('[v0] Attempting login with email:', email);
                 const { data, error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error) throw error;
                 
-                const { data: profile } = await supabase
+                console.log('[v0] Login successful, checking user role...');
+                console.log('[v0] User ID:', data.user.id);
+                
+                const { data: profile, error: profileError } = await supabase
                     .from('users')
                     .select('role')
                     .eq('id', data.user.id)
                     .single();
                 
-                if (profile?.role !== 'admin') {
+                console.log('[v0] Profile data:', profile);
+                console.log('[v0] Profile error:', profileError);
+                
+                if (profileError) {
+                    console.log('[v0] Error fetching profile:', profileError.message);
+                    showNotification('Erro ao buscar perfil do usuário. Verifique se o usuário existe na tabela users.', 'error');
                     await supabase.auth.signOut();
-                    throw new Error('Acesso negado. Apenas administradores podem acessar.');
+                    return;
                 }
                 
+                if (!profile) {
+                    console.log('[v0] No profile found for user');
+                    showNotification('Usuário não encontrado na tabela users. Por favor, crie o usuário com role "admin".', 'error');
+                    await supabase.auth.signOut();
+                    return;
+                }
+                
+                console.log('[v0] User role:', profile.role);
+                
+                if (profile.role !== 'admin') {
+                    await supabase.auth.signOut();
+                    throw new Error(`Acesso negado. Role atual: "${profile.role}". Apenas administradores (role: "admin") podem acessar.`);
+                }
+                
+                console.log('[v0] Admin access granted');
                 currentUser = data.user;
                 document.getElementById('loginScreen').classList.add('hidden');
                 document.getElementById('mainContent').classList.add('active');
@@ -1936,6 +1960,7 @@
                 loadDashboard();
                 setupRealtimeSubscription();
             } catch (error) {
+                console.log('[v0] Login error:', error);
                 showNotification(error.message, 'error');
             }
         });
@@ -2695,18 +2720,27 @@
             loadTheme();
             supabase.auth.getSession().then(({ data: { session } }) => {
                 if (session) {
+                    console.log('[v0] Existing session found, checking admin role...');
                     supabase.from('users')
                         .select('role')
                         .eq('id', session.user.id)
                         .single()
-                        .then(({ data: profile }) => {
+                        .then(({ data: profile, error: profileError }) => {
+                            console.log('[v0] Session profile:', profile);
+                            if (profileError) {
+                                console.log('[v0] Session profile error:', profileError);
+                            }
                             if (profile?.role === 'admin') {
+                                console.log('[v0] Admin session restored');
                                 currentUser = session.user;
                                 document.getElementById('loginScreen').classList.add('hidden');
                                 document.getElementById('mainContent').classList.add('active');
                                 document.querySelector('.logout-btn').classList.remove('hidden');
                                 loadDashboard();
                                 setupRealtimeSubscription();
+                            } else {
+                                console.log('[v0] Session user is not admin, logging out');
+                                supabase.auth.signOut();
                             }
                         });
                 }
