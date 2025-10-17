@@ -1134,6 +1134,72 @@
             font-size: 18px;
         }
         
+        /* Adicionando estilos para expansão de agendamentos */
+        .booking-item {
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .booking-item.expanded .booking-details {
+            max-height: 500px;
+            opacity: 1;
+            margin-top: 15px;
+        }
+        
+        .booking-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .booking-expand-icon {
+            transition: transform 0.3s ease;
+            color: var(--lime);
+            font-size: 20px;
+        }
+        
+        .booking-item.expanded .booking-expand-icon {
+            transform: rotate(180deg);
+        }
+        
+        .booking-details {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .upcoming-bookings-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid var(--dark-bg);
+        }
+        
+        .upcoming-bookings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .upcoming-bookings-header h3 {
+            color: var(--lime);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .upcoming-count {
+            background: var(--lime);
+            color: var(--dark-bg);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        /* </CHANGE> */
+        
         /* Empty State */
         .empty-state { 
             text-align: center; 
@@ -1632,6 +1698,24 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Adicionando seção de próximos agendamentos -->
+                <div class="upcoming-bookings-section">
+                    <div class="upcoming-bookings-header">
+                        <h3>
+                            <i class="fas fa-clock" aria-hidden="true"></i> 
+                            Próximos Agendamentos
+                            <span class="upcoming-count" id="upcomingCount">0</span>
+                        </h3>
+                    </div>
+                    <div class="bookings-table" id="upcomingBookingsTable" role="region" aria-label="Próximos agendamentos">
+                        <div class="empty-state">
+                            <i class="fas fa-calendar-plus" aria-hidden="true"></i>
+                            <p>Nenhum agendamento futuro</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- </CHANGE> -->
             </div>
 
             <div class="card">
@@ -3114,6 +3198,9 @@
                     // Renderizar calendário
                     renderCalendar();
                     
+                    // Carregar próximos agendamentos
+                    loadUpcomingBookings();
+                    
                     // Se houver uma data selecionada, carregar seus agendamentos
                     if (selectedDate) {
                         loadBookingsForDate(selectedDate);
@@ -3128,6 +3215,126 @@
                     showNotification('Erro ao carregar calendário', 'error');
                 });
         }
+        
+        // Função para carregar próximos agendamentos
+        function loadUpcomingBookings() {
+            const today = new Date().toISOString().split('T')[0];
+            const futureDate = new Date();
+            futureDate.setDate(futureDate.getDate() + 30); // Próximos 30 dias
+            const futureDateStr = futureDate.toISOString().split('T')[0];
+            
+            supabase.from('bookings')
+                .select('id, booking_date, booking_time, status, users(full_name, phone), services(name, price, duration), barbers(name)')
+                .gte('booking_date', today)
+                .lte('booking_date', futureDateStr)
+                .in('status', ['confirmed', 'pending'])
+                .order('booking_date', { ascending: true })
+                .order('booking_time', { ascending: true })
+                .limit(10)
+                .then(({ data, error }) => {
+                    if (error) throw error;
+                    
+                    const upcomingBookings = data || [];
+                    document.getElementById('upcomingCount').textContent = upcomingBookings.length;
+                    
+                    renderUpcomingBookings(upcomingBookings);
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar próximos agendamentos:', error);
+                });
+        }
+        
+        // Função para renderizar próximos agendamentos com expansão
+        function renderUpcomingBookings(bookings) {
+            const container = document.getElementById('upcomingBookingsTable');
+            
+            if (bookings.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-calendar-plus" aria-hidden="true"></i>
+                        <p>Nenhum agendamento futuro</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = bookings.map((booking, index) => {
+                const date = new Date(booking.booking_date + 'T12:00:00');
+                const dateDayMonth = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+                const timeFormatted = booking.booking_time.substring(0, 5);
+                
+                const clientName = booking.users?.full_name || booking.customer_full_name || 'Cliente Anônimo';
+                const clientPhone = booking.users?.phone || booking.customer_phone || 'Sem telefone';
+                
+                const phoneNumberClean = clientPhone.replace(/\D/g, '');
+                const whatsappLink = phoneNumberClean ? 
+                    `https://wa.me/55${phoneNumberClean}?text=Olá ${clientName.split(' ')[0]}, aqui é da Barbearia BarberSync! Entrando em contato sobre seu agendamento de ${dateDayMonth} às ${timeFormatted}.` : 
+                    '#';
+
+                return `
+                    <div class="booking-item" onclick="toggleBookingExpand('upcoming-${index}')">
+                        <div class="booking-summary">
+                            <div class="booking-main">
+                                <div class="booking-client">
+                                    <h4><i class="fas fa-user" aria-hidden="true"></i> ${clientName}</h4>
+                                    <p><i class="fas fa-cut" aria-hidden="true"></i> ${booking.services?.name}</p>
+                                </div>
+                                <span class="booking-status status-${booking.status}">
+                                    ${booking.status === 'confirmed' ? 'Confirmado' : 
+                                      booking.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                                </span>
+                            </div>
+                            <div class="booking-datetime-highlight">
+                                <div class="datetime-box">
+                                    <div class="datetime-label">Data</div>
+                                    <div class="datetime-value">${dateDayMonth.toUpperCase()}</div>
+                                </div>
+                                <div class="datetime-separator">•</div>
+                                <div class="datetime-box">
+                                    <div class="datetime-label">Horário</div>
+                                    <div class="datetime-value">${timeFormatted}</div>
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-down booking-expand-icon" aria-hidden="true"></i>
+                        </div>
+                        
+                        <div class="booking-details" id="upcoming-${index}">
+                            <div class="booking-client">
+                                <p><i class="fas fa-user-tie" aria-hidden="true"></i> Barbeiro: ${booking.barbers?.name || 'Não especificado'}</p>
+                                <p><i class="fas fa-phone" aria-hidden="true"></i> ${clientPhone}</p>
+                                <p><i class="fas fa-dollar-sign" aria-hidden="true"></i> R$ ${booking.services?.price?.toFixed(2) || '0.00'} • <i class="fas fa-hourglass-half" aria-hidden="true"></i> ${booking.services?.duration || 0}min</p>
+                            </div>
+                            
+                            <div class="booking-footer">
+                                <div class="booking-actions">
+                                    ${booking.status === 'confirmed' ? `
+                                        <button class="btn-cancel" onclick="event.stopPropagation(); cancelAndDeleteBooking('${booking.id}')" aria-label="Excluir agendamento">
+                                            <i class="fas fa-times-circle" aria-hidden="true"></i> Cancelar
+                                        </button>
+                                        <button class="btn-complete" onclick="event.stopPropagation(); updateBookingStatus('${booking.id}', 'completed')" aria-label="Concluir agendamento">
+                                            <i class="fas fa-check" aria-hidden="true"></i> Concluir
+                                        </button>
+                                    ` : ''}
+                                    ${phoneNumberClean ? `
+                                        <a href="${whatsappLink}" class="btn-whatsapp" target="_blank" onclick="event.stopPropagation()" aria-label="Conversar no WhatsApp">
+                                            <i class="fab fa-whatsapp" aria-hidden="true"></i> Chat
+                                        </a>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Função para expandir/colapsar agendamento
+        function toggleBookingExpand(bookingId) {
+            const detailsElement = document.getElementById(bookingId);
+            const bookingItem = detailsElement.closest('.booking-item');
+            bookingItem.classList.toggle('expanded');
+        }
+        // </CHANGE>
         
         function renderCalendar() {
             const year = currentCalendarDate.getFullYear();
@@ -3241,7 +3448,7 @@
                 return;
             }
             
-            container.innerHTML = bookingsForDay.map(booking => {
+            container.innerHTML = bookingsForDay.map((booking, index) => {
                 const date = new Date(booking.booking_date + 'T12:00:00');
                 const dateDayMonth = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
                 const timeFormatted = booking.booking_time.substring(0, 5);
@@ -3255,58 +3462,66 @@
                     '#';
 
                 return `
-                    <div class="booking-item">
-                        <div class="booking-main">
+                    <div class="booking-item" onclick="toggleBookingExpand('day-${index}')">
+                        <div class="booking-summary">
+                            <div class="booking-main">
+                                <div class="booking-client">
+                                    <h4><i class="fas fa-user" aria-hidden="true"></i> ${clientName}</h4>
+                                    <p><i class="fas fa-cut" aria-hidden="true"></i> ${booking.services?.name}</p>
+                                </div>
+                                <span class="booking-status status-${booking.status}">
+                                    ${booking.status === 'confirmed' ? 'Confirmado' : 
+                                      booking.status === 'completed' ? 'Concluído' : 
+                                      booking.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                                </span>
+                            </div>
+                            <div class="booking-datetime-highlight">
+                                <div class="datetime-box">
+                                    <div class="datetime-label">Data</div>
+                                    <div class="datetime-value">${dateDayMonth.toUpperCase()}</div>
+                                </div>
+                                <div class="datetime-separator">•</div>
+                                <div class="datetime-box">
+                                    <div class="datetime-label">Horário</div>
+                                    <div class="datetime-value">${timeFormatted}</div>
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-down booking-expand-icon" aria-hidden="true"></i>
+                        </div>
+                        
+                        <div class="booking-details" id="day-${index}">
                             <div class="booking-client">
-                                <h4><i class="fas fa-user" aria-hidden="true"></i> ${clientName}</h4>
-                                <p><i class="fas fa-cut" aria-hidden="true"></i> ${booking.services?.name}</p>
                                 <p><i class="fas fa-user-tie" aria-hidden="true"></i> Barbeiro: ${booking.barbers?.name || 'Não especificado'}</p>
                                 <p><i class="fas fa-phone" aria-hidden="true"></i> ${clientPhone}</p>
                                 <p><i class="fas fa-dollar-sign" aria-hidden="true"></i> R$ ${booking.services?.price?.toFixed(2) || '0.00'} • <i class="fas fa-hourglass-half" aria-hidden="true"></i> ${booking.services?.duration || 0}min</p>
                             </div>
-                            <span class="booking-status status-${booking.status}">
-                                ${booking.status === 'confirmed' ? 'Confirmado' : 
-                                  booking.status === 'completed' ? 'Concluído' : 
-                                  booking.status === 'pending' ? 'Pendente' : 'Cancelado'}
-                            </span>
-                        </div>
-                        
-                        <div class="booking-datetime-highlight">
-                            <div class="datetime-box">
-                                <div class="datetime-label">Data</div>
-                                <div class="datetime-value">${dateDayMonth.toUpperCase()}</div>
-                            </div>
-                            <div class="datetime-separator">•</div>
-                            <div class="datetime-box">
-                                <div class="datetime-label">Horário</div>
-                                <div class="datetime-value">${timeFormatted}</div>
-                            </div>
-                        </div>
-                        
-                        <div class="booking-footer">
-                            <div class="booking-actions">
-                                ${booking.status === 'confirmed' ? `
-                                    <button class="btn-cancel" onclick="cancelAndDeleteBooking('${booking.id}')" aria-label="Excluir agendamento">
-                                        <i class="fas fa-times-circle" aria-hidden="true"></i> Cancelar
-                                    </button>
-                                    <button class="btn-complete" onclick="updateBookingStatus('${booking.id}', 'completed')" aria-label="Concluir agendamento">
-                                        <i class="fas fa-check" aria-hidden="true"></i> Concluir
-                                    </button>
-                                ` : booking.status === 'completed' || booking.status === 'cancelled' ? `
-                                    <button class="btn-delete" onclick="deleteBooking('${booking.id}')" aria-label="Excluir agendamento">
-                                        <i class="fas fa-trash" aria-hidden="true"></i> Excluir
-                                    </button>
-                                ` : ''}
-                                ${phoneNumberClean ? `
-                                    <a href="${whatsappLink}" class="btn-whatsapp" target="_blank" aria-label="Conversar no WhatsApp">
-                                        <i class="fab fa-whatsapp" aria-hidden="true"></i> Chat
-                                    </a>
-                                ` : ''}
+                            
+                            <div class="booking-footer">
+                                <div class="booking-actions">
+                                    ${booking.status === 'confirmed' ? `
+                                        <button class="btn-cancel" onclick="event.stopPropagation(); cancelAndDeleteBooking('${booking.id}')" aria-label="Excluir agendamento">
+                                            <i class="fas fa-times-circle" aria-hidden="true"></i> Cancelar
+                                        </button>
+                                        <button class="btn-complete" onclick="event.stopPropagation(); updateBookingStatus('${booking.id}', 'completed')" aria-label="Concluir agendamento">
+                                            <i class="fas fa-check" aria-hidden="true"></i> Concluir
+                                        </button>
+                                    ` : booking.status === 'completed' || booking.status === 'cancelled' ? `
+                                        <button class="btn-delete" onclick="event.stopPropagation(); deleteBooking('${booking.id}')" aria-label="Excluir agendamento">
+                                            <i class="fas fa-trash" aria-hidden="true"></i> Excluir
+                                        </button>
+                                    ` : ''}
+                                    ${phoneNumberClean ? `
+                                        <a href="${whatsappLink}" class="btn-whatsapp" target="_blank" onclick="event.stopPropagation()" aria-label="Conversar no WhatsApp">
+                                            <i class="fab fa-whatsapp" aria-hidden="true"></i> Chat
+                                        </a>
+                                    ` : ''}
+                                </div>
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
+            // </CHANGE>
         }
         
         function changeMonth(direction) {
