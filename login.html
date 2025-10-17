@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - Barbearia BarberSync</title>
-    <meta name="description" content="Painel administrativo da Barbearia BarberSync">
-    <meta name="robots" content="noindex, nofollow">
+    <title>BarberSync - Painel Administrativo</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { 
             margin: 0; 
@@ -576,6 +575,7 @@
             font-size: 14px;
         }
 
+        /*  Estilos atualizados para o calendário com dias verdes e contador */
         .calendar-day {
             min-height: 100px;
             padding: 8px;
@@ -584,6 +584,7 @@
             border: 2px solid transparent;
             transition: var(--transition);
             cursor: pointer;
+            position: relative;
         }
 
         .calendar-day:hover {
@@ -611,19 +612,65 @@
             color: var(--text);
             margin-bottom: 5px;
             font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /*  Número do dia fica verde quando tem agendamentos */
+        .calendar-day.has-bookings .calendar-day-number {
+            color: var(--green);
+        }
+
+        /*  Badge com total de agendamentos */
+        .booking-count {
+            background: var(--green);
+            color: white;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        /*  Container expansível para os agendamentos */
+        .calendar-bookings-list {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-in-out, opacity 0.3s ease-in-out;
+            opacity: 0;
+            margin-top: 8px;
+        }
+
+        .calendar-day.expanded .calendar-bookings-list {
+            max-height: 500px;
+            opacity: 1;
         }
 
         .calendar-booking {
             background: var(--lime);
             color: var(--dark-bg);
-            padding: 4px 6px;
+            padding: 6px 8px;
             border-radius: 4px;
-            font-size: 11px;
-            margin-bottom: 3px;
+            font-size: 12px;
+            margin-bottom: 5px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .calendar-booking:hover {
+            transform: translateX(3px);
+            box-shadow: var(--shadow);
         }
 
         .calendar-booking.confirmed {
@@ -639,6 +686,10 @@
         .calendar-booking.cancelled {
             background: var(--red);
             color: white;
+        }
+
+        .calendar-booking i {
+            font-size: 10px;
         }
         
         /* Booking Styles */
@@ -2027,7 +2078,7 @@
                     break;
                 case 'week':
                     const weekStart = new Date(today);
-                    weekStart.setDate(today.getDate() - today.getDay());
+                    weekStart.setDate(today.getDay() === 0 ? today.getDate() - 6 : today.getDate() - today.getDay()); // Ajustado para começar no Domingo
                     startDate = weekStart.toISOString().split('T')[0];
                     endDate = today.toISOString().split('T')[0];
                     break;
@@ -2346,7 +2397,7 @@
 
                 const { data: bookingsData } = await supabase
                     .from('bookings')
-                    .select('*, services(name, price), users(full_name, phone)')
+                    .select('*, services(name, price), users(full_name, phone), barbers(name)')
                     .gte('booking_date', startDate)
                     .lte('booking_date', endDate);
 
@@ -2397,8 +2448,18 @@
                 charts.revenueChart.data.datasets[0].data = revenueData;
                 charts.revenueChart.update();
 
-                charts.barbersChart.data.datasets[0].data = [bookingsData.length];
+                const barbersCounts = {};
+                bookingsData.forEach(booking => {
+                    const barberName = booking.barbers?.name || 'Não Atribuído';
+                    barbersCounts[barberName] = (barbersCounts[barberName] || 0) + 1;
+                });
+                const barberNames = Object.keys(barbersCounts);
+                const barberValues = Object.values(barbersCounts);
+
+                charts.barbersChart.data.labels = barberNames.length > 0 ? barberNames : ['Sem Barbeiros'];
+                charts.barbersChart.data.datasets[0].data = barberValues.length > 0 ? barberValues : [0];
                 charts.barbersChart.update();
+
 
                 const cancellationData = {};
                 bookingsData.forEach(booking => {
@@ -2413,12 +2474,15 @@
                 });
 
                 const cancellationRates = [];
+                const chartLabels = [];
                 for (let i = 0; i < 6; i++) {
                     const month = `${currentYear}-${(i + 1).toString().padStart(2, '0')}`;
                     const data = cancellationData[month];
-                    const rate = data ? (data.cancelled / data.total * 100) : 0;
-                    cancellationRates.push(rate);
+                    const rate = data ? (data.total > 0 ? (data.cancelled / data.total * 100) : 0) : 0;
+                    cancellationRates.push(rate.toFixed(1)); // Format to one decimal place
+                    chartLabels.push(monthNames[i].substring(0,3)); // Short month name
                 }
+                charts.cancellationChart.data.labels = chartLabels;
                 charts.cancellationChart.data.datasets[0].data = cancellationRates;
                 charts.cancellationChart.update();
 
@@ -2427,29 +2491,7 @@
             }
         }
 
-        //  Funções do calendário de agendamentos
-        async function loadBookingsCalendar() {
-            try {
-                const filterStatus = document.getElementById('filterStatus').value;
-                
-                let query = supabase.from('bookings')
-                    .select('*, users(full_name, phone, email), services(name, price, duration), barbers(name)');
-                
-                if (filterStatus !== 'all') {
-                    query = query.eq('status', filterStatus);
-                }
-                
-                const { data, error } = await query;
-                if (error) throw error;
-                
-                allBookingsData = data || [];
-                renderCalendar();
-            } catch (error) {
-                console.error('Erro ao carregar agendamentos:', error);
-                showNotification('Erro ao carregar agendamentos', 'error');
-            }
-        }
-
+        //  Função atualizada para renderizar calendário com dias verdes e expansão
         function renderCalendar() {
             const year = currentCalendarDate.getFullYear();
             const month = currentCalendarDate.getMonth();
@@ -2501,15 +2543,52 @@
                     dayDiv.classList.add('today');
                 }
                 
+                //  Adicionar classe has-bookings se houver agendamentos
+                if (sortedBookings.length > 0) {
+                    dayDiv.classList.add('has-bookings');
+                }
+                
+                //  Criar HTML com número verde e contador de agendamentos
                 dayDiv.innerHTML = `
-                    <div class="calendar-day-number">${day}</div>
-                    ${sortedBookings.slice(0, 3).map(booking => {
-                        const time = booking.booking_time.substring(0, 5);
-                        const clientName = booking.users?.full_name || booking.customer_full_name || 'Cliente';
-                        return `<div class="calendar-booking ${booking.status}" onclick="showBookingDetail('${booking.id}')" title="${time} - ${clientName}">${time} ${clientName.split(' ')[0]}</div>`;
-                    }).join('')}
-                    ${sortedBookings.length > 3 ? `<div class="calendar-booking" style="background: var(--text-muted);">+${sortedBookings.length - 3} mais</div>` : ''}
+                    <div class="calendar-day-number">
+                        <span>${day}</span>
+                        ${sortedBookings.length > 0 ? `<span class="booking-count">${sortedBookings.length}</span>` : ''}
+                    </div>
+                    ${sortedBookings.length > 0 ? `
+                        <div class="calendar-bookings-list">
+                            ${sortedBookings.map(booking => {
+                                const time = booking.booking_time.substring(0, 5);
+                                const clientName = booking.users?.full_name || booking.customer_full_name || 'Cliente';
+                                const serviceName = booking.services?.name || 'Serviço';
+                                const statusIcon = booking.status === 'confirmed' ? 'fa-check-circle' : 
+                                                  booking.status === 'completed' ? 'fa-check-double' : 
+                                                  booking.status === 'cancelled' ? 'fa-times-circle' : 'fa-clock'; // Icone para pendente
+                                return `
+                                    <div class="calendar-booking ${booking.status}" onclick="event.stopPropagation(); showBookingDetail('${booking.id}')" title="${time} - ${clientName} - ${serviceName}">
+                                        <i class="fas ${statusIcon}"></i>
+                                        <span>${time} - ${clientName.split(' ')[0]} - ${serviceName}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    ` : ''}
                 `;
+                
+                //  Adicionar evento de clique para expandir/recolher os agendamentos
+                if (sortedBookings.length > 0) {
+                    dayDiv.addEventListener('click', function(e) {
+                        // Não expandir se clicar em um agendamento específico
+                        if (e.target.closest('.calendar-booking')) return;
+                        
+                        // Fechar outros dias expandidos
+                        document.querySelectorAll('.calendar-day.expanded').forEach(d => {
+                            if (d !== dayDiv) d.classList.remove('expanded');
+                        });
+                        
+                        // Toggle expansão do dia clicado
+                        dayDiv.classList.toggle('expanded');
+                    });
+                }
                 
                 calendarGrid.appendChild(dayDiv);
             }
@@ -2584,14 +2663,23 @@
                         
                         <div class="booking-footer">
                             <div class="booking-actions">
-                                ${booking.status === 'confirmed' ? `
-                                    <button class="btn-cancel" onclick="cancelAndDeleteBooking('${booking.id}'); closeBookingDetailModal();" aria-label="Excluir agendamento">
+                                ${booking.status === 'pending' ? `
+                                    <button class="btn-confirm" onclick="updateBookingStatus('${booking.id}', 'confirmed'); closeBookingDetailModal();" aria-label="Confirmar agendamento">
+                                        <i class="fas fa-check" aria-hidden="true"></i> Confirmar
+                                    </button>
+                                    <button class="btn-cancel" onclick="updateBookingStatus('${booking.id}', 'cancelled'); closeBookingDetailModal();" aria-label="Cancelar agendamento">
                                         <i class="fas fa-times-circle" aria-hidden="true"></i> Cancelar
+                                    </button>
+                                ` : ''}
+                                ${booking.status === 'confirmed' ? `
+                                    <button class="btn-cancel" onclick="cancelAndDeleteBooking('${booking.id}'); closeBookingDetailModal();" aria-label="Cancelar e excluir agendamento">
+                                        <i class="fas fa-times-circle" aria-hidden="true"></i> Cancelar e Excluir
                                     </button>
                                     <button class="btn-complete" onclick="updateBookingStatus('${booking.id}', 'completed'); closeBookingDetailModal();" aria-label="Concluir agendamento">
                                         <i class="fas fa-check" aria-hidden="true"></i> Concluir
                                     </button>
-                                ` : booking.status === 'completed' || booking.status === 'cancelled' ? `
+                                ` : ''}
+                                ${booking.status === 'completed' || booking.status === 'cancelled' ? `
                                     <button class="btn-delete" onclick="deleteBooking('${booking.id}'); closeBookingDetailModal();" aria-label="Excluir agendamento">
                                         <i class="fas fa-trash" aria-hidden="true"></i> Excluir
                                     </button>
@@ -2646,7 +2734,7 @@
                 return; 
             }
             
-            const actionText = status === 'completed' ? 'concluir' : status === 'cancelled' ? 'cancelar' : 'confirmar';
+            const actionText = status === 'completed' ? 'concluir' : status === 'cancelled' ? 'cancelar' : status === 'confirmed' ? 'confirmar' : 'atualizar';
             if (!confirm(`Tem certeza que deseja ${actionText} este agendamento?`)) return;
             
             try {
@@ -3313,6 +3401,11 @@
                 const modal = document.querySelector('.modal:not(.hidden)');
                 if (modal) {
                     modal.classList.add('hidden');
+                }
+                // Check if a booking detail modal is open
+                const bookingModal = document.getElementById('bookingDetailModal');
+                if (bookingModal && !bookingModal.classList.contains('hidden')) {
+                    closeBookingDetailModal();
                 }
             }
         });
