@@ -16,7 +16,7 @@
             box-sizing: border-box; 
         }
         
-        /*  Adicionando variáveis para tema claro e escuro */
+        /* Adicionando variáveis CSS para tema claro */
         :root {
             --dark-bg: #0a0a0a; 
             --dark-card: #1a1a1a; 
@@ -34,7 +34,7 @@
             --shadow: 0 3px 20px rgba(0, 0, 0, 0.3);
             --shadow-hover: 0 5px 30px rgba(135, 206, 235, 0.2);
         }
-
+        
         /* Tema Claro */
         [data-theme="light"] {
             --dark-bg: #f5f5f5;
@@ -105,32 +105,29 @@
             font-weight: bold; 
             margin-left: 10px; 
         }
-
-        /*  Adicionando estilos para o botão de alternância de tema */
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .theme-toggle-btn {
+        
+        /* Adicionando botão de alternância de tema */
+        .theme-toggle {
             background: transparent;
             border: 2px solid var(--lime);
             color: var(--lime);
-            padding: 10px 15px;
-            border-radius: var(--border-radius);
+            padding: 10px;
+            border-radius: 50%;
             cursor: pointer;
             font-size: 18px;
             transition: var(--transition);
+            width: 45px;
+            height: 45px;
             display: flex;
             align-items: center;
             justify-content: center;
+            margin-right: 15px;
         }
-
-        .theme-toggle-btn:hover {
+        
+        .theme-toggle:hover {
             background: var(--lime);
             color: var(--dark-bg);
-            transform: translateY(-2px);
+            transform: rotate(180deg);
         }
         
         .logout-btn { 
@@ -203,11 +200,6 @@
             color: var(--text); 
             font-size: 16px; 
             transition: var(--transition); 
-        }
-
-        [data-theme="light"] .form-group input,
-        [data-theme="light"] .form-group select {
-            border-color: #ddd;
         }
         
         .form-group input:focus, 
@@ -343,10 +335,6 @@
             align-items: center;
             gap: 8px;
         }
-
-        [data-theme="light"] .period-btn {
-            border-color: #ddd;
-        }
         
         .period-btn.active { 
             background: var(--lime); 
@@ -436,10 +424,6 @@
             padding-top: 20px; 
             border-top: 2px solid #333; 
         }
-
-        [data-theme="light"] .stat-card.expanded .stat-details {
-            border-top-color: #ddd;
-        }
         
         .detail-item { 
             display: flex; 
@@ -524,12 +508,13 @@
             margin-top: 20px; 
         }
         
+        /* REMOVENDO ESTILOS BASEADOS EM STATUS PARA MANTER COR PADRÃO */
         .booking-item { 
             background: var(--dark-bg); 
             padding: 20px; 
             border-radius: 10px; 
             margin-bottom: 15px; 
-            border-left: 4px solid var(--lime);
+            border-left: 4px solid var(--lime); /* Linha de destaque mantida com a cor padrão (lime) */
             transition: var(--transition); 
         }
         
@@ -608,6 +593,7 @@
         }
         
         /* Status Badges */
+        /* Cores mantidas apenas para o texto do badge */
         .booking-status { 
             padding: 6px 16px; 
             border-radius: 20px; 
@@ -678,6 +664,7 @@
             transform: translateY(-2px); 
         }
         
+        /* AJUSTADO: COR DO BOTÃO CANCELAR PARA VERMELHO (EXCLUIR) */
         .btn-cancel { 
             background: var(--red); 
             color: white; 
@@ -889,10 +876,6 @@
             border: 2px solid #333; 
             transition: var(--transition);
         }
-
-        [data-theme="light"] .day-card {
-            border-color: #ddd;
-        }
         
         .day-card.active { 
             border-color: var(--lime); 
@@ -957,10 +940,6 @@
             color: var(--text); 
             font-size: 14px; 
         }
-
-        [data-theme="light"] .time-period input {
-            border-color: #ddd;
-        }
         
         .time-period input:focus { 
             outline: none; 
@@ -1012,6 +991,147 @@
         .filter-section input { 
             flex: 1; 
             min-width: 200px; 
+        }
+        
+        /* Adicionando estilos para a agenda mensal */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--dark-bg);
+            border-radius: var(--border-radius);
+        }
+        
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .calendar-nav button {
+            background: var(--lime);
+            color: var(--dark-bg);
+            border: none;
+            padding: 8px 15px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: bold;
+            transition: var(--transition);
+        }
+        
+        .calendar-nav button:hover {
+            background: var(--lime-dark);
+            transform: translateY(-2px);
+        }
+        
+        .calendar-month-year {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--lime);
+        }
+        
+        .calendar-stats {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .calendar-stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: rgba(135, 206, 235, 0.1);
+            border-radius: var(--border-radius);
+        }
+        
+        .calendar-stat-item i {
+            color: var(--lime);
+            font-size: 18px;
+        }
+        
+        .calendar-stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--lime);
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .calendar-day-header {
+            text-align: center;
+            padding: 10px;
+            font-weight: bold;
+            color: var(--lime);
+            background: var(--dark-bg);
+            border-radius: var(--border-radius);
+        }
+        
+        .calendar-day {
+            min-height: 80px;
+            padding: 10px;
+            background: var(--dark-bg);
+            border-radius: var(--border-radius);
+            border: 2px solid transparent;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        
+        .calendar-day:hover {
+            border-color: var(--lime);
+            transform: translateY(-2px);
+        }
+        
+        .calendar-day.has-bookings {
+            border-color: var(--lime);
+            background: rgba(135, 206, 235, 0.1);
+        }
+        
+        .calendar-day.today {
+            border-color: var(--green);
+            background: rgba(76, 175, 80, 0.1);
+        }
+        
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+        
+        .calendar-day-number {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--text);
+            margin-bottom: 5px;
+        }
+        
+        .calendar-day-bookings {
+            font-size: 12px;
+            color: var(--lime);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .bookings-list-section {
+            margin-top: 30px;
+        }
+        
+        .bookings-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .bookings-list-header h3 {
+            color: var(--lime);
+            font-size: 18px;
         }
         
         /* Empty State */
@@ -1159,10 +1279,6 @@
                 flex-direction: column; 
                 text-align: center; 
             }
-            .header-actions {
-                width: 100%;
-                justify-content: center;
-            }
             .logout-btn { 
                 width: 100%; 
             }
@@ -1222,6 +1338,27 @@
                 margin-right: 0;
                 margin-bottom: 10px;
             }
+            /* Ajustes responsivos para o calendário */
+            .calendar-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .calendar-nav {
+                order: 1;
+            }
+            .calendar-stats {
+                order: 2;
+                flex-direction: column;
+                gap: 10px;
+                width: 100%;
+            }
+            .calendar-stat-item {
+                width: 100%;
+                justify-content: center;
+            }
+            .calendar-grid {
+                grid-template-columns: repeat(4, 1fr); /* 4 colunas em telas menores */
+            }
         }
         
         @media (max-width: 480px) {
@@ -1242,6 +1379,10 @@
             }
             .login-card {
                 padding: 20px;
+            }
+            /* Ajustes responsivos para o calendário */
+            .calendar-grid {
+                grid-template-columns: repeat(3, 1fr); /* 3 colunas em telas bem pequenas */
             }
         }
         
@@ -1282,12 +1423,12 @@
                     <p style="color: var(--text-muted); font-size: 14px;">Painel Administrativo</p>
                 </div>
             </div>
-            <!--  Adicionando botão de alternância de tema e agrupando com logout -->
-            <div class="header-actions hidden">
-                <button class="theme-toggle-btn" onclick="toggleTheme()" aria-label="Alternar tema" title="Alternar tema">
+            /* Adicionando botão de alternância de tema no header */
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button class="theme-toggle hidden" onclick="toggleTheme()" aria-label="Alternar tema" title="Alternar tema">
                     <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
                 </button>
-                <button class="logout-btn" onclick="logout()" aria-label="Sair do sistema">
+                <button class="logout-btn hidden" onclick="logout()" aria-label="Sair do sistema">
                     <i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sair
                 </button>
             </div>
@@ -1445,25 +1586,50 @@
         </div>
 
         <div class="content-grid">
+            /* Substituindo filtros por agenda mensal com total de agendamentos */
             <div class="card full-width">
-                <h2><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agendamentos</h2>
-                <!--  Alterando valor padrão do filtro de status para "all" -->
-                <div class="filter-section">
-                    <select id="filterStatus" aria-label="Filtrar por status">
-                        <option value="all">Todos os Status</option>
-                        <option value="confirmed">Confirmados</option>
-                        <option value="completed">Concluídos</option>
-                        <option value="cancelled">Cancelados</option>
-                    </select>
-                    <input type="date" id="filterDate" aria-label="Filtrar por data">
-                    <button class="btn btn-secondary" onclick="loadBookings()">
-                        <i class="fas fa-search" aria-hidden="true"></i> Filtrar
-                    </button>
+                <h2><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agenda de Agendamentos</h2>
+                
+                <div class="calendar-header">
+                    <div class="calendar-nav">
+                        <button onclick="changeMonth(-1)" aria-label="Mês anterior">
+                            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                        </button>
+                        <span class="calendar-month-year" id="calendarMonthYear">Janeiro 2025</span>
+                        <button onclick="changeMonth(1)" aria-label="Próximo mês">
+                            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="calendar-stats">
+                        <div class="calendar-stat-item">
+                            <i class="fas fa-calendar-check" aria-hidden="true"></i>
+                            <div>
+                                <div style="font-size: 11px; color: var(--text-muted);">Total no Mês</div>
+                                <div class="calendar-stat-value" id="monthTotalBookings">0</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="bookings-table" id="bookingsTable" role="region" aria-label="Lista de agendamentos">
-                    <div class="empty-state">
-                        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
-                        <p>Carregando agendamentos...</p>
+                
+                <div class="calendar-grid" id="calendarGrid">
+                    <div class="calendar-day-header">Dom</div>
+                    <div class="calendar-day-header">Seg</div>
+                    <div class="calendar-day-header">Ter</div>
+                    <div class="calendar-day-header">Qua</div>
+                    <div class="calendar-day-header">Qui</div>
+                    <div class="calendar-day-header">Sex</div>
+                    <div class="calendar-day-header">Sáb</div>
+                </div>
+                
+                <div class="bookings-list-section">
+                    <div class="bookings-list-header">
+                        <h3 id="selectedDateTitle">Agendamentos do Dia</h3>
+                    </div>
+                    <div class="bookings-table" id="bookingsTable" role="region" aria-label="Lista de agendamentos">
+                        <div class="empty-state">
+                            <i class="fas fa-calendar" aria-hidden="true"></i>
+                            <p>Selecione um dia no calendário para ver os agendamentos</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1625,12 +1791,16 @@
     <script>
         const SUPABASE_URL = 'https://huggzgfejtedacfyatke.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1Z2d6Z2ZlanRlZGFjZnlhdGtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NDk3ODYsImV4cCI6MjA3NjAyNTc4Nn0.aTrXAe7m1KsRNwH28LmBvcOlBjYI8C-2kvHYGdkUmv8';
-        const WEBHOOK_URL = 'https://n8n-n8n.rthuab.easypanel.host/webhook/barbearia';
+        const WEBHOOK_URL = 'https://n8n-n8n.rthuab.easypanel.host/webhook/barbearia'; // URL do Webhook
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         let currentAdmin = null;
         let realtimeChannel = null;
         let currentPeriod = 'today';
+        let currentCalendarDate = new Date();
+        let selectedDate = null;
+        let allMonthBookings = [];
+        
         let scheduleConfig = {
             0: { active: true, periods: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },
             1: { active: true, periods: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },
@@ -1642,62 +1812,56 @@
         };
         const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 
+        // Variáveis para os gráficos
         let chartsInitialized = false;
         let charts = {};
 
-        //  Adicionando funções para gerenciar o tema
-        function initTheme() {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            document.documentElement.setAttribute('data-theme', savedTheme);
-            updateThemeIcon(savedTheme);
-        }
-
         function toggleTheme() {
             const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-            updateThemeIcon(newTheme);
             
-            // Atualizar cores dos gráficos se estiverem inicializados
+            const icon = document.getElementById('themeIcon');
+            icon.className = newTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+            
+            // Atualizar gráficos se estiverem inicializados
             if (chartsInitialized) {
                 updateChartsTheme(newTheme);
             }
         }
-
-        function updateThemeIcon(theme) {
+        
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
             const icon = document.getElementById('themeIcon');
             if (icon) {
-                icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+                icon.className = savedTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
             }
         }
-
+        
         function updateChartsTheme(theme) {
-            const textColor = theme === 'dark' ? '#ffffff' : '#1a1a1a';
-            const gridColor = theme === 'dark' ? '#333333' : '#e0e0e0';
-            const mutedColor = theme === 'dark' ? '#888888' : '#666666';
-
+            const textColor = theme === 'light' ? '#1a1a1a' : '#ffffff';
+            const gridColor = theme === 'light' ? '#e0e0e0' : '#333333';
+            const mutedColor = theme === 'light' ? '#666666' : '#888888';
+            
             Object.values(charts).forEach(chart => {
-                if (chart.options.plugins && chart.options.plugins.legend) {
+                if (chart.options.plugins?.legend) {
                     chart.options.plugins.legend.labels.color = textColor;
                 }
-                if (chart.options.scales) {
-                    if (chart.options.scales.x) {
-                        chart.options.scales.x.ticks.color = mutedColor;
-                        chart.options.scales.x.grid.color = gridColor;
-                    }
-                    if (chart.options.scales.y) {
-                        chart.options.scales.y.ticks.color = mutedColor;
-                        chart.options.scales.y.grid.color = gridColor;
-                    }
+                if (chart.options.scales?.x) {
+                    chart.options.scales.x.ticks.color = mutedColor;
+                    chart.options.scales.x.grid.color = gridColor;
+                }
+                if (chart.options.scales?.y) {
+                    chart.options.scales.y.ticks.color = mutedColor;
+                    chart.options.scales.y.grid.color = gridColor;
                 }
                 chart.update();
             });
         }
 
-        // Inicializar tema ao carregar a página
-        initTheme();
-
+        // Utility Functions
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
             notification.style.cssText = `
@@ -1741,6 +1905,7 @@
             btn.classList.toggle('active');
             btn.setAttribute('aria-expanded', !isActive);
             
+            // Load statistics and charts only when opening for the first time
             if (!isActive && !container.dataset.loaded) {
                 loadStats();
                 initializeCharts();
@@ -1807,6 +1972,7 @@
             `;
             document.body.appendChild(modal);
             
+            // Focus management
             const firstInput = modal.querySelector('input');
             firstInput.focus();
             
@@ -1862,7 +2028,7 @@
                     if (payload.eventType === 'DELETE' || (payload.eventType === 'UPDATE' && payload.new.status === 'cancelled')) {
                         showNotification('Um agendamento foi cancelado/excluído!', 'warning');
                     }
-                    loadBookings();
+                    loadCalendar(); // Atualiza o calendário completo
                     if (document.getElementById('dashboardContainer').classList.contains('active')) {
                         loadStats();
                         updateCharts();
@@ -1870,6 +2036,7 @@
                 }).subscribe();
         }
 
+        // Authentication Functions
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button[type="submit"]');
@@ -1897,7 +2064,9 @@
         function showAdminPanel() {
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('mainContent').style.display = 'block';
-            document.querySelector('.header-actions').classList.remove('hidden');
+            document.querySelector('.logout-btn').classList.remove('hidden');
+            /* Mostrando botão de tema */
+            document.querySelector('.theme-toggle').classList.remove('hidden');
             setupRealtimeListener();
             loadDashboard();
         }
@@ -1909,25 +2078,30 @@
                 currentAdmin = null;
                 document.getElementById('loginScreen').classList.remove('hidden');
                 document.getElementById('mainContent').style.display = 'none';
-                document.querySelector('.header-actions').classList.add('hidden');
+                document.querySelector('.logout-btn').classList.add('hidden');
+                /* Escondendo botão de tema */
+                document.querySelector('.theme-toggle').classList.add('hidden');
                 showNotification('Logout realizado com sucesso!', 'info');
             }
         }
 
         async function loadDashboard() {
             try {
-                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings()]);
+                /* Carregando calendário ao invés de filtros */
+                await Promise.all([loadCalendar(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings()]);
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
                 showNotification('Erro ao carregar dados do dashboard', 'error');
             }
         }
 
+        // Statistics Functions
         async function loadStats(customStart = null, customEnd = null) {
             try {
                 const { startDate, endDate } = customStart && customEnd ? 
                     { startDate: customStart, endDate: customEnd } : getPeriodDates();
                 
+                // Period bookings
                 const { data: periodData } = await supabase
                     .from('bookings')
                     .select('*, services(name, price), users(full_name, phone)') 
@@ -1946,6 +2120,7 @@
                     <div class="detail-item"><span>Cancelados</span><span>${cancelled}</span></div>
                 `;
                 
+                // Revenue - Calcular apenas com agendamentos concluídos
                 const completedBookings = periodData?.filter(b => b.status === 'completed') || [];
                 
                 const revenue = completedBookings.reduce((sum, booking) => sum + (booking.services?.price || 0), 0);
@@ -1958,6 +2133,7 @@
                     <div class="detail-item"><span>Cancelados (Sem Faturamento)</span><span>${cancelled}</span></div>
                 `;
                 
+                // Unique clients 
                 const clientIdentifiers = new Set();
                 periodData?.forEach(booking => {
                     if (booking.user_id) {
@@ -1975,6 +2151,7 @@
                     <div class="detail-item"><span>Média por Cliente</span><span>${uniqueClients ? (periodData.length / uniqueClients).toFixed(1) : 0}</span></div>
                 `;
                 
+                // Most popular services
                 const serviceCount = {};
                 periodData?.forEach(booking => {
                     const serviceName = booking.services?.name || 'Desconhecido';
@@ -1993,37 +2170,35 @@
             }
         }
 
+        // Charts Functions (Mantidas)
         function initializeCharts() {
             if (chartsInitialized) return;
             
-            const theme = document.documentElement.getAttribute('data-theme');
-            const textColor = theme === 'dark' ? '#ffffff' : '#1a1a1a';
-            const gridColor = theme === 'dark' ? '#333333' : '#e0e0e0';
-            const mutedColor = theme === 'dark' ? '#888888' : '#666666';
-
+            // Configurações padrão dos gráficos... (mantidas)
             const defaultOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
                         labels: {
-                            color: textColor
+                            color: '#ffffff'
                         }
                     }
                 },
                 scales: {
                     x: {
-                        ticks: { color: mutedColor },
-                        grid: { color: gridColor }
+                        ticks: { color: '#888888' },
+                        grid: { color: '#333333' }
                     },
                     y: {
-                        ticks: { color: mutedColor },
-                        grid: { color: gridColor },
+                        ticks: { color: '#888888' },
+                        grid: { color: '#333333' },
                         beginAtZero: true
                     }
                 }
             };
 
+            // Gráfico de Dias Mais Agendados
             const daysCtx = document.getElementById('daysChart').getContext('2d');
             charts.daysChart = new Chart(daysCtx, {
                 type: 'bar',
@@ -2040,6 +2215,7 @@
                 options: defaultOptions
             });
 
+            // Gráfico de Horários Mais Procurados
             const hoursCtx = document.getElementById('hoursChart').getContext('2d');
             charts.hoursChart = new Chart(hoursCtx, {
                 type: 'line',
@@ -2058,6 +2234,7 @@
                 options: defaultOptions
             });
 
+            // Gráfico de Serviços Mais Solicitados
             const servicesCtx = document.getElementById('servicesChart').getContext('2d');
             charts.servicesChart = new Chart(servicesCtx, {
                 type: 'doughnut',
@@ -2082,13 +2259,14 @@
                         legend: {
                             position: 'bottom',
                             labels: {
-                                color: textColor
+                                color: '#ffffff'
                             }
                         }
                     }
                 }
             });
 
+            // Gráfico de Faturamento Mensal 
             const revenueCtx = document.getElementById('revenueChart').getContext('2d');
             charts.revenueChart = new Chart(revenueCtx, {
                 type: 'line',
@@ -2107,6 +2285,7 @@
                 options: defaultOptions
             });
 
+            // Gráfico de Performance dos Barbeiros
             const barbersCtx = document.getElementById('barbersChart').getContext('2d');
             charts.barbersChart = new Chart(barbersCtx, {
                 type: 'bar',
@@ -2123,6 +2302,7 @@
                 options: defaultOptions
             });
 
+            // Gráfico de Taxa de Cancelamento
             const cancellationCtx = document.getElementById('cancellationChart').getContext('2d');
             charts.cancellationChart = new Chart(cancellationCtx, {
                 type: 'bar',
@@ -2150,6 +2330,7 @@
                 const { startDate, endDate } = customStart && customEnd ? 
                     { startDate: customStart, endDate: customEnd } : getPeriodDates();
 
+                // Buscar dados dos agendamentos
                 const { data: bookingsData } = await supabase
                     .from('bookings')
                     .select('*, services(name, price), users(full_name, phone)')
@@ -2158,6 +2339,7 @@
 
                 if (!bookingsData) return;
 
+                // Atualizar gráfico de dias
                 const daysCounts = [0, 0, 0, 0, 0, 0, 0];
                 bookingsData.forEach(booking => {
                     const dayOfWeek = new Date(booking.booking_date + 'T12:00:00').getDay();
@@ -2166,6 +2348,7 @@
                 charts.daysChart.data.datasets[0].data = daysCounts;
                 charts.daysChart.update();
 
+                // Atualizar gráfico de horários
                 const hoursCounts = {};
                 bookingsData.forEach(booking => {
                     const hour = booking.booking_time.substring(0, 2) + ':00';
@@ -2176,6 +2359,7 @@
                 charts.hoursChart.data.datasets[0].data = hoursData;
                 charts.hoursChart.update();
 
+                // Atualizar gráfico de serviços
                 const servicesCounts = {};
                 bookingsData.forEach(booking => {
                     const serviceName = booking.services?.name || 'Desconhecido';
@@ -2186,6 +2370,7 @@
                 charts.servicesChart.data.datasets[0].data = topServices.map(([, count]) => count);
                 charts.servicesChart.update();
 
+                // Atualizar gráfico de faturamento mensal
                 const monthlyRevenue = {};
                 bookingsData.forEach(booking => {
                     if (booking.status === 'completed') {
@@ -2203,9 +2388,11 @@
                 charts.revenueChart.data.datasets[0].data = revenueData;
                 charts.revenueChart.update();
 
+                // Atualizar gráfico de performance dos barbeiros
                 charts.barbersChart.data.datasets[0].data = [bookingsData.length];
                 charts.barbersChart.update();
 
+                // Atualizar gráfico de taxa de cancelamento
                 const cancellationData = {};
                 bookingsData.forEach(booking => {
                     const month = booking.booking_date.substring(0, 7);
@@ -2233,111 +2420,9 @@
             }
         }
 
-        //  Modificando loadBookings para remover filtros padrão e mostrar todos os agendamentos
-        async function loadBookings() {
-            const container = document.getElementById('bookingsTable');
-            container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><p>Carregando...</p></div>';
-            
-            try {
-                const filterStatus = document.getElementById('filterStatus').value;
-                const filterDate = document.getElementById('filterDate').value;
-                
-                // Buscar todos os agendamentos sem filtro padrão
-                let query = supabase.from('bookings')
-                    .select('*, users(full_name, phone, email), services(name, price, duration), barbers(name)')
-                    .order('booking_date', { ascending: false })
-                    .order('booking_time', { ascending: false });
-                
-                // Aplicar filtros apenas se especificados pelo usuário
-                if (filterStatus !== 'all') {
-                    query = query.eq('status', filterStatus);
-                }
-                
-                if (filterDate) {
-                    query = query.eq('booking_date', filterDate);
-                }
-                
-                const { data, error } = await query;
-                if (error) throw error;
-                
-                if (!data || data.length === 0) {
-                    container.innerHTML = `<div class="empty-state"><i class="fas fa-calendar" aria-hidden="true"></i><p>Nenhum agendamento encontrado</p></div>`;
-                    return;
-                }
-                
-                container.innerHTML = data.map(booking => {
-                    const date = new Date(booking.booking_date + 'T12:00:00');
-                    const dateDayMonth = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-                    const timeFormatted = booking.booking_time.substring(0, 5);
-                    
-                    const clientName = booking.users?.full_name || booking.customer_full_name || 'Cliente Anônimo';
-                    const clientPhone = booking.users?.phone || booking.customer_phone || 'Sem telefone';
-                    
-                    const phoneNumberClean = clientPhone.replace(/\D/g, '');
-                    const whatsappLink = phoneNumberClean ? 
-                        `https://wa.me/55${phoneNumberClean}?text=Olá ${clientName.split(' ')[0]}, aqui é da Barbearia BarberSync! Entrando em contato sobre seu agendamento de ${dateDayMonth} às ${timeFormatted}.` : 
-                        '#';
-
-                    return `
-                        <div class="booking-item">
-                            <div class="booking-main">
-                                <div class="booking-client">
-                                    <h4><i class="fas fa-user" aria-hidden="true"></i> ${clientName}</h4>
-                                    <p><i class="fas fa-cut" aria-hidden="true"></i> ${booking.services?.name}</p>
-                                    <p><i class="fas fa-user-tie" aria-hidden="true"></i> Barbeiro: ${booking.barbers?.name || 'Não especificado'}</p>
-                                    <p><i class="fas fa-phone" aria-hidden="true"></i> ${clientPhone}</p>
-                                    <p><i class="fas fa-dollar-sign" aria-hidden="true"></i> R$ ${booking.services?.price?.toFixed(2) || '0.00'} • <i class="fas fa-hourglass-half" aria-hidden="true"></i> ${booking.services?.duration || 0}min</p>
-                                </div>
-                                <span class="booking-status status-${booking.status}">
-                                    ${booking.status === 'confirmed' ? 'Confirmado' : 
-                                      booking.status === 'completed' ? 'Concluído' : 
-                                      booking.status === 'pending' ? 'Pendente' : 'Cancelado'}
-                                </span>
-                            </div>
-                            
-                            <div class="booking-datetime-highlight">
-                                <div class="datetime-box">
-                                    <div class="datetime-label">Data</div>
-                                    <div class="datetime-value">${dateDayMonth.toUpperCase()}</div>
-                                </div>
-                                <div class="datetime-separator">•</div>
-                                <div class="datetime-box">
-                                    <div class="datetime-label">Horário</div>
-                                    <div class="datetime-value">${timeFormatted}</div>
-                                </div>
-                            </div>
-                            
-                            <div class="booking-footer">
-                                <div class="booking-actions">
-                                    ${booking.status === 'confirmed' ? `
-                                        <button class="btn-cancel" onclick="cancelAndDeleteBooking('${booking.id}')" aria-label="Excluir agendamento">
-                                            <i class="fas fa-times-circle" aria-hidden="true"></i> Cancelar
-                                        </button>
-                                        <button class="btn-complete" onclick="updateBookingStatus('${booking.id}', 'completed')" aria-label="Concluir agendamento">
-                                            <i class="fas fa-check" aria-hidden="true"></i> Concluir
-                                        </button>
-                                    ` : booking.status === 'completed' || booking.status === 'cancelled' ? `
-                                        <button class="btn-delete" onclick="deleteBooking('${booking.id}')" aria-label="Excluir agendamento">
-                                            <i class="fas fa-trash" aria-hidden="true"></i> Excluir
-                                        </button>
-                                    ` : ''}
-                                    ${phoneNumberClean ? `
-                                        <a href="${whatsappLink}" class="btn-whatsapp" target="_blank" aria-label="Conversar no WhatsApp">
-                                            <i class="fab fa-whatsapp" aria-hidden="true"></i> Chat
-                                        </a>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } catch (error) {
-                console.error('Erro ao carregar agendamentos:', error);
-                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i><p>Erro ao carregar agendamentos</p></div>';
-                showNotification('Erro ao carregar agendamentos', 'error');
-            }
-        }
-
+        // Booking Management Functions
+        /* Removendo função loadBookings antiga e mantendo apenas loadCalendar */
+        
         async function cancelAndDeleteBooking(bookingId) {
              if (!bookingId) { 
                 showNotification('ID inválido', 'error'); 
@@ -2346,12 +2431,13 @@
             if (!confirm(`Tem certeza que deseja CANCELAR e EXCLUIR este agendamento? Esta ação não pode ser desfeita.`)) return;
 
             try {
+                // Remove o agendamento do banco
                 const { error } = await supabase.from('bookings').delete().eq('id', bookingId);
                 
                 if (error) throw error;
                 
                 showNotification(`Agendamento cancelado e excluído com sucesso!`, 'success');
-                loadBookings();
+                loadCalendar();
                 if (document.getElementById('dashboardContainer').classList.contains('active')) {
                     loadStats();
                     updateCharts();
@@ -2371,6 +2457,7 @@
             if (!confirm(`Tem certeza que deseja ${actionText} este agendamento?`)) return;
             
             try {
+                // Não há mais chamada de webhook aqui (movida para o index.html)
                 const { error } = await supabase.from('bookings')
                     .update({ status: status })
                     .eq('id', bookingId);
@@ -2378,7 +2465,7 @@
                 if (error) throw error;
                 
                 showNotification(`Agendamento ${actionText} com sucesso!`, 'success');
-                loadBookings();
+                loadCalendar();
                 if (document.getElementById('dashboardContainer').classList.contains('active')) {
                     loadStats();
                     updateCharts();
@@ -2401,7 +2488,7 @@
                 if (error) throw error;
                 
                 showNotification('Agendamento excluído com sucesso!', 'success');
-                loadBookings();
+                loadCalendar();
                 if (document.getElementById('dashboardContainer').classList.contains('active')) {
                     loadStats();
                     updateCharts();
@@ -2411,6 +2498,7 @@
             }
         }
 
+        // Service Management Functions (Mantidas)
         async function loadServices() {
             try {
                 const { data, error } = await supabase.from('services').select('*').order('id', { ascending: true });
@@ -2517,6 +2605,7 @@
             }
         }
 
+        // Barber Management Functions (Mantidas)
         async function loadBarbers() {
             try {
                 const { data, error } = await supabase.from('barbers').select('*').order('id', { ascending: true });
@@ -2559,63 +2648,6 @@
             }
         }
 
-        async function addBarber() {
-            const name = document.getElementById('barberName').value.trim();
-            const specialty = document.getElementById('barberSpecialty').value.trim();
-            const photoFile = document.getElementById('barberPhoto').files[0];
-            
-            if (!name || name.length < 3) { 
-                showNotification('Nome deve ter pelo menos 3 caracteres!', 'error'); 
-                return; 
-            }
-            
-            try {
-                let photoUrl = null;
-                
-                if (photoFile) {
-                    if (photoFile.size > 2 * 1024 * 1024) {
-                        showNotification('Arquivo muito grande! Máximo 2MB.', 'error');
-                        return;
-                    }
-                    
-                    const fileExt = photoFile.name.split('.').pop();
-                    const fileName = `${Math.random()}.${fileExt}`;
-                    
-                    const { data: uploadData, error: uploadError } = await supabase.storage
-                        .from('barber-photos')
-                        .upload(fileName, photoFile);
-                    
-                    if (uploadError) {
-                        console.error('Erro no upload:', uploadError);
-                        showNotification('Erro ao fazer upload da foto', 'error');
-                        return;
-                    }
-                    
-                    const { data: urlData } = supabase.storage
-                        .from('barber-photos')
-                        .getPublicUrl(fileName);
-                    
-                    photoUrl = urlData.publicUrl;
-                }
-                
-                const { error } = await supabase.from('barbers').insert([{ 
-                    name, 
-                    specialty: specialty || null,
-                    photo_url: photoUrl
-                }]);
-                
-                if (error) throw error;
-                
-                showNotification('Barbeiro adicionado com sucesso!', 'success');
-                document.getElementById('barberName').value = '';
-                document.getElementById('barberSpecialty').value = '';
-                document.getElementById('barberPhoto').value = '';
-                loadBarbers();
-            } catch (error) {
-                showNotification('Erro ao adicionar barbeiro: ' + error.message, 'error');
-            }
-        }
-
         async function openEditBarberModal(barberId) {
             try {
                 const { data: barber, error } = await supabase.from('barbers').select('*').eq('id', barberId).single();
@@ -2628,6 +2660,7 @@
                 const modal = document.getElementById('editBarberModal');
                 modal.classList.remove('hidden');
                 
+                // Focus management
                 const firstInput = modal.querySelector('input[type="text"]');
                 firstInput.focus();
             } catch (error) {
@@ -2658,8 +2691,9 @@
                     specialty: specialty || null
                 };
                 
+                // Upload nova foto se fornecida
                 if (photoFile) {
-                    if (photoFile.size > 2 * 1024 * 1024) {
+                    if (photoFile.size > 2 * 1024 * 1024) { // 2MB
                         showNotification('Arquivo muito grande! Máximo 2MB.', 'error');
                         return;
                     }
@@ -2710,6 +2744,7 @@
             }
         }
 
+        // Client Management Functions (Mantidas)
         async function loadClients() {
             const container = document.getElementById('clientsList');
             container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><p>Carregando clientes...</p></div>';
@@ -2793,6 +2828,7 @@
                 const modal = document.getElementById('editClientModal');
                 modal.classList.remove('hidden');
                 
+                // Focus management
                 const firstInput = modal.querySelector('input[type="text"]');
                 firstInput.focus();
             } catch (error) {
@@ -2867,6 +2903,7 @@
             }
         }
 
+        // Schedule Management Functions (Mantidas)
         async function loadScheduleSettings() {
             try {
                 const { data } = await supabase.from('settings').select('*').in('key', ['schedule_config', 'interval_time']);
@@ -3005,6 +3042,10 @@
             }
         }
 
+        // Initialize Application
+        /* Carregando tema ao inicializar */
+        loadTheme();
+        
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 currentAdmin = session.user;
@@ -3021,7 +3062,9 @@
             }
         });
 
+        // Keyboard Navigation
         document.addEventListener('keydown', (e) => {
+            // Close modal with Escape key
             if (e.key === 'Escape') {
                 const modal = document.querySelector('.modal:not(.hidden)');
                 if (modal) {
@@ -3030,6 +3073,7 @@
             }
         });
 
+        // Add keyboard support for stat cards
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 if (e.target.classList.contains('stat-card')) {
@@ -3038,6 +3082,238 @@
                 }
             }
         });
+
+        // Adicionando funções de calendário
+        function loadCalendar() {
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            
+            // Atualizar título do mês/ano
+            const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                               'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            document.getElementById('calendarMonthYear').textContent = `${monthNames[month]} ${year}`;
+            
+            // Buscar todos os agendamentos do mês
+            const firstDay = new Date(year, month, 1).toISOString().split('T')[0];
+            const lastDay = new Date(year, month + 1, 0).toISOString().split('T')[0];
+            
+            supabase.from('bookings')
+                .select('id, booking_date, booking_time, status, users(full_name, phone), services(name, price, duration), barbers(name)')
+                .gte('booking_date', firstDay)
+                .lte('booking_date', lastDay)
+                .order('booking_date', { ascending: true })
+                .order('booking_time', { ascending: true })
+                .then(({ data, error }) => {
+                    if (error) throw error;
+                    
+                    allMonthBookings = data || [];
+                    
+                    // Atualizar total do mês
+                    document.getElementById('monthTotalBookings').textContent = allMonthBookings.length;
+                    
+                    // Renderizar calendário
+                    renderCalendar();
+                    
+                    // Se houver uma data selecionada, carregar seus agendamentos
+                    if (selectedDate) {
+                        loadBookingsForDate(selectedDate);
+                    } else {
+                        // Seleciona o dia de hoje por padrão ao carregar o calendário
+                        const todayStr = new Date().toISOString().split('T')[0];
+                        selectDate(todayStr);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar calendário:', error);
+                    showNotification('Erro ao carregar calendário', 'error');
+                });
+        }
+        
+        function renderCalendar() {
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const prevLastDay = new Date(year, month, 0);
+            
+            const firstDayOfWeek = firstDay.getDay();
+            const daysInMonth = lastDay.getDate();
+            const daysInPrevMonth = prevLastDay.getDate();
+            
+            const calendarGrid = document.getElementById('calendarGrid');
+            
+            // Limpar dias anteriores (manter cabeçalhos)
+            const dayHeaders = calendarGrid.querySelectorAll('.calendar-day-header');
+            calendarGrid.innerHTML = '';
+            dayHeaders.forEach(header => calendarGrid.appendChild(header));
+            
+            // Dias do mês anterior
+            for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+                const day = daysInPrevMonth - i;
+                const dayElement = createDayElement(day, true, year, month - 1);
+                calendarGrid.appendChild(dayElement);
+            }
+            
+            // Dias do mês atual
+            const today = new Date();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const isToday = day === today.getDate() && 
+                               month === today.getMonth() && 
+                               year === today.getFullYear();
+                const dayElement = createDayElement(day, false, year, month, isToday);
+                calendarGrid.appendChild(dayElement);
+            }
+            
+            // Dias do próximo mês
+            const remainingDays = 42 - (firstDayOfWeek + daysInMonth);
+            for (let day = 1; day <= remainingDays; day++) {
+                const dayElement = createDayElement(day, true, year, month + 1);
+                calendarGrid.appendChild(dayElement);
+            }
+        }
+        
+        function createDayElement(day, isOtherMonth, year, month, isToday = false) {
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-day';
+            if (isOtherMonth) dayElement.classList.add('other-month');
+            if (isToday) dayElement.classList.add('today');
+            
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const bookingsForDay = allMonthBookings.filter(b => b.booking_date === dateStr);
+            
+            if (bookingsForDay.length > 0 && !isOtherMonth) {
+                dayElement.classList.add('has-bookings');
+            }
+            
+            dayElement.innerHTML = `
+                <div class="calendar-day-number">${day}</div>
+                ${bookingsForDay.length > 0 ? `
+                    <div class="calendar-day-bookings">
+                        <i class="fas fa-calendar-check" aria-hidden="true"></i>
+                        ${bookingsForDay.length}
+                    </div>
+                ` : ''}
+            `;
+            
+            if (!isOtherMonth) {
+                dayElement.onclick = () => selectDate(dateStr);
+            }
+            
+            return dayElement;
+        }
+        
+        function selectDate(dateStr) {
+            selectedDate = dateStr;
+            loadBookingsForDate(dateStr);
+
+            // Destacar o dia selecionado no calendário
+            document.querySelectorAll('.calendar-day').forEach(dayEl => {
+                dayEl.classList.remove('selected');
+            });
+            const selectedDayElement = document.querySelector(`.calendar-day:not(.other-month) .calendar-day-number:contains('${dateStr.split('-')[2]}')`).closest('.calendar-day');
+            if (selectedDayElement) {
+                selectedDayElement.classList.add('selected');
+            }
+        }
+        
+        function loadBookingsForDate(dateStr) {
+            const date = new Date(dateStr + 'T12:00:00');
+            const dateFormatted = date.toLocaleDateString('pt-BR', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            document.getElementById('selectedDateTitle').textContent = 
+                `Agendamentos de ${dateFormatted.charAt(0).toUpperCase() + dateFormatted.slice(1)}`;
+            
+            const bookingsForDay = allMonthBookings.filter(b => b.booking_date === dateStr);
+            const container = document.getElementById('bookingsTable');
+            
+            if (bookingsForDay.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-calendar" aria-hidden="true"></i>
+                        <p>Nenhum agendamento para este dia</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = bookingsForDay.map(booking => {
+                const date = new Date(booking.booking_date + 'T12:00:00');
+                const dateDayMonth = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+                const timeFormatted = booking.booking_time.substring(0, 5);
+                
+                const clientName = booking.users?.full_name || booking.customer_full_name || 'Cliente Anônimo';
+                const clientPhone = booking.users?.phone || booking.customer_phone || 'Sem telefone';
+                
+                const phoneNumberClean = clientPhone.replace(/\D/g, '');
+                const whatsappLink = phoneNumberClean ? 
+                    `https://wa.me/55${phoneNumberClean}?text=Olá ${clientName.split(' ')[0]}, aqui é da Barbearia BarberSync! Entrando em contato sobre seu agendamento de ${dateDayMonth} às ${timeFormatted}.` : 
+                    '#';
+
+                return `
+                    <div class="booking-item">
+                        <div class="booking-main">
+                            <div class="booking-client">
+                                <h4><i class="fas fa-user" aria-hidden="true"></i> ${clientName}</h4>
+                                <p><i class="fas fa-cut" aria-hidden="true"></i> ${booking.services?.name}</p>
+                                <p><i class="fas fa-user-tie" aria-hidden="true"></i> Barbeiro: ${booking.barbers?.name || 'Não especificado'}</p>
+                                <p><i class="fas fa-phone" aria-hidden="true"></i> ${clientPhone}</p>
+                                <p><i class="fas fa-dollar-sign" aria-hidden="true"></i> R$ ${booking.services?.price?.toFixed(2) || '0.00'} • <i class="fas fa-hourglass-half" aria-hidden="true"></i> ${booking.services?.duration || 0}min</p>
+                            </div>
+                            <span class="booking-status status-${booking.status}">
+                                ${booking.status === 'confirmed' ? 'Confirmado' : 
+                                  booking.status === 'completed' ? 'Concluído' : 
+                                  booking.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                            </span>
+                        </div>
+                        
+                        <div class="booking-datetime-highlight">
+                            <div class="datetime-box">
+                                <div class="datetime-label">Data</div>
+                                <div class="datetime-value">${dateDayMonth.toUpperCase()}</div>
+                            </div>
+                            <div class="datetime-separator">•</div>
+                            <div class="datetime-box">
+                                <div class="datetime-label">Horário</div>
+                                <div class="datetime-value">${timeFormatted}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="booking-footer">
+                            <div class="booking-actions">
+                                ${booking.status === 'confirmed' ? `
+                                    <button class="btn-cancel" onclick="cancelAndDeleteBooking('${booking.id}')" aria-label="Excluir agendamento">
+                                        <i class="fas fa-times-circle" aria-hidden="true"></i> Cancelar
+                                    </button>
+                                    <button class="btn-complete" onclick="updateBookingStatus('${booking.id}', 'completed')" aria-label="Concluir agendamento">
+                                        <i class="fas fa-check" aria-hidden="true"></i> Concluir
+                                    </button>
+                                ` : booking.status === 'completed' || booking.status === 'cancelled' ? `
+                                    <button class="btn-delete" onclick="deleteBooking('${booking.id}')" aria-label="Excluir agendamento">
+                                        <i class="fas fa-trash" aria-hidden="true"></i> Excluir
+                                    </button>
+                                ` : ''}
+                                ${phoneNumberClean ? `
+                                    <a href="${whatsappLink}" class="btn-whatsapp" target="_blank" aria-label="Conversar no WhatsApp">
+                                        <i class="fab fa-whatsapp" aria-hidden="true"></i> Chat
+                                    </a>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function changeMonth(direction) {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + direction);
+            loadCalendar();
+        }
+
     </script>
 </body>
 </html>
