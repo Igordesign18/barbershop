@@ -10,95 +10,106 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* -- Updated Theme Variables -- */
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --accent-primary: #ff6b35;
+            --accent-secondary: #ffa500;
+            --border-color: #333333;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --transition: all 0.3s ease;
+            --border-radius: 8px;
+        }
+
+        /* Tema Claro */
+        [data-theme="light"] {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e8e8e8;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --accent-primary: #ff6b35;
+            --accent-secondary: #ffa500;
+            --border-color: #d0d0d0;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --danger-color: #f44336;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
         * { 
             margin: 0; 
             padding: 0; 
             box-sizing: border-box; 
         }
         
-        /* Adicionando variáveis CSS para tema claro */
-        :root {
-            --dark-bg: #0a0a0a; 
-            --dark-card: #1a1a1a; 
-            --lime: #87ceeb; 
-            --lime-dark: #4682b4;
-            --text: #ffffff; 
-            --text-muted: #888888; 
-            --red: #ff4444; 
-            --orange: #ff9800; 
-            --green: #4caf50;
-            --whatsapp: #25D366;
-            --confirm: #1e90ff; 
-            --border-radius: 8px;
-            --transition: all 0.3s ease;
-            --shadow: 0 3px 20px rgba(0, 0, 0, 0.3);
-            --shadow-hover: 0 5px 30px rgba(135, 206, 235, 0.2);
-        }
-        
-        /* Tema Claro */
-        [data-theme="light"] {
-            --dark-bg: #f5f5f5;
-            --dark-card: #ffffff;
-            --text: #1a1a1a;
-            --text-muted: #666666;
-            --shadow: 0 3px 20px rgba(0, 0, 0, 0.1);
-            --shadow-hover: 0 5px 30px rgba(135, 206, 235, 0.3);
-        }
-        
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: var(--dark-bg); 
-            color: var(--text); 
+            background: var(--bg-primary); 
+            color: var(--text-primary); 
             min-height: 100vh; 
             line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
         }
         
         /* Header Styles */
         header { 
-            background: var(--dark-card); 
-            padding: 20px 0; 
-            box-shadow: 0 2px 10px rgba(135, 206, 235, 0.1); 
-            position: sticky; 
-            top: 0; 
-            z-index: 100; 
+            background: var(--bg-secondary); 
+            padding: 20px; 
+            box-shadow: var(--shadow); 
+            margin-bottom: 30px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .header-content { 
             display: flex; 
             align-items: center; 
-            justify-content: space-between; 
-            max-width: 1400px; 
-            margin: 0 auto; 
-            padding: 0 20px; 
+            gap: 15px; 
         }
         
         .logo { 
-            display: flex; 
-            align-items: center; 
-            gap: 15px; 
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--accent-primary);
         }
         
         .barber-photo { 
             width: 60px; 
             height: 60px; 
             border-radius: 50%; 
-            border: 3px solid var(--lime); 
-            background: var(--dark-bg); 
+            border: 3px solid var(--accent-primary); 
+            background: var(--bg-primary); 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             font-size: 24px; 
-            color: var(--lime); 
+            color: var(--accent-primary); 
         }
         
-        .logo h1 { 
+        h1 { 
             font-size: 24px; 
-            color: var(--lime); 
+            color: var(--text-primary); 
         }
         
         .admin-badge { 
-            background: var(--lime); 
-            color: var(--dark-bg); 
+            background: var(--accent-primary); 
+            color: var(--bg-primary); 
             padding: 4px 12px; 
             border-radius: 20px; 
             font-size: 12px; 
@@ -108,32 +119,32 @@
         
         /* Adicionando botão de alternância de tema */
         .theme-toggle {
-            background: transparent;
-            border: 2px solid var(--lime);
-            color: var(--lime);
-            padding: 10px;
-            border-radius: 50%;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 15px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 18px;
             transition: var(--transition);
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
         }
         
         .theme-toggle:hover {
-            background: var(--lime);
-            color: var(--dark-bg);
-            transform: rotate(180deg);
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            transform: scale(1.05);
         }
         
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
         .logout-btn { 
-            background: transparent; 
-            border: 2px solid var(--lime); 
-            color: var(--lime); 
+            background: var(--bg-tertiary); 
+            border: 2px solid var(--danger-color); 
+            color: var(--danger-color); 
             padding: 10px 20px; 
             border-radius: var(--border-radius); 
             cursor: pointer; 
@@ -142,8 +153,8 @@
         }
         
         .logout-btn:hover { 
-            background: var(--lime); 
-            color: var(--dark-bg); 
+            background: var(--danger-color); 
+            color: var(--text-primary); 
             transform: translateY(-2px);
         }
         
@@ -157,7 +168,7 @@
         }
         
         .login-card { 
-            background: var(--dark-card); 
+            background: var(--bg-secondary); 
             padding: 40px; 
             border-radius: 15px; 
             box-shadow: var(--shadow); 
@@ -168,12 +179,12 @@
         .login-card h2 { 
             text-align: center; 
             margin-bottom: 10px; 
-            color: var(--lime); 
+            color: var(--accent-primary); 
         }
         
         .login-card p { 
             text-align: center; 
-            color: var(--text-muted); 
+            color: var(--text-secondary); 
             margin-bottom: 30px; 
         }
         
@@ -185,7 +196,7 @@
         .form-group label { 
             display: block; 
             margin-bottom: 8px; 
-            color: var(--text-muted); 
+            color: var(--text-secondary); 
             font-size: 14px; 
             font-weight: 500;
         }
@@ -194,10 +205,10 @@
         .form-group select { 
             width: 100%; 
             padding: 12px; 
-            background: var(--dark-bg); 
-            border: 2px solid #333; 
+            background: var(--bg-primary); 
+            border: 2px solid var(--border-color); 
             border-radius: var(--border-radius); 
-            color: var(--text); 
+            color: var(--text-primary); 
             font-size: 16px; 
             transition: var(--transition); 
         }
@@ -205,16 +216,16 @@
         .form-group input:focus, 
         .form-group select:focus { 
             outline: none; 
-            border-color: var(--lime); 
-            box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.1);
+            border-color: var(--accent-primary); 
+            box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
         }
         
         /* Button Styles */
         .btn { 
             width: 100%; 
             padding: 15px; 
-            background: var(--lime); 
-            color: var(--dark-bg); 
+            background: var(--accent-primary); 
+            color: var(--text-primary); 
             border: none; 
             border-radius: var(--border-radius); 
             font-size: 16px; 
@@ -228,9 +239,9 @@
         }
         
         .btn:hover { 
-            background: var(--lime-dark); 
+            background: var(--accent-secondary); 
             transform: translateY(-2px); 
-            box-shadow: var(--shadow-hover);
+            box-shadow: 0 5px 20px rgba(255, 165, 0, 0.2);
         }
         
         .btn:disabled { 
@@ -240,14 +251,14 @@
         }
         
         .btn-secondary { 
-            background: var(--dark-bg); 
-            color: var(--lime); 
-            border: 2px solid var(--lime); 
+            background: var(--bg-primary); 
+            color: var(--accent-primary); 
+            border: 2px solid var(--accent-primary); 
         }
         
         .btn-secondary:hover {
-            background: var(--lime);
-            color: var(--dark-bg);
+            background: var(--accent-primary);
+            color: var(--text-primary);
         }
         
         /* Main Content */
@@ -255,7 +266,7 @@
             display: none; 
             max-width: 1400px; 
             margin: 0 auto; 
-            padding: 30px 20px; 
+            padding: 0 20px; 
         }
         
         /* Dashboard Toggle */
@@ -268,9 +279,9 @@
         .dashboard-toggle-btn { 
             width: 100%; 
             padding: 20px; 
-            background: var(--dark-card); 
-            border: 3px solid var(--lime); 
-            color: var(--lime); 
+            background: var(--bg-secondary); 
+            border: 3px solid var(--accent-primary); 
+            color: var(--accent-primary); 
             border-radius: 15px; 
             cursor: pointer; 
             font-size: 20px; 
@@ -283,9 +294,9 @@
         }
         
         .dashboard-toggle-btn:hover { 
-            background: rgba(135, 206, 235, 0.1); 
+            background: rgba(255, 107, 53, 0.1); 
             transform: translateY(-3px); 
-            box-shadow: 0 5px 30px rgba(135, 206, 235, 0.4); 
+            box-shadow: 0 5px 30px rgba(255, 107, 53, 0.3); 
         }
         
         .dashboard-toggle-btn i { 
@@ -324,9 +335,9 @@
         
         .period-btn { 
             padding: 10px 20px; 
-            background: var(--dark-bg); 
-            border: 2px solid #333; 
-            color: var(--text); 
+            background: var(--bg-primary); 
+            border: 2px solid var(--border-color); 
+            color: var(--text-primary); 
             border-radius: var(--border-radius); 
             cursor: pointer; 
             font-size: 14px; 
@@ -337,13 +348,13 @@
         }
         
         .period-btn.active { 
-            background: var(--lime); 
-            color: var(--dark-bg); 
-            border-color: var(--lime); 
+            background: var(--accent-primary); 
+            color: var(--text-primary); 
+            border-color: var(--accent-primary); 
         }
         
         .period-btn:hover { 
-            border-color: var(--lime); 
+            border-color: var(--accent-primary); 
             transform: translateY(-1px);
         }
         
@@ -356,11 +367,11 @@
         }
         
         .stat-card { 
-            background: var(--dark-card); 
+            background: var(--bg-secondary); 
             padding: 20px; 
             border-radius: 15px; 
             box-shadow: var(--shadow); 
-            border-left: 4px solid var(--lime); 
+            border-left: 4px solid var(--accent-primary); 
             cursor: pointer; 
             transition: var(--transition); 
             position: relative; 
@@ -368,12 +379,12 @@
         
         .stat-card:hover { 
             transform: translateY(-5px); 
-            box-shadow: var(--shadow-hover); 
+            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.2);
         }
         
         .stat-card.expanded { 
-            border: 2px solid var(--lime); 
-            border-left: 4px solid var(--lime); 
+            border: 2px solid var(--accent-primary); 
+            border-left: 4px solid var(--accent-primary); 
         }
         
         .stat-header { 
@@ -383,7 +394,7 @@
         }
         
         .stat-card h3 { 
-            color: var(--text-muted); 
+            color: var(--text-secondary); 
             font-size: 14px; 
             margin-bottom: 10px; 
             font-weight: 500;
@@ -392,19 +403,19 @@
         .stat-card .stat-value { 
             font-size: 32px; 
             font-weight: bold; 
-            color: var(--lime); 
+            color: var(--accent-primary); 
             margin: 10px 0; 
         }
         
         .stat-card .stat-icon { 
             font-size: 40px; 
-            color: var(--lime); 
+            color: var(--accent-primary); 
             opacity: 0.3; 
         }
         
         .expand-icon { 
             font-size: 20px; 
-            color: var(--lime); 
+            color: var(--accent-primary); 
             transition: transform 0.3s; 
         }
         
@@ -422,24 +433,24 @@
             max-height: 500px; 
             margin-top: 20px; 
             padding-top: 20px; 
-            border-top: 2px solid #333; 
+            border-top: 2px solid var(--border-color); 
         }
         
         .detail-item { 
             display: flex; 
             justify-content: space-between; 
             padding: 10px; 
-            background: var(--dark-bg); 
+            background: var(--bg-primary); 
             margin-bottom: 8px; 
             border-radius: var(--border-radius); 
         }
         
         .detail-item span:first-child { 
-            color: var(--text-muted); 
+            color: var(--text-secondary); 
         }
         
         .detail-item span:last-child { 
-            color: var(--lime); 
+            color: var(--accent-primary); 
             font-weight: bold; 
         }
 
@@ -456,15 +467,15 @@
         }
 
         .chart-container {
-            background: var(--dark-card);
+            background: var(--bg-secondary);
             padding: 25px;
             border-radius: 15px;
             box-shadow: var(--shadow); 
-            border-left: 4px solid var(--lime);
+            border-left: 4px solid var(--accent-primary);
         }
 
         .chart-container h3 {
-            color: var(--lime);
+            color: var(--accent-primary);
             margin-bottom: 20px;
             text-align: center;
             font-size: 18px;
@@ -483,14 +494,14 @@
         }
         
         .card { 
-            background: var(--dark-card); 
+            background: var(--bg-secondary); 
             padding: 25px; 
             border-radius: 15px; 
             box-shadow: var(--shadow); 
         }
         
         .card h2 { 
-            color: var(--lime); 
+            color: var(--accent-primary); 
             margin-bottom: 20px; 
             display: flex; 
             align-items: center; 
@@ -510,17 +521,17 @@
         
         /* REMOVENDO ESTILOS BASEADOS EM STATUS PARA MANTER COR PADRÃO */
         .booking-item { 
-            background: var(--dark-bg); 
+            background: var(--bg-primary); 
             padding: 20px; 
             border-radius: 10px; 
             margin-bottom: 15px; 
-            border-left: 4px solid var(--lime); /* Linha de destaque mantida com a cor padrão (lime) */
+            border-left: 4px solid var(--accent-primary); /* Linha de destaque mantida com a cor padrão (accent-primary) */
             transition: var(--transition); 
         }
         
         .booking-item:hover { 
             transform: translateX(5px); 
-            box-shadow: 0 5px 20px rgba(135, 206, 235, 0.15); 
+            box-shadow: 0 5px 20px rgba(255, 107, 53, 0.15); 
         }
         
         .booking-main { 
@@ -537,7 +548,7 @@
         
         .booking-client h4 { 
             font-size: 18px; 
-            color: var(--lime); 
+            color: var(--accent-primary); 
             margin-bottom: 8px; 
             display: flex; 
             align-items: center; 
@@ -545,7 +556,7 @@
         }
         
         .booking-client p { 
-            color: var(--text-muted); 
+            color: var(--text-secondary); 
             font-size: 14px; 
             margin-top: 5px; 
             display: flex; 
@@ -555,10 +566,10 @@
         
         /* DateTime Highlight */
         .booking-datetime-highlight { 
-            background: rgba(135, 206, 235, 0.1); 
+            background: rgba(255, 107, 53, 0.1); 
             padding: 15px; 
             border-radius: var(--border-radius); 
-            border: 2px solid rgba(135, 206, 235, 0.3); 
+            border: 2px solid rgba(255, 107, 53, 0.3); 
             margin: 15px 0; 
             display: flex; 
             gap: 20px; 
@@ -573,7 +584,7 @@
         
         .datetime-label { 
             font-size: 11px; 
-            color: var(--text-muted); 
+            color: var(--text-secondary); 
             text-transform: uppercase; 
             letter-spacing: 1px; 
             margin-bottom: 5px; 
@@ -582,13 +593,13 @@
         .datetime-value { 
             font-size: 24px; 
             font-weight: bold; 
-            color: var(--lime); 
+            color: var(--accent-primary); 
             letter-spacing: 1px; 
         }
         
         .datetime-separator { 
             font-size: 24px; 
-            color: var(--lime); 
+            color: var(--accent-primary); 
             opacity: 0.5; 
         }
         
@@ -604,22 +615,22 @@
         }
         
         .status-confirmed { 
-            background: var(--green); 
+            background: var(--success-color); 
             color: white; 
         }
         
         .status-cancelled { 
-            background: var(--red); 
+            background: var(--danger-color); 
             color: white; 
         }
 
         .status-pending { 
-            background: var(--orange); 
+            background: var(--warning-color); 
             color: white; 
         }
         
         .status-completed { 
-            background: var(--text-muted); 
+            background: var(--text-secondary); 
             color: white; 
         }
         
@@ -655,18 +666,18 @@
         }
 
         .btn-confirm { 
-            background: var(--confirm); 
-            color: white; 
+            background: var(--accent-primary); 
+            color: var(--text-primary); 
         }
         
         .btn-confirm:hover { 
-            background: #1c7ed6; 
+            background: var(--accent-secondary); 
             transform: translateY(-2px); 
         }
         
         /* AJUSTADO: COR DO BOTÃO CANCELAR PARA VERMELHO (EXCLUIR) */
         .btn-cancel { 
-            background: var(--red); 
+            background: var(--danger-color); 
             color: white; 
         }
         
@@ -676,7 +687,7 @@
         }
         
         .btn-complete { 
-            background: var(--green); 
+            background: var(--success-color); 
             color: white; 
         }
         
@@ -686,7 +697,7 @@
         }
         
         .btn-delete { 
-            background: var(--red); 
+            background: var(--danger-color); 
             color: white; 
         }
         
@@ -696,7 +707,7 @@
         }
 
         .btn-whatsapp {
-            background: var(--whatsapp);
+            background: #25D366; /* WhatsApp green */
             color: white;
         }
 
@@ -706,12 +717,12 @@
         }
         
         .btn-edit { 
-            background: var(--lime); 
-            color: var(--dark-bg); 
+            background: var(--accent-primary); 
+            color: var(--text-primary); 
         }
         
         .btn-edit:hover {
-            background: var(--lime-dark);
+            background: var(--accent-secondary);
             transform: translateY(-2px);
         }
         
@@ -723,14 +734,14 @@
         .service-item, 
         .client-item,
         .barber-item { 
-            background: var(--dark-bg); 
+            background: var(--bg-primary); 
             padding: 15px; 
             border-radius: var(--border-radius); 
             margin-bottom: 10px; 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            border-left: 4px solid var(--lime); 
+            border-left: 4px solid var(--accent-primary); 
             flex-wrap: wrap; 
             gap: 15px; 
             transition: var(--transition);
@@ -740,20 +751,20 @@
         .client-item:hover,
         .barber-item:hover {
             transform: translateX(3px);
-            box-shadow: 0 3px 15px rgba(135, 206, 235, 0.1);
+            box-shadow: 0 3px 15px rgba(255, 107, 53, 0.1);
         }
         
         .service-info h4, 
         .client-info h4,
         .barber-info h4 { 
             margin-bottom: 5px; 
-            color: var(--lime);
+            color: var(--accent-primary);
         }
         
         .service-info p, 
         .client-info p,
         .barber-info p { 
-            color: var(--text-muted); 
+            color: var(--text-secondary); 
             font-size: 14px; 
             margin-top: 3px; 
         }
@@ -789,7 +800,7 @@
             align-items: center; 
             gap: 5px; 
             font-size: 12px; 
-            color: var(--text-muted); 
+            color: var(--text-secondary); 
         }
 
         /* Barber specific styles */
@@ -797,13 +808,13 @@
             width: 60px;
             height: 60px;
             border-radius: 50%;
-            border: 3px solid var(--lime);
-            background: var(--dark-bg);
+            border: 3px solid var(--accent-primary);
+            background: var(--bg-primary);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 24px;
-            color: var(--lime);
+            color: var(--accent-primary);
             object-fit: cover;
             margin-right: 15px;
             flex-shrink: 0;
@@ -830,8 +841,8 @@
             position: relative;
             display: inline-block;
             cursor: pointer;
-            background: var(--dark-bg);
-            border: 2px dashed var(--lime);
+            background: var(--bg-primary);
+            border: 2px dashed var(--accent-primary);
             border-radius: var(--border-radius);
             padding: 20px;
             text-align: center;
@@ -840,8 +851,8 @@
         }
 
         .file-input-wrapper:hover {
-            background: rgba(135, 206, 235, 0.1);
-            border-color: var(--lime-dark);
+            background: rgba(255, 107, 53, 0.1);
+            border-color: var(--accent-secondary);
         }
 
         .file-input-wrapper input[type="file"] {
@@ -855,7 +866,7 @@
             flex-direction: column;
             align-items: center;
             gap: 10px;
-            color: var(--lime);
+            color: var(--accent-primary);
             font-size: 14px;
         }
 
@@ -869,16 +880,16 @@
         }
         
         .day-card { 
-            background: var(--dark-bg); 
+            background: var(--bg-primary); 
             padding: 20px; 
             border-radius: var(--border-radius); 
             margin-bottom: 15px; 
-            border: 2px solid #333; 
+            border: 2px solid var(--border-color); 
             transition: var(--transition);
         }
         
         .day-card.active { 
-            border-color: var(--lime); 
+            border-color: var(--accent-primary); 
         }
         
         .day-header { 
@@ -891,12 +902,12 @@
         }
         
         .day-header h4 { 
-            color: var(--lime); 
+            color: var(--accent-primary); 
             font-size: 18px; 
         }
         
         .day-toggle { 
-            background: var(--red); 
+            background: var(--danger-color); 
             color: white; 
             padding: 8px 15px; 
             border: none; 
@@ -907,7 +918,7 @@
         }
         
         .day-toggle.active { 
-            background: var(--green); 
+            background: var(--success-color); 
         }
         
         .day-toggle:hover {
@@ -924,7 +935,7 @@
             display: flex; 
             gap: 10px; 
             align-items: center; 
-            background: var(--dark-card); 
+            background: var(--bg-tertiary); 
             padding: 10px; 
             border-radius: var(--border-radius); 
             flex-wrap: wrap; 
@@ -934,21 +945,21 @@
             flex: 1; 
             min-width: 100px; 
             padding: 8px; 
-            background: var(--dark-bg); 
-            border: 2px solid #333; 
+            background: var(--bg-primary); 
+            border: 2px solid var(--border-color); 
             border-radius: var(--border-radius); 
-            color: var(--text); 
+            color: var(--text-primary); 
             font-size: 14px; 
         }
         
         .time-period input:focus { 
             outline: none; 
-            border-color: var(--lime); 
+            border-color: var(--accent-primary); 
         }
         
         .time-period button { 
             padding: 8px 12px; 
-            background: var(--red); 
+            background: var(--danger-color); 
             color: white; 
             border: none; 
             border-radius: var(--border-radius); 
@@ -966,8 +977,8 @@
             width: 100%; 
             padding: 10px; 
             background: transparent; 
-            border: 2px dashed var(--lime); 
-            color: var(--lime); 
+            border: 2px dashed var(--accent-primary); 
+            color: var(--accent-primary); 
             border-radius: var(--border-radius); 
             cursor: pointer; 
             font-size: 14px; 
@@ -976,7 +987,7 @@
         }
         
         .add-period-btn:hover { 
-            background: rgba(135, 206, 235, 0.1); 
+            background: rgba(255, 107, 53, 0.1); 
         }
         
         /* Filter Section */
@@ -994,14 +1005,24 @@
         }
         
         /* Adicionando estilos para a agenda mensal */
+        .calendar-container {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+
         .calendar-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
             padding: 15px;
-            background: var(--dark-bg);
+            background: var(--bg-primary);
             border-radius: var(--border-radius);
+            flex-wrap: wrap;
+            gap: 15px;
         }
         
         .calendar-nav {
@@ -1011,8 +1032,8 @@
         }
         
         .calendar-nav button {
-            background: var(--lime);
-            color: var(--dark-bg);
+            background: var(--accent-primary);
+            color: var(--text-primary);
             border: none;
             padding: 8px 15px;
             border-radius: var(--border-radius);
@@ -1022,14 +1043,14 @@
         }
         
         .calendar-nav button:hover {
-            background: var(--lime-dark);
+            background: var(--accent-secondary);
             transform: translateY(-2px);
         }
         
         .calendar-month-year {
             font-size: 20px;
             font-weight: bold;
-            color: var(--lime);
+            color: var(--accent-primary);
         }
         
         .calendar-stats {
@@ -1043,19 +1064,19 @@
             align-items: center;
             gap: 8px;
             padding: 8px 15px;
-            background: rgba(135, 206, 235, 0.1);
+            background: rgba(255, 107, 53, 0.1);
             border-radius: var(--border-radius);
         }
         
         .calendar-stat-item i {
-            color: var(--lime);
+            color: var(--accent-primary);
             font-size: 18px;
         }
         
         .calendar-stat-value {
             font-size: 18px;
             font-weight: bold;
-            color: var(--lime);
+            color: var(--accent-primary);
         }
         
         .calendar-grid {
@@ -1069,33 +1090,36 @@
             text-align: center;
             padding: 10px;
             font-weight: bold;
-            color: var(--lime);
-            background: var(--dark-bg);
+            color: var(--accent-primary);
+            background: var(--bg-primary);
             border-radius: var(--border-radius);
         }
         
         .calendar-day {
             min-height: 80px;
             padding: 10px;
-            background: var(--dark-bg);
+            background: var(--bg-primary);
             border-radius: var(--border-radius);
             border: 2px solid transparent;
             transition: var(--transition);
             cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
         
         .calendar-day:hover {
-            border-color: var(--lime);
+            border-color: var(--accent-primary);
             transform: translateY(-2px);
         }
         
         .calendar-day.has-bookings {
-            border-color: var(--lime);
-            background: rgba(135, 206, 235, 0.1);
+            border-color: var(--accent-primary);
+            background: rgba(255, 107, 53, 0.1);
         }
         
         .calendar-day.today {
-            border-color: var(--green);
+            border-color: var(--success-color);
             background: rgba(76, 175, 80, 0.1);
         }
         
@@ -1106,13 +1130,12 @@
         .calendar-day-number {
             font-size: 16px;
             font-weight: bold;
-            color: var(--text);
-            margin-bottom: 5px;
+            color: var(--text-primary);
         }
         
         .calendar-day-bookings {
             font-size: 12px;
-            color: var(--lime);
+            color: var(--accent-primary);
             display: flex;
             align-items: center;
             gap: 5px;
@@ -1127,10 +1150,12 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .bookings-list-header h3 {
-            color: var(--lime);
+            color: var(--accent-primary);
             font-size: 18px;
         }
         
@@ -1150,12 +1175,14 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
         }
         
         .booking-expand-icon {
             transition: transform 0.3s ease;
-            color: var(--lime);
+            color: var(--accent-primary);
             font-size: 20px;
+            margin-left: 15px; /* Add some space */
         }
         
         .booking-item.expanded .booking-expand-icon {
@@ -1172,7 +1199,7 @@
         .upcoming-bookings-section {
             margin-top: 40px;
             padding-top: 30px;
-            border-top: 2px solid var(--dark-bg);
+            border-top: 2px solid var(--bg-tertiary);
         }
         
         .upcoming-bookings-header {
@@ -1183,7 +1210,7 @@
         }
         
         .upcoming-bookings-header h3 {
-            color: var(--lime);
+            color: var(--accent-primary);
             font-size: 20px;
             display: flex;
             align-items: center;
@@ -1191,8 +1218,8 @@
         }
         
         .upcoming-count {
-            background: var(--lime);
-            color: var(--dark-bg);
+            background: var(--accent-primary);
+            color: var(--text-primary);
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 14px;
@@ -1204,7 +1231,7 @@
         .empty-state { 
             text-align: center; 
             padding: 40px; 
-            color: var(--text-muted); 
+            color: var(--text-secondary); 
         }
         
         .empty-state i { 
@@ -1219,7 +1246,7 @@
         }
         
         .interval-config { 
-            background: var(--dark-bg); 
+            background: var(--bg-primary); 
             padding: 15px; 
             border-radius: var(--border-radius); 
             margin-top: 20px; 
@@ -1241,10 +1268,10 @@
         }
         
         .modal-content { 
-            background: var(--dark-card); 
+            background: var(--bg-secondary); 
             padding: 30px; 
             border-radius: 15px; 
-            box-shadow: 0 5px 30px rgba(135, 206, 235, 0.3); 
+            box-shadow: 0 5px 30px rgba(255, 107, 53, 0.3); 
             width: 90%; 
             max-width: 500px; 
             max-height: 90vh; 
@@ -1259,7 +1286,7 @@
         }
         
         .modal-header h2 { 
-            color: var(--lime); 
+            color: var(--accent-primary); 
             font-size: 20px; 
             margin: 0; 
         }
@@ -1267,7 +1294,7 @@
         .close-modal { 
             background: transparent; 
             border: none; 
-            color: var(--text-muted); 
+            color: var(--text-secondary); 
             font-size: 24px; 
             cursor: pointer; 
             transition: color 0.3s; 
@@ -1275,7 +1302,7 @@
         }
         
         .close-modal:hover { 
-            color: var(--lime); 
+            color: var(--accent-primary); 
         }
         
         /* Animations */
@@ -1337,6 +1364,11 @@
         }
         
         @media (max-width: 768px) { 
+            .header { 
+                flex-direction: column; 
+                gap: 15px; 
+                text-align: center;
+            }
             .header-content { 
                 flex-direction: column; 
                 gap: 15px; 
@@ -1344,6 +1376,10 @@
             .logo { 
                 flex-direction: column; 
                 text-align: center; 
+            }
+            .header-actions {
+                width: 100%;
+                justify-content: center;
             }
             .logout-btn { 
                 width: 100%; 
@@ -1465,33 +1501,27 @@
         button:focus,
         input:focus,
         select:focus {
-            outline: 2px solid var(--lime);
+            outline: 2px solid var(--accent-primary);
             outline-offset: 2px;
         }
         
         /* High Contrast Mode Support */
         @media (prefers-contrast: high) {
             :root {
-                --text-muted: #cccccc;
+                --text-secondary: #cccccc;
             }
         }
     </style>
 </head>
 <body>
     <header>
-        <div class="header-content">
+        <div class="container header-content">
             <div class="logo">
-                <div class="barber-photo" aria-label="Foto do barbeiro">
-                    <i class="fas fa-user" aria-hidden="true"></i>
-                </div>
-                <div>
-                    <h1>BarberSync <span class="admin-badge">ADMIN</span></h1>
-                    <p style="color: var(--text-muted); font-size: 14px;">Painel Administrativo</p>
-                </div>
+                BarberSync
             </div>
-            /* Adicionando botão de alternância de tema no header */
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <button class="theme-toggle hidden" onclick="toggleTheme()" aria-label="Alternar tema" title="Alternar tema">
+            <div class="header-actions">
+                /* Adicionando botão de alternância de tema no header */
+                <button class="theme-toggle" onclick="toggleTheme()" aria-label="Alternar tema" title="Alternar tema">
                     <i class="fas fa-sun" id="themeIcon" aria-hidden="true"></i>
                 </button>
                 <button class="logout-btn hidden" onclick="logout()" aria-label="Sair do sistema">
@@ -1519,7 +1549,7 @@
                 </button>
             </form>
             <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 2px solid #333;">
-                <a href="index.html" style="color: var(--lime); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; transition: all 0.3s;">
+                <a href="index.html" style="color: var(--accent-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; transition: all 0.3s;">
                     <i class="fas fa-user-circle" style="font-size: 18px;" aria-hidden="true"></i>
                     <span>Entrar como Cliente</span>
                 </a>
@@ -1653,8 +1683,8 @@
 
         <div class="content-grid">
             /* Substituindo filtros por agenda mensal com total de agendamentos */
-            <div class="card full-width">
-                <h2><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agenda de Agendamentos</h2>
+            <div class="calendar-container">
+                <h2><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agenda</h2>
                 
                 <div class="calendar-header">
                     <div class="calendar-nav">
@@ -1670,7 +1700,7 @@
                         <div class="calendar-stat-item">
                             <i class="fas fa-calendar-check" aria-hidden="true"></i>
                             <div>
-                                <div style="font-size: 11px; color: var(--text-muted);">Total no Mês</div>
+                                <div style="font-size: 11px; color: var(--text-secondary);">Total no Mês</div>
                                 <div class="calendar-stat-value" id="monthTotalBookings">0</div>
                             </div>
                         </div>
@@ -1801,7 +1831,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="editClientModalTitle"><i class="fas fa-user-edit" aria-hidden="true"></i> Editar Cliente</h2>
-                <button class="close-modal" onclick="closeEditClientModal()" aria-label="Fechar modal">
+                <button class="close-modal" onclick="closeEditClientModal()" aria-label=" Fechar modal">
                     <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
             </div>
@@ -1835,7 +1865,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="editBarberModalTitle"><i class="fas fa-user-edit" aria-hidden="true"></i> Editar Barbeiro</h2>
-                <button class="close-modal" onclick="closeEditBarberModal()" aria-label="Fechar modal">
+                <button class="close-modal" onclick="closeEditBarberModal()" aria-label=" Fechar modal">
                     <i class="fas fa-times" aria-hidden="true"></i>
                 </button>
             </div>
@@ -1952,8 +1982,8 @@
                 position: fixed; 
                 top: 80px; 
                 right: 20px; 
-                background: ${type === 'warning' ? 'var(--orange)' : type === 'error' ? 'var(--red)' : 'var(--lime)'}; 
-                color: ${type === 'warning' || type === 'error' ? 'white' : 'var(--dark-bg)'}; 
+                background: ${type === 'warning' ? 'var(--warning-color)' : type === 'error' ? 'var(--danger-color)' : type === 'success' ? 'var(--success-color)' : 'var(--accent-primary)'}; 
+                color: ${type === 'warning' || type === 'error' || type === 'success' ? 'white' : 'var(--bg-primary)'}; 
                 padding: 15px 20px; 
                 border-radius: 8px; 
                 box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
@@ -2258,25 +2288,29 @@
         function initializeCharts() {
             if (chartsInitialized) return;
             
-            // Configurações padrão dos gráficos... (mantidas)
+            const theme = document.documentElement.getAttribute('data-theme');
+            const textColor = theme === 'light' ? '#1a1a1a' : '#ffffff';
+            const gridColor = theme === 'light' ? '#e0e0e0' : '#333333';
+            const mutedColor = theme === 'light' ? '#666666' : '#888888';
+            
             const defaultOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
                         labels: {
-                            color: '#ffffff'
+                            color: textColor
                         }
                     }
                 },
                 scales: {
                     x: {
-                        ticks: { color: '#888888' },
-                        grid: { color: '#333333' }
+                        ticks: { color: mutedColor },
+                        grid: { color: gridColor }
                     },
                     y: {
-                        ticks: { color: '#888888' },
-                        grid: { color: '#333333' },
+                        ticks: { color: mutedColor },
+                        grid: { color: gridColor },
                         beginAtZero: true
                     }
                 }
@@ -2291,8 +2325,8 @@
                     datasets: [{
                         label: 'Agendamentos',
                         data: [0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(135, 206, 235, 0.8)',
-                        borderColor: 'rgba(135, 206, 235, 1)',
+                        backgroundColor: 'rgba(255, 107, 53, 0.8)',
+                        borderColor: 'rgba(255, 107, 53, 1)',
                         borderWidth: 2
                     }]
                 },
@@ -2308,8 +2342,8 @@
                     datasets: [{
                         label: 'Agendamentos por Horário',
                         data: [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(39, 174, 96, 0.2)',
-                        borderColor: 'rgba(39, 174, 96, 1)',
+                        backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                        borderColor: 'rgba(76, 175, 80, 1)',
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4
@@ -2327,10 +2361,10 @@
                     datasets: [{
                         data: [],
                         backgroundColor: [
-                            'rgba(135, 206, 235, 0.8)',
-                            'rgba(39, 174, 96, 0.8)',
-                            'rgba(243, 156, 18, 0.8)',
-                            'rgba(231, 76, 60, 0.8)',
+                            'rgba(255, 107, 53, 0.8)',
+                            'rgba(76, 175, 80, 0.8)',
+                            'rgba(255, 165, 0, 0.8)',
+                            'rgba(244, 67, 54, 0.8)',
                             'rgba(155, 89, 182, 0.8)'
                         ],
                         borderWidth: 2
@@ -2343,7 +2377,7 @@
                         legend: {
                             position: 'bottom',
                             labels: {
-                                color: '#ffffff'
+                                color: textColor
                             }
                         }
                     }
@@ -2359,8 +2393,8 @@
                     datasets: [{
                         label: 'Faturamento (R$) - Apenas Concluídos',
                         data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(243, 156, 18, 0.2)',
-                        borderColor: 'rgba(243, 156, 18, 1)',
+                        backgroundColor: 'rgba(255, 165, 0, 0.2)',
+                        borderColor: 'rgba(255, 165, 0, 1)',
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4
@@ -2395,8 +2429,8 @@
                     datasets: [{
                         label: 'Taxa de Cancelamento (%)',
                         data: [0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(231, 76, 60, 0.8)',
-                        borderColor: 'rgba(231, 76, 60, 1)',
+                        backgroundColor: 'rgba(244, 67, 54, 0.8)',
+                        borderColor: 'rgba(244, 67, 54, 1)',
                         borderWidth: 2
                     }]
                 },
@@ -2417,7 +2451,7 @@
                 // Buscar dados dos agendamentos
                 const { data: bookingsData } = await supabase
                     .from('bookings')
-                    .select('*, services(name, price), users(full_name, phone)')
+                    .select('*, services(name, price), users(full_name, phone), barbers(name)')
                     .gte('booking_date', startDate)
                     .lte('booking_date', endDate);
 
@@ -2473,12 +2507,24 @@
                 charts.revenueChart.update();
 
                 // Atualizar gráfico de performance dos barbeiros
-                charts.barbersChart.data.datasets[0].data = [bookingsData.length];
+                const barberBookingCounts = {};
+                bookingsData.forEach(booking => {
+                    const barberName = booking.barbers?.name || 'Não Atribuído';
+                    barberBookingCounts[barberName] = (barberBookingCounts[barberName] || 0) + 1;
+                });
+                charts.barbersChart.data.labels = Object.keys(barberBookingCounts);
+                charts.barbersChart.data.datasets[0].data = Object.values(barberBookingCounts);
                 charts.barbersChart.update();
 
                 // Atualizar gráfico de taxa de cancelamento
                 const cancellationData = {};
-                bookingsData.forEach(booking => {
+                const allBookingsForCancellationChart = await supabase.from('bookings')
+                    .select('booking_date, status')
+                    .gte('booking_date', `${currentYear}-01-01`)
+                    .lte('booking_date', `${currentYear}-12-31`)
+                    .then(({data}) => data || []);
+
+                allBookingsForCancellationChart.forEach(booking => {
                     const month = booking.booking_date.substring(0, 7);
                     if (!cancellationData[month]) {
                         cancellationData[month] = { total: 0, cancelled: 0 };
@@ -2490,12 +2536,13 @@
                 });
 
                 const cancellationRates = [];
-                for (let i = 0; i < 6; i++) {
+                for (let i = 0; i < 6; i++) { // Últimos 6 meses como exemplo, ajuste conforme necessário
                     const month = `${currentYear}-${(i + 1).toString().padStart(2, '0')}`;
                     const data = cancellationData[month];
-                    const rate = data ? (data.cancelled / data.total * 100) : 0;
+                    const rate = data ? (data.total > 0 ? (data.cancelled / data.total * 100) : 0) : 0;
                     cancellationRates.push(rate);
                 }
+                charts.cancellationChart.data.labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'].slice(0, cancellationRates.length); // Ajuste os labels se mudar o período
                 charts.cancellationChart.data.datasets[0].data = cancellationRates;
                 charts.cancellationChart.update();
 
@@ -2594,7 +2641,7 @@
                     return;
                 }
                 
-                container.innerHTML = `<h3 style="margin: 20px 0 15px; color: var(--lime); font-size: 16px;">Serviços Cadastrados</h3>` + 
+                container.innerHTML = `<h3 style="margin: 20px 0 15px; color: var(--accent-primary); font-size: 16px;">Serviços Cadastrados</h3>` + 
                     data.map(service => 
                         `<div class="service-item">
                             <div class="service-info">
@@ -2701,7 +2748,7 @@
                     return;
                 }
                 
-                container.innerHTML = `<h3 style="margin: 20px 0 15px; color: var(--lime); font-size: 16px;">Barbeiros Cadastrados</h3>` + 
+                container.innerHTML = `<h3 style="margin: 20px 0 15px; color: var(--accent-primary); font-size: 16px;">Barbeiros Cadastrados</h3>` + 
                     data.map(barber => 
                         `<div class="barber-item">
                             <div class="barber-content">
@@ -3021,7 +3068,7 @@
                             ${config.periods.map((period, index) => `
                                 <div class="time-period">
                                     <input type="time" value="${period.start}" onchange="updatePeriod(${dayNum}, ${index}, 'start', this.value)" ${!config.active ? 'disabled' : ''} aria-label="Horário de início">
-                                    <span style="color: var(--text-muted);">às</span>
+                                    <span style="color: var(--text-secondary);">às</span>
                                     <input type="time" value="${period.end}" onchange="updatePeriod(${dayNum}, ${index}, 'end', this.value)" ${!config.active ? 'disabled' : ''} aria-label="Horário de fim">
                                     <button onclick="removePeriod(${dayNum}, ${index})" ${!config.active ? 'disabled' : ''} aria-label="Remover período">
                                         <i class="fas fa-trash" aria-hidden="true"></i>
@@ -3224,7 +3271,7 @@
             const futureDateStr = futureDate.toISOString().split('T')[0];
             
             supabase.from('bookings')
-                .select('id, booking_date, booking_time, status, users(full_name, phone), services(name, price, duration), barbers(name)')
+                .select('id, booking_date, booking_time, status, users(full_name, phone), customer_full_name, customer_phone, services(name, price, duration), barbers(name)')
                 .gte('booking_date', today)
                 .lte('booking_date', futureDateStr)
                 .in('status', ['confirmed', 'pending'])
@@ -3263,7 +3310,7 @@
                 const dateDayMonth = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
                 const timeFormatted = booking.booking_time.substring(0, 5);
                 
-                const clientName = booking.users?.full_name || booking.customer_full_name || 'Cliente Anônimo';
+                const clientName = booking.users?.full_name || booking.customer_full_name || 'Cliente não identificado';
                 const clientPhone = booking.users?.phone || booking.customer_phone || 'Sem telefone';
                 
                 const phoneNumberClean = clientPhone.replace(/\D/g, '');
@@ -3417,9 +3464,10 @@
             document.querySelectorAll('.calendar-day').forEach(dayEl => {
                 dayEl.classList.remove('selected');
             });
-            const selectedDayElement = document.querySelector(`.calendar-day:not(.other-month) .calendar-day-number:contains('${dateStr.split('-')[2]}')`).closest('.calendar-day');
-            if (selectedDayElement) {
-                selectedDayElement.classList.add('selected');
+            // Helper to find the element containing the day number
+            const dayNumberElement = document.querySelector(`.calendar-day:not(.other-month) .calendar-day-number`);
+            if (dayNumberElement && dayNumberElement.textContent == dateStr.split('-')[2]) {
+                dayNumberElement.closest('.calendar-day').classList.add('selected');
             }
         }
         
@@ -3453,7 +3501,7 @@
                 const dateDayMonth = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
                 const timeFormatted = booking.booking_time.substring(0, 5);
                 
-                const clientName = booking.users?.full_name || booking.customer_full_name || 'Cliente Anônimo';
+                const clientName = booking.users?.full_name || booking.customer_full_name || 'Cliente não identificado';
                 const clientPhone = booking.users?.phone || booking.customer_phone || 'Sem telefone';
                 
                 const phoneNumberClean = clientPhone.replace(/\D/g, '');
