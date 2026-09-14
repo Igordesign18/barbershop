@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Super Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+        --ebony: #0e0c0a; --surface: #18140f; --surface-raised: #211b14;
+        --hairline: rgba(198, 161, 91, 0.16);
+        --brass: #c6a15b; --brass-light: #e8c978; --oxblood: #7a2f3f;
+        --ivory: #f2ede3; --ivory-muted: #a69c8c;
+        --green: #6fae7a; --red: #c15c5c; --wa: #25D366;
+        --radius: 14px;
+    }
+    body {
+        font-family: 'Manrope', sans-serif;
+        background: radial-gradient(ellipse 1400px 700px at 50% -15%, rgba(198,161,91,0.06), transparent), var(--ebony);
+        color: var(--ivory); min-height: 100vh; line-height: 1.55; -webkit-font-smoothing: antialiased;
+    }
+    .serif { font-family: 'Fraunces', serif; }
+    .hidden { display: none !important; }
+    .container { max-width: 1080px; margin: 0 auto; padding: 32px 24px 80px; }
+
+    header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 18px 28px; background: var(--surface); border-bottom: 1px solid var(--hairline);
+    }
+    header h1 {
+        font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; color: var(--ivory);
+        display: flex; align-items: center; gap: 12px;
+    }
+    header h1 i { color: var(--brass); }
+    header h1 .badge {
+        font-family: 'Manrope', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em;
+        color: var(--brass-light); border: 1px solid var(--hairline); padding: 3px 10px; border-radius: 100px;
+    }
+
+    .btn {
+        background: linear-gradient(135deg, var(--brass-light), var(--brass));
+        color: var(--ebony); border: none; padding: 12px 20px; border-radius: 9px;
+        font-weight: 700; font-size: 13.5px; cursor: pointer;
+        display: inline-flex; align-items: center; gap: 8px; transition: filter 0.2s;
+    }
+    .btn:hover { filter: brightness(1.08); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-secondary { background: transparent; color: var(--ivory); border: 1px solid var(--hairline); }
+    .btn-secondary:hover { border-color: var(--brass); }
+    .btn-danger { background: var(--oxblood); color: var(--ivory); }
+    .btn-sm { padding: 8px 14px; font-size: 12px; }
+
+    .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .login-box {
+        background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius);
+        padding: 44px 38px; width: 100%; max-width: 380px;
+    }
+    .login-box .crest {
+        width: 56px; height: 56px; margin: 0 auto 20px; border: 1px solid var(--brass); border-radius: 50%;
+        display: flex; align-items: center; justify-content: center; color: var(--brass); font-size: 20px;
+    }
+    .login-box h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 22px; text-align: center; margin-bottom: 28px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 7px; font-size: 12.5px; color: var(--ivory-muted); }
+    .form-group input, .form-group select {
+        width: 100%; padding: 12px 14px; border-radius: 8px; background: var(--ebony);
+        color: var(--ivory); border: 1px solid var(--hairline); font-size: 14px; font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--brass); }
+
+    .card {
+        background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius);
+        padding: 28px; margin-bottom: 22px;
+    }
+    .card h2 {
+        font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; margin-bottom: 20px;
+        display: flex; align-items: center; gap: 10px; color: var(--ivory);
+    }
+    .card h2 i { color: var(--brass); font-size: 16px; }
+
+    .tenant-grid { display: grid; gap: 12px; }
+    .tenant-item {
+        background: var(--surface-raised); border-radius: 10px; padding: 18px 20px;
+        display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+        border-left: 3px solid var(--green);
+    }
+    .tenant-item.suspended { border-left-color: var(--red); }
+    .tenant-item .name { font-family: 'Fraunces', serif; font-weight: 600; font-size: 16px; margin-bottom: 6px; }
+    .tenant-item .meta { font-size: 12px; color: var(--ivory-muted); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .tenant-item .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill { padding: 4px 11px; border-radius: 100px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.02em; }
+    .pill.active { background: rgba(111,174,122,0.14); color: var(--green); }
+    .pill.suspended { background: rgba(193,92,92,0.14); color: var(--red); }
+    .pill.wa-connected { background: rgba(37,211,102,0.14); color: var(--wa); }
+    .pill.wa-disconnected { background: rgba(198,161,91,0.12); color: var(--brass-light); }
+
+    .empty-state { text-align: center; padding: 40px; color: var(--ivory-muted); font-size: 14px; }
+
+    .modal-overlay {
+        position: fixed; inset: 0; background: rgba(6,5,4,0.78); backdrop-filter: blur(3px);
+        display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px;
+    }
+    .modal-content {
+        background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius);
+        padding: 30px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-content h3 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; margin-bottom: 20px; }
+    .modal-content hr { border: none; border-top: 1px solid var(--hairline); margin: 20px 0; }
+
+    .confirm-icon { font-size: 32px; color: var(--brass); margin-bottom: 14px; display: block; text-align: center; }
+    .confirm-msg { font-size: 14px; text-align: center; margin-bottom: 22px; line-height: 1.5; }
+    .confirm-actions { display: flex; gap: 10px; }
+    .confirm-actions button { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: 700; font-size: 13.5px; cursor: pointer; }
+    .confirm-actions .cm-cancel { background: transparent; border: 1px solid var(--hairline); color: var(--ivory); }
+    .confirm-actions .cm-confirm { background: var(--oxblood); color: var(--ivory); }
+
+    .notification {
+        position: fixed; top: 20px; right: 20px; padding: 14px 20px; border-radius: 9px;
+        font-weight: 600; font-size: 13.5px; z-index: 999; box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        border: 1px solid var(--hairline);
+    }
+    .notification.success { background: var(--surface-raised); color: var(--green); border-color: rgba(111,174,122,0.3); }
+    .notification.error { background: var(--surface-raised); color: var(--red); border-color: rgba(193,92,92,0.3); }
+    .notification.info { background: var(--surface-raised); color: var(--brass-light); border-color: var(--hairline); }
+
+    a.tenant-link { color: var(--brass-light); text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; }
+    a.tenant-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+    <div class="login-box">
+        <div class="crest"><i class="fas fa-crown" aria-hidden="true"></i></div>
+        <h2>Super Admin</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="suEmail">Email</label>
+                <input type="email" id="suEmail" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="suPassword">Senha</label>
+                <input type="password" id="suPassword" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn" style="width:100%; justify-content:center; margin-top:6px;">
+                <i class="fas fa-sign-in-alt" aria-hidden="true"></i> Entrar
+            </button>
+        </form>
+    </div>
+</div>
+
+<div id="mainContent" style="display:none;">
+    <header>
+        <h1><i class="fas fa-crown" aria-hidden="true"></i> BarberSync <span class="badge">SUPER ADMIN</span></h1>
+        <button class="btn btn-secondary btn-sm" onclick="logout()"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sair</button>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2><i class="fas fa-plus-circle" aria-hidden="true"></i> Nova Barbearia</h2>
+            <form id="newTenantForm">
+                <div class="form-group">
+                    <label for="tenantName">Nome da barbearia</label>
+                    <input type="text" id="tenantName" placeholder="Ex: Barbearia do João" required>
+                </div>
+                <div class="form-group">
+                    <label for="tenantSlug">Link (opcional — gerado automaticamente pelo nome)</label>
+                    <input type="text" id="tenantSlug" placeholder="Ex: barbearia-do-joao">
+                </div>
+                <div class="form-group">
+                    <label for="managerEmail">Email do gestor (login dele no /admin)</label>
+                    <input type="email" id="managerEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="managerPassword">Senha do gestor</label>
+                    <input type="text" id="managerPassword" placeholder="mínimo 6 caracteres" required>
+                </div>
+                <div class="form-group">
+                    <label for="subscriptionExpires">Assinatura válida até (opcional)</label>
+                    <input type="date" id="subscriptionExpires">
+                </div>
+                <button type="submit" class="btn">
+                    <i class="fas fa-store" aria-hidden="true"></i> Criar Barbearia
+                </button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2><i class="fas fa-store-alt" aria-hidden="true"></i> Barbearias Cadastradas</h2>
+            <div class="tenant-grid" id="tenantsList">
+                <div class="empty-state">Carregando...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay hidden" id="editModal">
+    <div class="modal-content">
+        <h3>Editar Barbearia</h3>
+        <form id="editTenantForm">
+            <input type="hidden" id="editTenantId">
+            <div class="form-group">
+                <label for="editTenantName">Nome</label>
+                <input type="text" id="editTenantName" required>
+            </div>
+            <div class="form-group">
+                <label for="editTenantSlug">Link</label>
+                <input type="text" id="editTenantSlug" required>
+            </div>
+            <div class="form-group">
+                <label for="editTenantStatus">Status</label>
+                <select id="editTenantStatus">
+                    <option value="active">Ativo</option>
+                    <option value="suspended">Suspenso</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editSubscriptionExpires">Assinatura válida até</label>
+                <input type="date" id="editSubscriptionExpires">
+            </div>
+            <hr>
+            <div class="form-group">
+                <label for="editManagerEmail">Novo email do gestor (deixe igual para não trocar)</label>
+                <input type="email" id="editManagerEmail">
+            </div>
+            <div class="form-group">
+                <label for="editManagerPassword">Nova senha do gestor (deixe em branco para não trocar)</label>
+                <input type="text" id="editManagerPassword" placeholder="mínimo 6 caracteres">
+            </div>
+            <div style="display:flex; gap:10px; margin-top:16px;">
+                <button type="submit" class="btn" style="flex:1; justify-content:center;">Salvar</button>
+                <button type="button" class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="closeEditModal()">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay hidden" id="customConfirmOverlay">
+    <div class="modal-content" style="max-width:380px; text-align:center;">
+        <i class="fas fa-exclamation-triangle confirm-icon" aria-hidden="true"></i>
+        <p class="confirm-msg" id="customConfirmMessage"></p>
+        <div class="confirm-actions">
+            <button class="cm-cancel" id="customConfirmCancelBtn">Cancelar</button>
+            <button class="cm-confirm" id="customConfirmOkBtn">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = '/api/superadmin';
+
+    function getToken() { return localStorage.getItem('superAdminToken'); }
+    function setToken(t) { localStorage.setItem('superAdminToken', t); }
+    function clearToken() { localStorage.removeItem('superAdminToken'); }
+
+    function customConfirm(message) {
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('customConfirmOverlay');
+            const msgEl = document.getElementById('customConfirmMessage');
+            const okBtn = document.getElementById('customConfirmOkBtn');
+            const cancelBtn = document.getElementById('customConfirmCancelBtn');
+            msgEl.textContent = message;
+            overlay.classList.remove('hidden');
+            const cleanup = (result) => {
+                overlay.classList.add('hidden');
+                okBtn.removeEventListener('click', onOk);
+                cancelBtn.removeEventListener('click', onCancel);
+                resolve(result);
+            };
+            const onOk = () => cleanup(true);
+            const onCancel = () => cleanup(false);
+            okBtn.addEventListener('click', onOk);
+            cancelBtn.addEventListener('click', onCancel);
+        });
+    }
+
+    async function apiFetch(path, options = {}) {
+        const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers);
+        const token = getToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`${API_URL}${path}`, Object.assign({}, options, { headers }));
+
+        if (response.status === 401) {
+            clearToken();
+            showLogin();
+            throw new Error('Sessão expirada, faça login novamente.');
+        }
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || 'Erro na requisição');
+        }
+        if (response.status === 204) return null;
+        return response.json();
+    }
+
+    function showNotification(message, type = 'info') {
+        const el = document.createElement('div');
+        el.className = `notification ${type}`;
+        el.textContent = message;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 4000);
+    }
+
+    function showLogin() {
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('mainContent').style.display = 'none';
+    }
+
+    function showPanel() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+        loadTenants();
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: document.getElementById('suEmail').value,
+                    password: document.getElementById('suPassword').value
+                })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Erro ao entrar');
+            if (data.role !== 'superadmin') throw new Error('Este login não é de super admin.');
+
+            setToken(data.token);
+            showPanel();
+        } catch (error) {
+            showNotification(error.message, 'error');
+        }
+    });
+
+    function logout() {
+        clearToken();
+        showLogin();
+    }
+
+    async function loadTenants() {
+        const container = document.getElementById('tenantsList');
+        container.innerHTML = '<div class="empty-state">Carregando...</div>';
+        try {
+            const tenants = await apiFetch('/tenants');
+            if (!tenants.length) {
+                container.innerHTML = '<div class="empty-state">Nenhuma barbearia cadastrada ainda.</div>';
+                return;
+            }
+
+            container.innerHTML = tenants.map(t => {
+                const waStatus = t.whatsapp_status === 'connected' ? 'wa-connected' : 'wa-disconnected';
+                const waLabel = t.whatsapp_status === 'connected' ? 'WhatsApp conectado' : 'WhatsApp desconectado';
+                const expires = t.subscription_expires_at ? `vence em ${formatDateBR(t.subscription_expires_at)}` : 'sem vencimento definido';
+                return `
+                    <div class="tenant-item ${t.status === 'suspended' ? 'suspended' : ''}">
+                        <div>
+                            <div class="name">${t.name}</div>
+                            <div class="meta">
+                                <span class="pill ${t.status === 'active' ? 'active' : 'suspended'}">${t.status === 'active' ? 'Ativo' : 'Suspenso'}</span>
+                                <span class="pill ${waStatus}">${waLabel}</span>
+                                <span>${expires}</span>
+                                <span>gestor: ${t.manager ? t.manager.email : '—'}</span>
+                            </div>
+                            <a class="tenant-link" href="/${t.slug}" target="_blank">
+                                <i class="fas fa-external-link-alt" aria-hidden="true"></i> /${t.slug}
+                            </a>
+                        </div>
+                        <div class="actions">
+                            <button class="btn btn-secondary btn-sm" onclick="openEditModal(${t.id})">
+                                <i class="fas fa-edit" aria-hidden="true"></i> Editar
+                            </button>
+                            <button class="btn btn-sm ${t.status === 'active' ? 'btn-danger' : ''}" onclick="toggleStatus(${t.id}, '${t.status}')">
+                                <i class="fas fa-power-off" aria-hidden="true"></i> ${t.status === 'active' ? 'Suspender' : 'Reativar'}
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteTenant(${t.id}, '${t.name.replace(/'/g, "\\'")}')">
+                                <i class="fas fa-trash" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            window.__tenants = tenants;
+        } catch (error) {
+            container.innerHTML = '<div class="empty-state">Erro ao carregar barbearias.</div>';
+            showNotification(error.message, 'error');
+        }
+    }
+
+    function formatDateBR(isoDate) {
+        const [y, m, d] = isoDate.split('-');
+        return `${d}/${m}/${y}`;
+    }
+
+    document.getElementById('newTenantForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        try {
+            await apiFetch('/tenants', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: document.getElementById('tenantName').value,
+                    slug: document.getElementById('tenantSlug').value,
+                    manager_email: document.getElementById('managerEmail').value,
+                    manager_password: document.getElementById('managerPassword').value,
+                    subscription_expires_at: document.getElementById('subscriptionExpires').value || null
+                })
+            });
+            showNotification('Barbearia criada com sucesso!', 'success');
+            e.target.reset();
+            loadTenants();
+        } catch (error) {
+            showNotification(error.message, 'error');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    function openEditModal(id) {
+        const tenant = (window.__tenants || []).find(t => t.id === id);
+        if (!tenant) return;
+
+        document.getElementById('editTenantId').value = tenant.id;
+        document.getElementById('editTenantName').value = tenant.name;
+        document.getElementById('editTenantSlug').value = tenant.slug;
+        document.getElementById('editTenantStatus').value = tenant.status;
+        document.getElementById('editSubscriptionExpires').value = tenant.subscription_expires_at || '';
+        document.getElementById('editManagerEmail').value = tenant.manager ? tenant.manager.email : '';
+        document.getElementById('editManagerPassword').value = '';
+
+        document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').classList.add('hidden');
+    }
+
+    document.getElementById('editTenantForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('editTenantId').value;
+        const originalManagerEmail = (window.__tenants || []).find(t => String(t.id) === String(id))?.manager?.email || '';
+
+        try {
+            await apiFetch(`/tenants/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    name: document.getElementById('editTenantName').value,
+                    slug: document.getElementById('editTenantSlug').value,
+                    status: document.getElementById('editTenantStatus').value,
+                    subscription_expires_at: document.getElementById('editSubscriptionExpires').value || null
+                })
+            });
+
+            const newEmail = document.getElementById('editManagerEmail').value.trim();
+            const newPassword = document.getElementById('editManagerPassword').value;
+            if ((newEmail && newEmail !== originalManagerEmail) || newPassword) {
+                const body = {};
+                if (newEmail && newEmail !== originalManagerEmail) body.email = newEmail;
+                if (newPassword) body.password = newPassword;
+                await apiFetch(`/tenants/${id}/manager`, { method: 'PUT', body: JSON.stringify(body) });
+            }
+
+            showNotification('Barbearia atualizada!', 'success');
+            closeEditModal();
+            loadTenants();
+        } catch (error) {
+            showNotification(error.message, 'error');
+        }
+    });
+
+    async function toggleStatus(id, currentStatus) {
+        const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
+        const action = newStatus === 'suspended' ? 'suspender' : 'reativar';
+        if (!(await customConfirm(`Tem certeza que deseja ${action} esta barbearia?`))) return;
+
+        try {
+            await apiFetch(`/tenants/${id}`, { method: 'PUT', body: JSON.stringify({ status: newStatus }) });
+            showNotification(`Barbearia ${newStatus === 'suspended' ? 'suspensa' : 'reativada'}!`, 'success');
+            loadTenants();
+        } catch (error) {
+            showNotification(error.message, 'error');
+        }
+    }
+
+    async function deleteTenant(id, name) {
+        if (!(await customConfirm(`EXCLUIR permanentemente "${name}"? Isso apaga todos os agendamentos, clientes, barbeiros e serviços dessa barbearia. Não pode ser desfeito!`))) return;
+        if (!(await customConfirm('Tem certeza mesmo? Essa ação é irreversível.'))) return;
+
+        try {
+            await apiFetch(`/tenants/${id}`, { method: 'DELETE' });
+            showNotification('Barbearia excluída.', 'info');
+            loadTenants();
+        } catch (error) {
+            showNotification(error.message, 'error');
+        }
+    }
+
+    // Initialize
+    if (getToken()) {
+        apiFetch('/tenants').then(() => showPanel()).catch(() => { clearToken(); showLogin(); });
+    } else {
+        showLogin();
+    }
+</script>
+</body>
+</html>

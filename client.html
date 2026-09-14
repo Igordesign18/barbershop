@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --ebony: #0e0c0a;
+            --surface: #18140f;
+            --surface-raised: #211b14;
+            --hairline: rgba(198, 161, 91, 0.16);
+            --brass: #c6a15b;
+            --brass-light: #e8c978;
+            --oxblood: #7a2f3f;
+            --ivory: #f2ede3;
+            --ivory-muted: #a69c8c;
+            --green: #6fae7a;
+            --red: #c15c5c;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Manrope', sans-serif;
+            background:
+                radial-gradient(ellipse 1200px 600px at 50% -10%, rgba(198,161,91,0.08), transparent),
+                var(--ebony);
+            color: var(--ivory);
+            min-height: 100vh;
+            line-height: 1.55;
+            -webkit-font-smoothing: antialiased;
+        }
+        .serif { font-family: 'Fraunces', serif; }
+        .hidden { display: none !important; }
+        .container { max-width: 880px; margin: 0 auto; padding: 0 24px 80px; }
+
+        /* Hero */
+        .hero {
+            position: relative;
+            padding: 72px 24px 56px;
+            text-align: center;
+            border-bottom: 1px solid var(--hairline);
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute; inset: 0;
+            background-image: repeating-linear-gradient(115deg, rgba(198,161,91,0.035) 0px, rgba(198,161,91,0.035) 1px, transparent 1px, transparent 64px);
+            pointer-events: none;
+        }
+        .hero-crest {
+            width: 64px; height: 64px; margin: 0 auto 22px;
+            border: 1px solid var(--brass);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--brass);
+            font-size: 22px;
+            background: var(--surface);
+            box-shadow: 0 0 0 6px rgba(198,161,91,0.06);
+        }
+        .hero-crest img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+        .hero h1 {
+            font-family: 'Fraunces', serif;
+            font-weight: 600;
+            font-size: clamp(30px, 5vw, 44px);
+            letter-spacing: -0.01em;
+            color: var(--ivory);
+        }
+        .hero p.tagline {
+            margin-top: 10px;
+            color: var(--ivory-muted);
+            font-size: 15px;
+        }
+        .status-row {
+            margin-top: 26px;
+            display: flex; justify-content: center;
+        }
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 18px; border-radius: 100px;
+            font-size: 12.5px; font-weight: 600; letter-spacing: 0.01em;
+            border: 1px solid var(--hairline);
+            background: var(--surface);
+        }
+        .status-badge.open { color: var(--green); border-color: rgba(111,174,122,0.35); }
+        .status-badge.closed { color: var(--red); border-color: rgba(193,92,92,0.35); }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+        /* Layout */
+        .main-app { padding-top: 48px; }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--hairline);
+            border-radius: 14px;
+            padding: 28px;
+            margin-bottom: 20px;
+            transition: border-color 0.3s;
+        }
+        .card.active { border-color: rgba(198,161,91,0.45); }
+        .card.completed { border-color: var(--hairline); }
+        .card h3 {
+            display: flex; align-items: center; gap: 14px;
+            font-family: 'Fraunces', serif;
+            font-weight: 500;
+            font-size: 19px;
+            color: var(--ivory);
+            margin-bottom: 22px;
+        }
+        .card h3 i { color: var(--brass); font-size: 16px; }
+        .step-indicator {
+            width: 28px; height: 28px; border-radius: 50%;
+            border: 1px solid var(--brass);
+            color: var(--brass);
+            display: inline-flex; align-items: center; justify-content: center;
+            font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600;
+            flex-shrink: 0;
+        }
+        .card.completed .step-indicator { background: var(--brass); color: var(--ebony); }
+
+        /* Services */
+        .service-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 18px; border-radius: 10px;
+            border: 1px solid var(--hairline);
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .service-item:hover { border-color: rgba(198,161,91,0.4); background: rgba(198,161,91,0.04); }
+        .service-item.selected { border-color: var(--brass); background: rgba(198,161,91,0.08); }
+        .service-info h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+        .service-info p { font-size: 12.5px; color: var(--ivory-muted); }
+        .service-price { font-family: 'Fraunces', serif; font-size: 18px; color: var(--brass-light); font-weight: 600; }
+
+        /* Barbers */
+        .barbers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; }
+        .barber-item {
+            text-align: center; padding: 18px 10px;
+            border: 1px solid var(--hairline); border-radius: 10px;
+            cursor: pointer; transition: border-color 0.2s, background 0.2s;
+        }
+        .barber-item:hover { border-color: rgba(198,161,91,0.4); }
+        .barber-item.selected { border-color: var(--brass); background: rgba(198,161,91,0.08); }
+        .barber-photo-circle {
+            width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 10px;
+            background: var(--surface-raised);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; color: var(--brass);
+            overflow: hidden;
+        }
+        .barber-photo-circle img { width: 100%; height: 100%; object-fit: cover; }
+        .barber-name { font-size: 13.5px; font-weight: 600; }
+        .barber-specialty { font-size: 11.5px; color: var(--ivory-muted); margin-top: 2px; }
+
+        /* Calendar */
+        .calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+        .calendar-header h4 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 16px; text-transform: capitalize; }
+        .calendar-header button {
+            width: 34px; height: 34px; border-radius: 50%;
+            border: 1px solid var(--hairline); background: transparent; color: var(--ivory);
+            cursor: pointer; transition: border-color 0.2s;
+        }
+        .calendar-header button:hover { border-color: var(--brass); color: var(--brass); }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
+        .calendar-day {
+            aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border-radius: 8px; font-size: 13px; cursor: pointer;
+            border: 1px solid transparent;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .calendar-day:not(.disabled):hover { border-color: rgba(198,161,91,0.4); }
+        .calendar-day.disabled { color: rgba(166,156,140,0.3); cursor: not-allowed; }
+        .calendar-day.today { border-color: var(--hairline); }
+        .calendar-day.selected { background: var(--brass); color: var(--ebony); font-weight: 700; }
+        .calendar-day.selected small { color: var(--ebony); opacity: 0.7; }
+        .calendar-day small { color: var(--ivory-muted); font-size: 9.5px; margin-top: 2px; }
+
+        .time-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 8px; margin-top: 14px; }
+        .time-slot {
+            text-align: center; padding: 10px 6px; border-radius: 8px;
+            border: 1px solid var(--hairline); font-size: 13px; cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .time-slot:hover { border-color: rgba(198,161,91,0.4); }
+        .time-slot.selected { background: var(--brass); color: var(--ebony); font-weight: 700; border-color: var(--brass); }
+        .time-slot.disabled { color: rgba(166,156,140,0.3); border-color: var(--hairline); cursor: not-allowed; }
+
+        /* Confirm block */
+        .confirm-booking { margin-top: 26px; padding-top: 26px; border-top: 1px solid var(--hairline); }
+        .confirm-booking h4 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 17px; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; color: var(--brass-light); }
+        .unverified-user-fields h5 { font-size: 13px; font-weight: 600; color: var(--ivory-muted); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 12.5px; color: var(--ivory-muted); margin-bottom: 6px; }
+        .form-group input {
+            width: 100%; padding: 12px 14px; border-radius: 8px;
+            background: var(--ebony); border: 1px solid var(--hairline); color: var(--ivory);
+            font-size: 14px; font-family: 'Manrope', sans-serif;
+        }
+        .form-group input:focus { outline: none; border-color: var(--brass); }
+        .booking-summary { background: var(--surface-raised); border-radius: 10px; padding: 18px; margin: 18px 0; }
+        .booking-summary p { font-size: 13.5px; margin-bottom: 8px; display: flex; justify-content: space-between; gap: 10px; }
+        .booking-summary p:last-child { margin-bottom: 0; }
+        .booking-summary strong { color: var(--ivory-muted); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+        .booking-summary strong i { color: var(--brass); width: 14px; }
+
+        .btn {
+            width: 100%; padding: 15px; border-radius: 10px; border: none;
+            background: linear-gradient(135deg, var(--brass-light), var(--brass));
+            color: var(--ebony); font-weight: 700; font-size: 14.5px;
+            cursor: pointer; letter-spacing: 0.01em;
+            transition: filter 0.2s, transform 0.15s;
+        }
+        .btn:hover { filter: brightness(1.08); }
+        .btn:active { transform: scale(0.99); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(6,5,4,0.78);
+            display: flex; align-items: center; justify-content: center;
+            padding: 20px; z-index: 500; backdrop-filter: blur(3px);
+        }
+        .modal-content {
+            background: var(--surface); border: 1px solid var(--hairline);
+            border-radius: 16px; padding: 36px 32px; max-width: 400px; width: 100%;
+            text-align: center;
+        }
+        .modal-icon { font-size: 40px; color: var(--brass); margin-bottom: 16px; }
+        .modal-content h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 22px; margin-bottom: 8px; }
+        .modal-details { text-align: left; background: var(--surface-raised); border-radius: 10px; padding: 18px; margin: 20px 0; }
+        .modal-details p { font-size: 13.5px; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 10px; }
+        .modal-details p:last-child { margin-bottom: 0; justify-content: center; }
+        .modal-details strong { color: var(--ivory-muted); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+        .modal-details strong i { color: var(--brass); width: 14px; }
+        .modal-close-btn {
+            margin-top: 8px; width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--brass);
+            background: transparent; color: var(--brass-light); font-weight: 700; font-size: 14px; cursor: pointer;
+        }
+        .modal-close-btn:hover { background: rgba(198,161,91,0.08); }
+
+        @media (max-width: 640px) {
+            .hero { padding: 48px 20px 40px; }
+            .card { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div class="hero-crest" id="barberPhoto"><i class="fas fa-scissors"></i></div>
+        <h1>Carregando...</h1>
+        <p class="tagline">Agende seu horário em poucos passos</p>
+        <div class="status-row">
+            <span class="status-badge" id="statusBadge">
+                <span class="status-dot"></span>
+                <span id="statusText">Verificando...</span>
+            </span>
+        </div>
+    </div>
+
+    <div class="main-app container" id="mainApp" style="display:none;">
+        <div class="dashboard" id="dashboardSection">
+            <div class="card" id="serviceCard">
+                <h3>
+                    <span class="step-indicator">1</span>
+                    Escolha o serviço
+                </h3>
+                <div id="servicesList"></div>
+            </div>
+
+            <div class="card" id="barberCard">
+                <h3>
+                    <span class="step-indicator">2</span>
+                    Escolha o profissional
+                </h3>
+                <div class="barber-selection" id="barberSelection" style="display: none;">
+                    <div class="barbers-grid" id="barbersList"></div>
+                </div>
+            </div>
+
+            <div class="card" id="scheduleCard">
+                <h3>
+                    <span class="step-indicator">3</span>
+                    Data e horário
+                </h3>
+
+                <div class="calendar">
+                    <div class="calendar-header">
+                        <button id="prevMonth"><i class="fas fa-chevron-left"></i></button>
+                        <h4 id="currentMonth"></h4>
+                        <button id="nextMonth"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-grid" id="calendarGrid"></div>
+                    <div id="timeSlotsContainer"></div>
+                </div>
+
+                <div class="confirm-booking hidden" id="confirmBooking">
+                    <h4><i class="fas fa-check-circle"></i> Confirmar agendamento</h4>
+
+                    <div class="unverified-user-fields" id="unverifiedUserFields">
+                        <h5><i class="fas fa-info-circle"></i> Seus dados de contato</h5>
+                        <div class="form-group">
+                            <label for="bookingFullName">Nome completo</label>
+                            <input type="text" id="bookingFullName" placeholder="Seu nome completo" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="bookingPhone">Telefone (WhatsApp)</label>
+                            <div style="position: relative;">
+                                <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--ivory-muted); pointer-events: none;">+55</span>
+                                <input type="tel" id="bookingPhone" placeholder="(88) 99999-9999" maxlength="15" style="padding-left: 48px;" required>
+                            </div>
+                            <small style="color: var(--ivory-muted); font-size: 11.5px; margin-top: 6px; display: block;">
+                                DDD + 9 dígitos (11 dígitos no total)
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="booking-summary" id="bookingSummary"></div>
+                    <button class="btn" id="confirmBtn"><span>Confirmar agendamento</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="confirmationModal">
+        <div class="modal-content">
+            <div class="modal-icon"><i class="fas fa-check-circle"></i></div>
+            <h2>Agendamento confirmado</h2>
+            <p style="color: var(--ivory-muted); margin-bottom: 4px; font-size: 13.5px;">
+                Seu horário foi reservado com sucesso.
+            </p>
+            <div class="modal-details" id="modalDetails"></div>
+            <button class="modal-close-btn" onclick="closeModal()">Entendi</button>
+        </div>
+    </div>
+
+    <script>
+        // Cada barbearia tem seu proprio link: seudominio.com/<slug-da-loja>
+        const TENANT_SLUG = window.location.pathname.split('/').filter(Boolean)[0] || '';
+        const API_URL = `/api/public/${TENANT_SLUG}`;
+
+        let currentUser = null; 
+        let currentDate = new Date();
+        let selectedService = null;
+        let selectedBarber = null;
+        let selectedDate = null;
+        let selectedTime = null;
+        let services = [];
+        let barbers = [];
+        let bookedSlots = {}; 
+        let scheduleConfig = {};
+        let intervalTime = 30;
+
+        const mainApp = document.getElementById('mainApp');
+
+        // Função para formatar telefone
+        function formatPhoneInput(inputElement) {
+            if (!inputElement) return;
+            inputElement.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                
+                if (value.length > 11) {
+                    value = value.slice(0, 11);
+                }
+                
+                if (value.length > 0) {
+                    if (value.length <= 2) {
+                        value = `(${value}`;
+                    } else if (value.length <= 7) {
+                        value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+                    } else {
+                        value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+                    }
+                }
+                
+                e.target.value = value;
+            });
+        }
+        
+        formatPhoneInput(document.getElementById('bookingPhone'));
+        
+        // Funções utilitárias
+        // Sempre calcula "agora" no fuso de Brasília, independente do fuso do aparelho do cliente
+        function nowBR() {
+            return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+        }
+
+        function isTimeSlotPassed(date, time) {
+            const now = nowBR();
+            const slotDateTime = new Date(date + 'T' + time);
+            return slotDateTime <= now;
+        }
+
+        function formatDateToYYYYMMDD(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function validatePhone(phone) {
+            const cleaned = phone.replace(/\D/g, '');
+            return cleaned.length === 11;
+        }
+
+        function formatPhoneToWhatsApp(phone) {
+            let cleaned = phone.replace(/\D/g, '');
+            
+            if (cleaned.length !== 11) {
+                return '';
+            }
+            
+            return '55' + cleaned;
+        }
+
+        function sanitizeInput(input) {
+            if (typeof input !== 'string') return input;
+            return input.trim().substring(0, 255);
+        }
+
+        function updateStatusBadge() {
+            const statusBadge = document.getElementById('statusBadge');
+            const statusText = document.getElementById('statusText');
+            const now = nowBR();
+            const currentDay = now.getDay();
+            
+            if (!scheduleConfig[currentDay] || !scheduleConfig[currentDay].active) {
+                statusBadge.classList.remove('open');
+                statusBadge.classList.add('closed');
+                statusText.textContent = 'Fechado • Não abre hoje';
+                return;
+            }
+
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+            let isOpen = false;
+            let nextPeriod = null;
+
+            for (let period of scheduleConfig[currentDay].periods) {
+                const [startHour, startMin] = period.start.split(':').map(Number);
+                const [endHour, endMin] = period.end.split(':').map(Number);
+                const startMinutes = startHour * 60 + startMin;
+                const endMinutes = endHour * 60 + endMin;
+
+                if (currentTime >= startMinutes && currentTime < endMinutes) {
+                    isOpen = true;
+                    statusBadge.classList.remove('closed');
+                    statusBadge.classList.add('open');
+                    statusText.textContent = `Aberto • ${period.start} - ${period.end}`;
+                    return;
+                }
+
+                if (currentTime < startMinutes && !nextPeriod) {
+                    nextPeriod = period;
+                }
+            }
+
+            if (!isOpen) {
+                statusBadge.classList.remove('open');
+                statusBadge.classList.add('closed');
+                if (nextPeriod) {
+                    statusText.textContent = `Fechado • Abre às ${nextPeriod.start}`;
+                } else {
+                    statusText.textContent = 'Fechado • Abre amanhã';
+                }
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('confirmationModal').classList.add('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        async function initializeApp() {
+            if (!TENANT_SLUG) {
+                showTenantError('Link inválido. Peça o link correto da sua barbearia.');
+                return;
+            }
+
+            try {
+                const infoResponse = await fetch(`${API_URL}/info`);
+                if (!infoResponse.ok) {
+                    const err = await infoResponse.json().catch(() => ({}));
+                    showTenantError(err.error || 'Não foi possível carregar esta barbearia.');
+                    return;
+                }
+                const info = await infoResponse.json();
+                document.title = `${info.name} - Agendamento`;
+                const nameEl = document.querySelector('.hero h1');
+                if (nameEl) nameEl.textContent = info.name;
+            } catch (error) {
+                showTenantError('Não foi possível conectar ao servidor. Tente novamente em instantes.');
+                return;
+            }
+
+            mainApp.style.display = 'block';
+            
+            await loadSettings();
+            await loadServices();
+            await loadBarbers();
+            renderCalendar();
+            updateStatusBadge();
+            setInterval(updateStatusBadge, 60000);
+            
+            document.getElementById('unverifiedUserFields').classList.remove('hidden'); 
+        }
+
+        function showTenantError(message) {
+            document.body.innerHTML = `
+                <div style="display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; text-align:center;">
+                    <div>
+                        <i class="fas fa-store-slash" style="font-size:48px; color:var(--brass-light); margin-bottom:16px;"></i>
+                        <p style="font-size:18px; color:var(--ivory);">${message}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function loadSettings() {
+            try {
+                const response = await fetch(`${API_URL}/settings`);
+                const data = await response.json();
+
+                if (data.schedule_config) scheduleConfig = JSON.parse(data.schedule_config);
+                if (data.interval_time) intervalTime = parseInt(data.interval_time);
+
+                updateStatusBadge();
+            } catch (error) {
+                console.error('Erro ao carregar configurações:', error);
+            }
+        }
+        
+        async function loadServices() {
+            try {
+                const response = await fetch(`${API_URL}/services`);
+                if (!response.ok) throw new Error('Falha ao carregar serviços');
+
+                services = await response.json();
+                renderServices();
+            } catch (error) {
+                console.error('Erro ao carregar serviços:', error);
+            }
+        }
+
+        async function loadBarbers() {
+            try {
+                const response = await fetch(`${API_URL}/barbers`);
+                if (!response.ok) throw new Error('Falha ao carregar barbeiros');
+
+                barbers = await response.json();
+            } catch (error) {
+                console.error('Erro ao carregar barbeiros:', error);
+            }
+        }
+
+        function renderServices() {
+            const container = document.getElementById('servicesList');
+            
+            if (services.length === 0) {
+                container.innerHTML = '<p style="color: var(--ivory-muted); text-align: center;">Nenhum serviço disponível</p>';
+                return;
+            }
+
+            container.innerHTML = services.map(service => `
+                <div class="service-item" onclick="selectService(${service.id})">
+                    <div class="service-info">
+                        <h4><i class="fas fa-scissors"></i> ${service.name}</h4>
+                        <p><i class="fas fa-clock"></i> ${service.duration} minutos</p>
+                    </div>
+                    <div class="service-price">R$ ${service.price.toFixed(2)}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderBarbers() {
+            const container = document.getElementById('barbersList');
+            
+            if (barbers.length === 0) {
+                container.innerHTML = '<p style="color: var(--ivory-muted); text-align: center;">Nenhum barbeiro disponível. Cadastre um barbeiro no painel Admin.</p>';
+                return;
+            }
+
+            container.innerHTML = barbers.map(barber => {
+                const photoHtml = barber.photo_url 
+                    ? `<img src="${barber.photo_url}" alt="${barber.name}">` 
+                    : '<i class="fas fa-user-tie"></i>';
+                
+                const barberIdString = barber.id;
+                
+                const isSelected = selectedBarber && selectedBarber.id == barberIdString;
+                
+                return `
+                    <div class="barber-item ${isSelected ? 'selected' : ''}" 
+                         data-barber-id="${barberIdString}"
+                         onclick="selectBarber('${barberIdString}')">
+                        <div class="barber-photo-circle">
+                            ${photoHtml}
+                        </div>
+                        <div class="barber-name">${barber.name}</div>
+                        <div class="barber-specialty">${barber.specialty || 'Barbeiro'}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectService(id) {
+            selectedService = services.find(s => s.id === id);
+            document.querySelectorAll('.service-item').forEach(el => el.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            
+            selectedBarber = null;
+            selectedDate = null;
+            selectedTime = null;
+            
+            // Marca o card de serviço como completo
+            const serviceCard = document.getElementById('serviceCard');
+            serviceCard.classList.add('completed');
+            
+            // Ativa e exibe o card do barbeiro
+            const barberCard = document.getElementById('barberCard');
+            const barberSelection = document.getElementById('barberSelection');
+            barberSelection.style.display = 'block';
+            barberCard.classList.add('active');
+            renderBarbers();
+            
+            // Scroll suave para o próximo passo
+            setTimeout(() => {
+                barberCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+            
+            renderCalendar();
+            document.getElementById('confirmBooking').classList.add('hidden');
+        }
+
+        function selectBarber(id) {
+            const barberId = id;
+            selectedBarber = barbers.find(b => b.id == barberId);
+            
+            document.querySelectorAll('.barber-item').forEach(el => el.classList.remove('selected'));
+            
+            const targetElement = document.querySelector(`.barber-item[data-barber-id="${barberId}"]`);
+            if (targetElement) {
+                targetElement.classList.add('selected');
+            }
+            
+            selectedDate = null;
+            selectedTime = null;
+            
+            // Marca o card do barbeiro como completo
+            const barberCard = document.getElementById('barberCard');
+            barberCard.classList.add('completed');
+            barberCard.classList.remove('active');
+            
+            // Ativa o card de agendamento
+            const scheduleCard = document.getElementById('scheduleCard');
+            scheduleCard.classList.add('active');
+            
+            // Scroll suave para o calendário
+            setTimeout(() => {
+                scheduleCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+            
+            renderCalendar();
+            document.getElementById('confirmBooking').classList.add('hidden');
+        }
+
+        function renderCalendar() {
+            const monthYear = document.getElementById('currentMonth');
+            const grid = document.getElementById('calendarGrid');
+            
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            
+            monthYear.textContent = currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = nowBR();
+            today.setHours(0, 0, 0, 0);
+            
+            let html = '';
+            
+            for (let i = 0; i < firstDay; i++) {
+                html += '<div class="calendar-day disabled"></div>';
+            }
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day, 12, 0, 0);
+                const dayOfWeek = date.getDay();
+                const isPast = date < today;
+                const isWorkingDay = scheduleConfig[dayOfWeek]?.active || false;
+                const isToday = date.getDate() === today.getDate() && 
+                               date.getMonth() === today.getMonth() && 
+                               date.getFullYear() === today.getFullYear();
+                
+                const isSelected = selectedDate && 
+                                 selectedDate.getDate() === day && 
+                                 selectedDate.getMonth() === month && 
+                                 selectedDate.getFullYear() === year;
+                
+                const isDisabled = isPast || !isWorkingDay;
+                
+                html += `
+                    <div class="calendar-day ${isDisabled ? 'disabled' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}"
+                         onclick="${!isDisabled ? `selectDate(${year}, ${month}, ${day})` : ''}">
+                        <div>${day}</div>
+                        <small style="font-size: 10px; color: var(--ivory-muted);">
+                            ${date.toLocaleDateString('pt-BR', { weekday: 'short' })}
+                        </small>
+                    </div>
+                `;
+            }
+            
+            grid.innerHTML = html;
+        }
+
+        async function selectDate(year, month, day) {
+            if (!selectedService) {
+                alert('Selecione um serviço primeiro!');
+                return;
+            }
+            
+            if (!selectedBarber) {
+                alert('Selecione um barbeiro primeiro!');
+                return;
+            }
+            
+            selectedDate = new Date(year, month, day, 12, 0, 0);
+            selectedTime = null;
+            renderCalendar();
+            await loadBookedSlots();
+            renderTimeSlots();
+        }
+
+        async function loadBookedSlots() {
+            try {
+                const dateStr = formatDateToYYYYMMDD(selectedDate);
+
+                const response = await fetch(`${API_URL}/bookings/availability?date=${dateStr}&barberId=${selectedBarber.id}`);
+                if (!response.ok) throw new Error('Falha ao carregar horários');
+                const data = await response.json();
+
+                const allBookedSlots = {}; 
+                
+                data.forEach(booking => {
+                    const startTime = booking.booking_time.substring(0, 5);
+                    const duration = booking.duration || 30;
+                    const barberId = selectedBarber.id;
+                    
+                    for(let time of generateBlockedTimes(startTime, duration, intervalTime)) {
+                        if(!allBookedSlots[time]) {
+                            allBookedSlots[time] = [];
+                        }
+                        if(barberId && !allBookedSlots[time].includes(barberId)) {
+                            allBookedSlots[time].push(barberId);
+                        }
+                    }
+                });
+                
+                bookedSlots = allBookedSlots;
+                
+            } catch (error) {
+                console.error('Erro ao carregar horários:', error);
+                bookedSlots = {};
+            }
+        }
+        
+        function generateBlockedTimes(startTime, duration, interval) {
+            const slots = [];
+            const [startHour, startMin] = startTime.split(':').map(Number);
+            let currentMinutes = startHour * 60 + startMin;
+            const endMinutes = currentMinutes + duration;
+            
+            while (currentMinutes < endMinutes) {
+                const h = Math.floor(currentMinutes / 60);
+                const m = currentMinutes % 60;
+                const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                slots.push(time);
+                currentMinutes += interval;
+            }
+            return slots;
+        }
+
+        function renderTimeSlots() {
+            const container = document.getElementById('timeSlotsContainer');
+            
+            if (!selectedDate) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const slots = generateTimeSlots();
+            
+            container.innerHTML = `
+                <h4 style="margin-top: 20px; margin-bottom: 10px; color: var(--brass-light);">
+                    <i class="fas fa-clock"></i> Horários Disponíveis
+                </h4>
+                <div class="time-slots">
+                    ${slots.map(slot => `
+                        <div class="time-slot ${slot.isBooked ? 'disabled' : ''} ${selectedTime === slot.time ? 'selected' : ''}"
+                             onclick="${!slot.isBooked ? `selectTime('${slot.time}')` : ''}">
+                            <span>${slot.time}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function generateTimeSlots() {
+            const slots = [];
+            const dayOfWeek = selectedDate.getDay();
+            const dayConfig = scheduleConfig[dayOfWeek];
+
+            if (!dayConfig || !dayConfig.active) return slots;
+
+            const selectedDateStr = formatDateToYYYYMMDD(selectedDate);
+            const serviceDuration = selectedService ? selectedService.duration : 30;
+
+            for (let period of dayConfig.periods) {
+                const [openHour, openMin] = period.start.split(':').map(Number);
+                const [closeHour, closeMin] = period.end.split(':').map(Number);
+                
+                let currentMinutes = openHour * 60 + openMin;
+                const endMinutes = closeHour * 60 + closeMin;
+                
+                while (currentMinutes + serviceDuration <= endMinutes) {
+                    const hour = Math.floor(currentMinutes / 60);
+                    const minute = currentMinutes % 60;
+                    const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+                    
+                    const isTimePassed = isTimeSlotPassed(selectedDateStr, time + ':00');
+                    let isBlocked = isTimePassed;
+
+                    if (!isBlocked && selectedService) {
+                        const blockTimes = generateBlockedTimes(time, serviceDuration, intervalTime);
+                        
+                        for (let blockTime of blockTimes) {
+                            const bookingsAtBlockTime = bookedSlots[blockTime] || [];
+                            
+                            if (bookingsAtBlockTime.includes(selectedBarber.id)) {
+                                isBlocked = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    slots.push({
+                        time: time,
+                        isBooked: isBlocked
+                    });
+                    
+                    currentMinutes += intervalTime;
+                }
+            }
+            
+            return slots;
+        }
+
+        function selectTime(time) {
+            selectedTime = time;
+            renderTimeSlots();
+            
+            // Marca o card de agendamento como completo
+            const scheduleCard = document.getElementById('scheduleCard');
+            scheduleCard.classList.add('completed');
+            scheduleCard.classList.remove('active');
+            
+            showConfirmation();
+        }
+
+        function showConfirmation() {
+            const container = document.getElementById('confirmBooking');
+            const summary = document.getElementById('bookingSummary');
+            
+            const dateFormatted = selectedDate.toLocaleDateString('pt-BR', { 
+                weekday: 'long', 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric'
+            });
+            
+            const barberName = selectedBarber.name;
+            
+            summary.innerHTML = `
+                <p><strong><i class="fas fa-scissors"></i> Serviço:</strong> ${selectedService.name}</p>
+                <p><strong><i class="fas fa-user-tie"></i> Barbeiro:</strong> ${barberName}</p>
+                <p><strong><i class="fas fa-calendar"></i> Data:</strong> ${dateFormatted}</p>
+                <p><strong><i class="fas fa-clock"></i> Horário:</strong> ${selectedTime}</p>
+                <p><strong><i class="fas fa-money-bill-wave"></i> Valor:</strong> R$ ${selectedService.price.toFixed(2)}</p>
+                <p><strong><i class="fas fa-hourglass-half"></i> Duração:</strong> ${selectedService.duration} minutos</p>
+            `;
+            
+            document.getElementById('unverifiedUserFields').classList.remove('hidden'); 
+            
+            container.classList.remove('hidden');
+            
+            // Scroll suave para a confirmação com efeito
+            setTimeout(() => {
+                container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+
+        // A confirmação por WhatsApp agora é enviada automaticamente pelo servidor
+        // (usando o número conectado pelo gestor da barbearia), então não precisamos
+        // mais disparar nenhum webhook a partir do navegador do cliente.
+
+        document.getElementById('confirmBtn').addEventListener('click', async (e) => {
+            const btn = e.target.closest('button');
+            if (btn.disabled) return;
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Confirmando...</span>';
+
+            const bookingFullName = sanitizeInput(document.getElementById('bookingFullName').value);
+            const bookingPhoneRaw = document.getElementById('bookingPhone').value;
+
+            if (!bookingFullName || bookingFullName.length < 3) {
+                alert('Nome completo inválido!');
+                btn.disabled = false;
+                btn.innerHTML = '<span>Confirmar Agendamento</span>';
+                return;
+            }
+
+            if (!bookingPhoneRaw || !validatePhone(bookingPhoneRaw)) {
+                alert('Telefone inválido! Digite DDD + 9 dígitos\nExemplo: (88) 99999-9999');
+                btn.disabled = false;
+                btn.innerHTML = '<span>Confirmar Agendamento</span>';
+                return;
+            }
+            
+            const finalPhoneFormatted = formatPhoneToWhatsApp(bookingPhoneRaw);
+            const dateStr = formatDateToYYYYMMDD(selectedDate);
+            const barberIdToSave = selectedBarber.id;
+            
+            try {
+                const response = await fetch(`${API_URL}/bookings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_full_name: bookingFullName,
+                        customer_phone: finalPhoneFormatted,
+                        service_id: selectedService.id,
+                        barber_id: barberIdToSave,
+                        booking_date: dateStr,
+                        booking_time: selectedTime
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.error || 'Erro ao confirmar agendamento');
+                }
+
+                const bookingData = await response.json();
+
+                const modal = document.getElementById('confirmationModal');
+                const modalDetails = document.getElementById('modalDetails');
+                
+                const dateFormatted = selectedDate.toLocaleDateString('pt-BR', { 
+                    weekday: 'long', 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric'
+                });
+
+                const finalBarberName = selectedBarber.name;
+                
+                modalDetails.innerHTML = `
+                    <p>
+                        <strong><i class="fas fa-user"></i> Cliente:</strong>
+                        <span>${bookingFullName}</span>
+                    </p>
+                    <p>
+                        <strong><i class="fas fa-phone"></i> Telefone:</strong>
+                        <span>${bookingPhoneRaw}</span>
+                    </p>
+                    <hr style="border-color: #333; margin: 10px 0;">
+                    <p>
+                        <strong><i class="fas fa-scissors"></i> Serviço:</strong>
+                        <span>${selectedService.name}</span>
+                    </p>
+                    <p>
+                        <strong><i class="fas fa-user-tie"></i> Barbeiro:</strong>
+                        <span>${finalBarberName}</span>
+                    </p>
+                    <p>
+                        <strong><i class="fas fa-calendar"></i> Data:</strong>
+                        <span>${dateFormatted}</span>
+                    </p>
+                    <p>
+                        <strong><i class="fas fa-clock"></i> Horário:</strong>
+                        <span>${selectedTime}</span>
+                    </p>
+                    <p style="color: var(--green); font-weight: bold; margin-top: 15px;">
+                        <i class="fas fa-check-circle"></i> Agendamento Confirmado com Sucesso!
+                    </p>
+                `;
+                
+                modal.classList.remove('hidden');
+                
+                selectedService = null;
+                selectedBarber = null;
+                selectedDate = null;
+                selectedTime = null;
+                
+                // Remove as classes de estado dos cards
+                document.getElementById('serviceCard').classList.remove('completed', 'active');
+                document.getElementById('barberCard').classList.remove('completed', 'active');
+                document.getElementById('scheduleCard').classList.remove('completed', 'active');
+                
+                document.querySelectorAll('.service-item').forEach(el => el.classList.remove('selected'));
+                document.querySelectorAll('.barber-item').forEach(el => el.classList.remove('selected'));
+                document.getElementById('confirmBooking').classList.add('hidden');
+                document.getElementById('barberSelection').style.display = 'none';
+                document.getElementById('timeSlotsContainer').innerHTML = '';
+                renderCalendar();
+                
+                // Scroll para o topo
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                
+            } catch (error) {
+                alert('Erro ao confirmar agendamento: ' + error.message);
+                console.error('Erro completo:', error);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Confirmar Agendamento</span>';
+            }
+        });
+
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        });
+
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        });
+
+        initializeApp();
+        
+    </script>
+</body>
+</html>
