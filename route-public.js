@@ -42,10 +42,31 @@ router.get('/:slug/barbers', (req, res) => {
 });
 
 router.get('/:slug/settings', (req, res) => {
-  const rows = db.prepare("SELECT key, value FROM settings WHERE tenant_id = ? AND key IN ('schedule_config', 'interval_time')").all(req.tenantId);
+  const rows = db.prepare("SELECT key, value FROM settings WHERE tenant_id = ? AND key IN ('schedule_config', 'interval_time', 'banner_url', 'tagline')").all(req.tenantId);
   const result = {};
   rows.forEach(r => { result[r.key] = r.value; });
   res.json(result);
+});
+
+// Cliente consulta os proprios agendamentos digitando o telefone (sem precisar de login)
+router.get('/:slug/bookings/lookup', (req, res) => {
+  const { phone } = req.query;
+  if (!phone) return res.status(400).json({ error: 'Informe o telefone' });
+
+  const normalizedPhone = normalizePhone(phone);
+  const rows = db.prepare(`
+    SELECT b.id, b.booking_date, b.booking_time, b.status,
+           s.name AS service_name, s.price AS service_price,
+           br.name AS barber_name
+    FROM bookings b
+    LEFT JOIN services s ON s.id = b.service_id
+    LEFT JOIN barbers br ON br.id = b.barber_id
+    WHERE b.tenant_id = ? AND b.customer_phone = ?
+    ORDER BY b.booking_date DESC, b.booking_time DESC
+    LIMIT 30
+  `).all(req.tenantId, normalizedPhone);
+
+  res.json(rows);
 });
 
 router.get('/:slug/bookings/availability', (req, res) => {

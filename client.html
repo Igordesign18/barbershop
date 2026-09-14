@@ -50,7 +50,20 @@
             position: absolute; inset: 0;
             background-image: repeating-linear-gradient(115deg, rgba(198,161,91,0.035) 0px, rgba(198,161,91,0.035) 1px, transparent 1px, transparent 64px);
             pointer-events: none;
+            z-index: 1;
         }
+        .hero-banner {
+            position: absolute; inset: 0;
+            background-size: cover; background-position: center;
+            opacity: 0; transition: opacity 0.6s ease;
+        }
+        .hero-banner.loaded { opacity: 0.28; }
+        .hero-banner::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(180deg, rgba(14,12,10,0.55) 0%, var(--ebony) 92%);
+        }
+        .hero-inner { position: relative; z-index: 2; }
         .hero-crest {
             width: 64px; height: 64px; margin: 0 auto 22px;
             border: 1px solid var(--brass);
@@ -60,6 +73,7 @@
             font-size: 22px;
             background: var(--surface);
             box-shadow: 0 0 0 6px rgba(198,161,91,0.06);
+            animation: crestIn 0.7s cubic-bezier(.34,1.56,.64,1) both;
         }
         .hero-crest img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
         .hero h1 {
@@ -68,14 +82,25 @@
             font-size: clamp(30px, 5vw, 44px);
             letter-spacing: -0.01em;
             color: var(--ivory);
+            animation: fadeUp 0.6s ease 0.1s both;
         }
         .hero p.tagline {
             margin-top: 10px;
             color: var(--ivory-muted);
             font-size: 15px;
+            animation: fadeUp 0.6s ease 0.18s both;
         }
+        .my-bookings-link {
+            margin-top: 18px; background: none; border: none;
+            color: var(--brass-light); font-size: 12.5px; font-weight: 600;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+            opacity: 0.85; transition: opacity 0.2s;
+            animation: fadeUp 0.6s ease 0.3s both;
+        }
+        .my-bookings-link:hover { opacity: 1; text-decoration: underline; }
         .status-row {
             margin-top: 26px;
+            animation: fadeUp 0.6s ease 0.24s both;
             display: flex; justify-content: center;
         }
         .status-badge {
@@ -90,6 +115,17 @@
         .status-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes crestIn { from { opacity: 0; transform: scale(0.6) rotate(-12deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+        @keyframes cardIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+        .skeleton {
+            background: linear-gradient(90deg, var(--surface-raised) 25%, rgba(198,161,91,0.08) 50%, var(--surface-raised) 75%);
+            background-size: 400px 100%;
+            animation: shimmer 1.4s infinite linear;
+            border-radius: 8px; height: 58px; margin-bottom: 10px;
+        }
+
         /* Layout */
         .main-app { padding-top: 48px; }
         .card {
@@ -98,9 +134,10 @@
             border-radius: 14px;
             padding: 28px;
             margin-bottom: 20px;
-            transition: border-color 0.3s;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            animation: fadeUp 0.5s ease both;
         }
-        .card.active { border-color: rgba(198,161,91,0.45); }
+        .card.active { border-color: rgba(198,161,91,0.45); box-shadow: 0 0 0 1px rgba(198,161,91,0.12), 0 12px 32px rgba(0,0,0,0.25); }
         .card.completed { border-color: var(--hairline); }
         .card h3 {
             display: flex; align-items: center; gap: 14px;
@@ -128,10 +165,17 @@
             border: 1px solid var(--hairline);
             margin-bottom: 10px;
             cursor: pointer;
-            transition: border-color 0.2s, background 0.2s;
+            transition: border-color 0.2s, background 0.2s, transform 0.15s;
+            animation: cardIn 0.4s ease both;
         }
-        .service-item:hover { border-color: rgba(198,161,91,0.4); background: rgba(198,161,91,0.04); }
+        .service-item:hover { border-color: rgba(198,161,91,0.4); background: rgba(198,161,91,0.04); transform: translateX(3px); }
         .service-item.selected { border-color: var(--brass); background: rgba(198,161,91,0.08); }
+        .service-item:nth-child(1) { animation-delay: 0.02s; }
+        .service-item:nth-child(2) { animation-delay: 0.07s; }
+        .service-item:nth-child(3) { animation-delay: 0.12s; }
+        .service-item:nth-child(4) { animation-delay: 0.17s; }
+        .service-item:nth-child(5) { animation-delay: 0.22s; }
+        .service-item:nth-child(n+6) { animation-delay: 0.26s; }
         .service-info h4 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
         .service-info p { font-size: 12.5px; color: var(--ivory-muted); }
         .service-price { font-family: 'Fraunces', serif; font-size: 18px; color: var(--brass-light); font-weight: 600; }
@@ -141,17 +185,25 @@
         .barber-item {
             text-align: center; padding: 18px 10px;
             border: 1px solid var(--hairline); border-radius: 10px;
-            cursor: pointer; transition: border-color 0.2s, background 0.2s;
+            cursor: pointer; transition: border-color 0.2s, background 0.2s, transform 0.15s;
+            animation: cardIn 0.4s ease both;
         }
-        .barber-item:hover { border-color: rgba(198,161,91,0.4); }
+        .barber-item:hover { border-color: rgba(198,161,91,0.4); transform: translateY(-3px); }
         .barber-item.selected { border-color: var(--brass); background: rgba(198,161,91,0.08); }
+        .barber-item:nth-child(1) { animation-delay: 0.02s; }
+        .barber-item:nth-child(2) { animation-delay: 0.07s; }
+        .barber-item:nth-child(3) { animation-delay: 0.12s; }
+        .barber-item:nth-child(4) { animation-delay: 0.17s; }
+        .barber-item:nth-child(n+5) { animation-delay: 0.22s; }
         .barber-photo-circle {
             width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 10px;
             background: var(--surface-raised);
             display: flex; align-items: center; justify-content: center;
             font-size: 22px; color: var(--brass);
             overflow: hidden;
+            transition: transform 0.2s;
         }
+        .barber-item:hover .barber-photo-circle { transform: scale(1.06); }
         .barber-photo-circle img { width: 100%; height: 100%; object-fit: cover; }
         .barber-name { font-size: 13.5px; font-weight: 600; }
         .barber-specialty { font-size: 11.5px; color: var(--ivory-muted); margin-top: 2px; }
@@ -229,7 +281,7 @@
             border-radius: 16px; padding: 36px 32px; max-width: 400px; width: 100%;
             text-align: center;
         }
-        .modal-icon { font-size: 40px; color: var(--brass); margin-bottom: 16px; }
+        .modal-icon { font-size: 40px; color: var(--brass); margin-bottom: 16px; animation: crestIn 0.5s cubic-bezier(.34,1.56,.64,1) both; }
         .modal-content h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 22px; margin-bottom: 8px; }
         .modal-details { text-align: left; background: var(--surface-raised); border-radius: 10px; padding: 18px; margin: 20px 0; }
         .modal-details p { font-size: 13.5px; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 10px; }
@@ -249,15 +301,39 @@
     </style>
 </head>
 <body>
-    <div class="hero">
-        <div class="hero-crest" id="barberPhoto"><i class="fas fa-scissors"></i></div>
-        <h1>Carregando...</h1>
-        <p class="tagline">Agende seu horário em poucos passos</p>
-        <div class="status-row">
-            <span class="status-badge" id="statusBadge">
-                <span class="status-dot"></span>
-                <span id="statusText">Verificando...</span>
-            </span>
+    <div class="hero" id="heroSection">
+        <div class="hero-banner" id="heroBanner"></div>
+        <div class="hero-inner">
+            <div class="hero-crest" id="barberPhoto"><i class="fas fa-scissors"></i></div>
+            <h1>Carregando...</h1>
+            <p class="tagline" id="heroTagline">Agende seu horário em poucos passos</p>
+            <div class="status-row">
+                <span class="status-badge" id="statusBadge">
+                    <span class="status-dot"></span>
+                    <span id="statusText">Verificando...</span>
+                </span>
+            </div>
+            <button class="my-bookings-link" onclick="openLookup()">
+                <i class="fas fa-calendar-check" aria-hidden="true"></i> Já agendei — ver meus horários
+            </button>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="lookupModal">
+        <div class="modal-content" style="text-align:left;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <h2 style="font-size:19px;"><i class="fas fa-calendar-check" aria-hidden="true" style="color:var(--brass); margin-right:8px;"></i>Meus agendamentos</h2>
+                <button onclick="closeLookup()" style="background:none; border:none; color:var(--ivory-muted); font-size:20px; cursor:pointer;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="form-group">
+                <label for="lookupPhone">Seu telefone (o mesmo usado pra agendar)</label>
+                <div style="position: relative;">
+                    <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--ivory-muted);">+55</span>
+                    <input type="tel" id="lookupPhone" placeholder="(88) 99999-9999" maxlength="15" style="padding-left: 48px;">
+                </div>
+            </div>
+            <button class="btn" onclick="searchMyBookings()" style="margin-bottom:18px;">Buscar</button>
+            <div id="lookupResults"></div>
         </div>
     </div>
 
@@ -526,14 +602,76 @@
                 if (data.schedule_config) scheduleConfig = JSON.parse(data.schedule_config);
                 if (data.interval_time) intervalTime = parseInt(data.interval_time);
 
+                if (data.banner_url) {
+                    const banner = document.getElementById('heroBanner');
+                    banner.style.backgroundImage = `url('${data.banner_url}')`;
+                    banner.classList.add('loaded');
+                }
+                if (data.tagline) {
+                    document.getElementById('heroTagline').textContent = data.tagline;
+                }
+
                 updateStatusBadge();
             } catch (error) {
                 console.error('Erro ao carregar configurações:', error);
             }
         }
+
+        // Consulta de agendamentos pelo telefone (sem precisar de login)
+        function openLookup() {
+            document.getElementById('lookupModal').classList.remove('hidden');
+            document.getElementById('lookupResults').innerHTML = '';
+        }
+        function closeLookup() {
+            document.getElementById('lookupModal').classList.add('hidden');
+        }
+        async function searchMyBookings() {
+            const phoneInput = document.getElementById('lookupPhone');
+            const resultsEl = document.getElementById('lookupResults');
+            const phone = phoneInput.value.replace(/\D/g, '');
+
+            if (phone.length < 10) {
+                resultsEl.innerHTML = '<p style="color:var(--red); font-size:13px;">Digite um telefone válido (DDD + número).</p>';
+                return;
+            }
+
+            resultsEl.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
+
+            try {
+                const response = await fetch(`${API_URL}/bookings/lookup?phone=${encodeURIComponent(phone)}`);
+                const bookings = await response.json();
+
+                if (!bookings.length) {
+                    resultsEl.innerHTML = '<p style="color:var(--ivory-muted); font-size:13.5px; text-align:center; padding:20px 0;">Nenhum agendamento encontrado com esse telefone.</p>';
+                    return;
+                }
+
+                const statusLabel = { confirmed: 'Confirmado', completed: 'Concluído', cancelled: 'Cancelado', pending: 'Pendente' };
+                const statusColor = { confirmed: 'var(--green)', completed: 'var(--brass-light)', cancelled: 'var(--red)', pending: 'var(--ivory-muted)' };
+
+                resultsEl.innerHTML = bookings.map((b, i) => `
+                    <div style="border:1px solid var(--hairline); border-radius:10px; padding:14px 16px; margin-bottom:10px; animation: cardIn 0.35s ease ${i * 0.05}s both;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <strong style="font-family:'Fraunces',serif; font-size:15px;">${b.service_name || 'Serviço'}</strong>
+                            <span style="font-size:11px; font-weight:700; color:${statusColor[b.status] || 'var(--ivory-muted)'};">${statusLabel[b.status] || b.status}</span>
+                        </div>
+                        <p style="font-size:13px; color:var(--ivory-muted);">
+                            <i class="fas fa-calendar" aria-hidden="true"></i> ${b.booking_date.split('-').reverse().join('/')}
+                            &nbsp;•&nbsp; <i class="fas fa-clock" aria-hidden="true"></i> ${b.booking_time.substring(0,5)}
+                            ${b.barber_name ? `&nbsp;•&nbsp; <i class="fas fa-user-tie" aria-hidden="true"></i> ${b.barber_name}` : ''}
+                        </p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                resultsEl.innerHTML = '<p style="color:var(--red); font-size:13px;">Erro ao buscar agendamentos. Tente novamente.</p>';
+            }
+        }
         
         async function loadServices() {
             try {
+                const container = document.getElementById('servicesList');
+                container.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
+
                 const response = await fetch(`${API_URL}/services`);
                 if (!response.ok) throw new Error('Falha ao carregar serviços');
 
