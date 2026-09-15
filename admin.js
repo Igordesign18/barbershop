@@ -1573,13 +1573,27 @@
                 return; 
             }
             
+            const photoInput = document.getElementById('servicePhoto');
+            const photoFile = photoInput.files[0];
+            if (photoFile && photoFile.size > 3 * 1024 * 1024) {
+                showNotification('Foto muito grande! Máximo 3MB.', 'error');
+                return;
+            }
+
             try {
-                await apiFetch('/services', { method: 'POST', body: JSON.stringify({ name, price, duration }) });
+                const service = await apiFetch('/services', { method: 'POST', body: JSON.stringify({ name, price, duration }) });
+
+                if (photoFile) {
+                    const formData = new FormData();
+                    formData.append('photo', photoFile);
+                    await apiFetch(`/services/${service.id}/photo`, { method: 'POST', body: formData });
+                }
                 
                 showNotification('Serviço adicionado com sucesso!', 'success');
                 document.getElementById('serviceName').value = '';
                 document.getElementById('servicePrice').value = '';
                 document.getElementById('serviceDuration').value = '';
+                photoInput.value = '';
                 loadServices();
             } catch (error) {
                 showNotification('Erro ao adicionar serviço: ' + error.message, 'error');

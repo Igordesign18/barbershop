@@ -285,6 +285,16 @@
             }
 
             const social = profile.social || {};
+
+            // Icones no topo (hero) - so WhatsApp e Instagram, pra acesso rapido
+            const heroIcons = [];
+            if (social.whatsapp) heroIcons.push(`<a href="${social.whatsapp}" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>`);
+            if (social.instagram) heroIcons.push(`<a href="${social.instagram}" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a>`);
+            if (heroIcons.length) {
+                document.getElementById('heroSocialRow').innerHTML = heroIcons.join('');
+                document.getElementById('heroSocialRow').classList.remove('hidden');
+            }
+
             const socialIcons = [];
             if (social.whatsapp) socialIcons.push(`<a href="${social.whatsapp}" target="_blank" rel="noopener" class="social-icon-link" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>`);
             if (social.instagram) socialIcons.push(`<a href="${social.instagram}" target="_blank" rel="noopener" class="social-icon-link" aria-label="Instagram"><i class="fab fa-instagram"></i></a>`);
@@ -511,8 +521,8 @@
                 </div>
             `).join('');
 
-            // Cada serviço aparece em círculo (com foto do corte, se o gestor tiver enviado)
-            const servicesHtml = services.length ? `<div class="barbers-grid" style="margin-top: ${packages.length ? '14px' : '0'};">` + services.map(service => `
+            // Cada serviço aparece em círculo, em carrossel horizontal (com foto do corte, se enviada)
+            const servicesHtml = services.length ? `<div class="services-carousel" style="margin-top: ${packages.length ? '14px' : '0'};">` + services.map(service => `
                 <div class="barber-item" onclick="selectService(${service.id})">
                     <div class="barber-photo-circle">
                         ${service.photo_url ? `<img src="${service.photo_url}" alt="${service.name}">` : '<i class="fas fa-scissors"></i>'}
@@ -1023,5 +1033,33 @@
             currentDate.setDate(currentDate.getDate() + 7);
             renderCalendar();
         });
+
+        // Efeito de particulas douradas caindo no topo (puramente decorativo)
+        function initHeroParticles() {
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (prefersReducedMotion) return;
+
+            const container = document.getElementById('heroParticles');
+            const count = 22;
+            let html = '';
+
+            for (let i = 0; i < count; i++) {
+                const size = (Math.random() * 3 + 1.5).toFixed(1);
+                const left = (Math.random() * 100).toFixed(1);
+                const duration = (Math.random() * 6 + 7).toFixed(1);
+                const delay = (Math.random() * -12).toFixed(1);
+                const drift = (Math.random() * 60 - 30).toFixed(0);
+                const opacity = (Math.random() * 0.35 + 0.35).toFixed(2);
+
+                html += `<span class="hero-particle" style="
+                    width:${size}px; height:${size}px; left:${left}%;
+                    animation-duration:${duration}s; animation-delay:${delay}s;
+                    --drift:${drift}px; --particle-opacity:${opacity};
+                "></span>`;
+            }
+
+            container.innerHTML = html;
+        }
+        initHeroParticles();
 
         initializeApp();

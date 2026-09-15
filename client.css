@@ -53,6 +53,21 @@
             position: absolute; inset: 0;
             background: linear-gradient(180deg, rgba(14,12,10,0.55) 0%, var(--ebony) 92%);
         }
+        .hero-particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 1; }
+        .hero-particle {
+            position: absolute; top: -8%;
+            border-radius: 50%;
+            background: var(--brass-light);
+            box-shadow: 0 0 6px 1px rgba(232,201,120,0.5);
+            animation: heroFall linear infinite;
+            opacity: 0;
+        }
+        @keyframes heroFall {
+            0% { transform: translateY(0) translateX(0); opacity: 0; }
+            8% { opacity: var(--particle-opacity, 0.7); }
+            92% { opacity: var(--particle-opacity, 0.7); }
+            100% { transform: translateY(720px) translateX(var(--drift, 24px)); opacity: 0; }
+        }
         .hero-inner { position: relative; z-index: 2; }
         .hero-crest {
             width: 64px; height: 64px; margin: 0 auto 22px;
@@ -93,6 +108,19 @@
             animation: fadeUp 0.6s ease 0.24s both;
             display: flex; justify-content: center;
         }
+        .hero-social-row {
+            display: flex; justify-content: center; gap: 14px; margin-top: 14px;
+            animation: fadeUp 0.6s ease 0.28s both;
+        }
+        .hero-social-row a {
+            width: 38px; height: 38px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid var(--hairline);
+            background: linear-gradient(150deg, var(--surface-raised), var(--surface));
+            color: var(--brass-light); font-size: 16px;
+            transition: border-color 0.2s, transform 0.15s;
+        }
+        .hero-social-row a:hover { border-color: var(--brass); transform: translateY(-2px); }
         .status-badge {
             display: inline-flex; align-items: center; gap: 8px;
             padding: 8px 18px; border-radius: 100px;
@@ -226,6 +254,12 @@
 
         /* Barbers */
         .barbers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; }
+        .services-carousel {
+            display: flex; gap: 14px; overflow-x: auto; padding: 2px 2px 8px;
+            scroll-snap-type: x proximity; scrollbar-width: none;
+        }
+        .services-carousel::-webkit-scrollbar { display: none; }
+        .services-carousel .barber-item { flex: 0 0 118px; scroll-snap-align: start; }
         .barber-item {
             text-align: center; padding: 18px 10px;
             background: linear-gradient(160deg, var(--surface-raised), var(--surface) 75%);

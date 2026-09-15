@@ -239,6 +239,17 @@
                     <label for="serviceDuration">Duração (minutos)</label>
                     <input type="number" id="serviceDuration" placeholder="40" min="15" step="15">
                 </div>
+                <div class="form-group">
+                    <label>Foto do corte/serviço (opcional — aparece em círculo pro cliente)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="servicePhoto" accept="image/*">
+                        <label for="servicePhoto" class="file-input-label">
+                            <i class="fas fa-camera"></i>
+                            <span>Clique para selecionar uma foto</span>
+                            <small>JPG ou PNG (máx. 3MB)</small>
+                        </label>
+                    </div>
+                </div>
                 <button class="btn" onclick="addService()">
                     <i class="fas fa-plus" aria-hidden="true"></i> Adicionar Serviço
                 </button>
