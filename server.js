@@ -53,6 +53,13 @@ const PUBLIC_DIR = __dirname;
 app.get('/superadmin', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'superadmin.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
 
+// CSS/JS de cada pagina, servidos individualmente (evita expor os arquivos do backend
+// que tambem estao nessa mesma pasta, como aconteceria com um express.static geral)
+app.get('/admin.css', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.css')));
+app.get('/admin.js', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.js')));
+app.get('/client.css', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'client.css')));
+app.get('/client.js', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'client.js')));
+
 app.get('/', (req, res) => {
   res.send('BarberSync no ar. Acesse o link da sua barbearia (ex: /nome-da-loja) ou /admin para entrar no painel.');
 });
