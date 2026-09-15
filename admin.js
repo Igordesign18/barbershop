@@ -484,12 +484,12 @@
             const bannerFile = bannerInput.files[0];
             const logoFile = logoInput.files[0];
 
-            if (bannerFile && bannerFile.size > 4 * 1024 * 1024) {
-                showNotification('Foto de capa muito grande! Máximo 4MB.', 'error');
+            if (bannerFile && bannerFile.size > 15 * 1024 * 1024) {
+                showNotification('Foto de capa muito grande! Máximo 15MB.', 'error');
                 return;
             }
-            if (logoFile && logoFile.size > 4 * 1024 * 1024) {
-                showNotification('Logo muito grande! Máximo 4MB.', 'error');
+            if (logoFile && logoFile.size > 15 * 1024 * 1024) {
+                showNotification('Logo muito grande! Máximo 15MB.', 'error');
                 return;
             }
 
@@ -559,8 +559,8 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            if (file.size > 4 * 1024 * 1024) {
-                showNotification('Arquivo muito grande! Máximo 4MB.', 'error');
+            if (file.size > 15 * 1024 * 1024) {
+                showNotification('Arquivo muito grande! Máximo 15MB.', 'error');
                 e.target.value = '';
                 return;
             }
@@ -616,8 +616,8 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            if (file.size > 4 * 1024 * 1024) {
-                showNotification('Arquivo muito grande! Máximo 4MB.', 'error');
+            if (file.size > 15 * 1024 * 1024) {
+                showNotification('Arquivo muito grande! Máximo 15MB.', 'error');
                 e.target.value = '';
                 return;
             }
@@ -1644,8 +1644,8 @@
             
             const photoInput = document.getElementById('servicePhoto');
             const photoFile = photoInput.files[0];
-            if (photoFile && photoFile.size > 3 * 1024 * 1024) {
-                showNotification('Foto muito grande! Máximo 3MB.', 'error');
+            if (photoFile && photoFile.size > 15 * 1024 * 1024) {
+                showNotification('Foto muito grande! Máximo 15MB.', 'error');
                 return;
             }
 
@@ -1704,8 +1704,8 @@
             const id = document.getElementById('editServiceId').value;
             if (!file || !id) return;
 
-            if (file.size > 3 * 1024 * 1024) {
-                showNotification('Foto muito grande! Máximo 3MB.', 'error');
+            if (file.size > 15 * 1024 * 1024) {
+                showNotification('Foto muito grande! Máximo 15MB.', 'error');
                 e.target.value = '';
                 return;
             }
@@ -1847,8 +1847,8 @@
             }
             
             try {
-                if (photoFile && photoFile.size > 2 * 1024 * 1024) {
-                    showNotification('Arquivo muito grande! Máximo 2MB.', 'error');
+                if (photoFile && photoFile.size > 15 * 1024 * 1024) {
+                    showNotification('Arquivo muito grande! Máximo 15MB.', 'error');
                     return;
                 }
 
@@ -1905,8 +1905,8 @@
             }
             
             try {
-                if (photoFile && photoFile.size > 2 * 1024 * 1024) {
-                    showNotification('Arquivo muito grande! Máximo 2MB.', 'error');
+                if (photoFile && photoFile.size > 15 * 1024 * 1024) {
+                    showNotification('Arquivo muito grande! Máximo 15MB.', 'error');
                     return;
                 }
 
