@@ -1854,6 +1854,10 @@
                     <input type="text" id="shopPhone" placeholder="(88) 99999-9999">
                 </div>
                 <div class="form-group">
+                    <label for="socialWhatsapp">WhatsApp (link, ex: https://wa.me/5588999999999)</label>
+                    <input type="text" id="socialWhatsapp" placeholder="https://wa.me/5588999999999">
+                </div>
+                <div class="form-group">
                     <label for="socialInstagram">Instagram (link completo)</label>
                     <input type="text" id="socialInstagram" placeholder="https://instagram.com/sualoja">
                 </div>
@@ -2754,6 +2758,7 @@
 
                 document.getElementById('shopAddress').value = profile.address || '';
                 document.getElementById('shopPhone').value = profile.phone || '';
+                document.getElementById('socialWhatsapp').value = social.whatsapp || '';
                 document.getElementById('socialInstagram').value = social.instagram || '';
                 document.getElementById('socialFacebook').value = social.facebook || '';
             } catch (error) {
@@ -2777,6 +2782,7 @@
                 },
                 payment_methods,
                 social: {
+                    whatsapp: document.getElementById('socialWhatsapp').value.trim(),
                     instagram: document.getElementById('socialInstagram').value.trim(),
                     facebook: document.getElementById('socialFacebook').value.trim()
                 },

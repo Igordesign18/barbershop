@@ -253,23 +253,29 @@
             width: 34px; height: 34px; border-radius: 50%;
             border: 1px solid var(--hairline); background: transparent; color: var(--ivory);
             cursor: pointer; transition: border-color 0.2s;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
         .calendar-header button:hover { border-color: var(--brass); color: var(--brass); }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
+        .calendar-strip { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+        .calendar-days { display: flex; gap: 8px; overflow-x: auto; flex: 1; scrollbar-width: none; }
+        .calendar-days::-webkit-scrollbar { display: none; }
         .calendar-day {
-            aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            border-radius: 8px; font-size: 13px; cursor: pointer;
-            border: 1px solid transparent;
+            flex-shrink: 0; width: 52px; padding: 10px 0 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer;
+            border: 1px solid var(--hairline); background: var(--surface-raised);
             transition: border-color 0.2s, background 0.2s;
         }
         .calendar-day:not(.disabled):hover { border-color: rgba(198,161,91,0.4); }
-        .calendar-day.disabled { color: rgba(166,156,140,0.3); cursor: not-allowed; }
-        .calendar-day.today { border-color: var(--hairline); }
-        .calendar-day.selected { background: var(--brass); color: var(--ebony); font-weight: 700; }
-        .calendar-day.selected small { color: var(--ebony); opacity: 0.7; }
-        .calendar-day small { color: var(--ivory-muted); font-size: 9.5px; margin-top: 2px; }
+        .calendar-day.disabled { color: rgba(166,156,140,0.3); cursor: not-allowed; opacity: 0.5; }
+        .calendar-day.today:not(.selected) { border-color: var(--brass); }
+        .calendar-day.selected { background: var(--brass); color: var(--ebony); border-color: var(--brass); }
+        .calendar-day.selected small { color: var(--ebony); opacity: 0.75; }
+        .calendar-day small { color: var(--ivory-muted); font-size: 10.5px; font-weight: 600; text-transform: capitalize; margin-bottom: 4px; }
 
-        .time-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 8px; margin-top: 14px; }
+        .time-period-header { display: flex; justify-content: space-between; align-items: baseline; margin: 18px 0 10px; }
+        .time-period-header h5 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 14px; color: var(--ivory); }
+        .time-period-header span { font-size: 11px; color: var(--ivory-muted); background: var(--surface-raised); padding: 3px 10px; border-radius: 100px; }
+        .time-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 8px; }
         .time-slot {
             text-align: center; padding: 10px 6px; border-radius: 8px;
             border: 1px solid var(--hairline); font-size: 13px; cursor: pointer;
@@ -383,6 +389,13 @@
         <div class="gallery-dots" id="galleryDots"></div>
     </div>
 
+    <div class="container hidden" id="amenitiesSection" style="padding-top:20px;">
+        <div id="amenitiesRow" class="amenities-row"></div>
+        <button class="btn" onclick="document.getElementById('serviceCard').scrollIntoView({behavior:'smooth', block:'start'})" style="margin-top:4px;">
+            <i class="fas fa-calendar-plus" aria-hidden="true"></i> Agendar agora
+        </button>
+    </div>
+
     <div class="main-app container" id="mainApp" style="display:none;">
         <div class="dashboard" id="dashboardSection">
             <div class="card" id="serviceCard">
@@ -410,12 +423,12 @@
                 </h3>
 
                 <div class="calendar">
-                    <div class="calendar-header">
-                        <button id="prevMonth"><i class="fas fa-chevron-left"></i></button>
-                        <h4 id="currentMonth"></h4>
-                        <button id="nextMonth"><i class="fas fa-chevron-right"></i></button>
+                    <h4 id="currentMonth" style="font-family:'Fraunces',serif; font-weight:500; font-size:15px; text-transform:capitalize; margin-bottom:14px; color: var(--brass-light);"></h4>
+                    <div class="calendar-strip">
+                        <button id="prevMonth" aria-label="Semana anterior"><i class="fas fa-chevron-left"></i></button>
+                        <div class="calendar-days" id="calendarGrid"></div>
+                        <button id="nextMonth" aria-label="Próxima semana"><i class="fas fa-chevron-right"></i></button>
                     </div>
-                    <div class="calendar-grid" id="calendarGrid"></div>
                     <div id="timeSlotsContainer"></div>
                 </div>
 
@@ -449,9 +462,7 @@
 
     <div class="container hidden" id="shopProfileSection">
         <div class="card">
-            <h3><i class="fas fa-info-circle" aria-hidden="true" style="color:var(--brass);"></i> Sobre a barbearia</h3>
-
-            <div id="amenitiesRow" class="amenities-row"></div>
+            <h3><i class="fas fa-info-circle" aria-hidden="true" style="color:var(--brass);"></i> Localização e contato</h3>
 
             <div id="addressBlock" class="profile-block hidden">
                 <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
@@ -763,12 +774,12 @@
 
             const activeAmenities = Object.entries(profile.amenities || {}).filter(([, v]) => v);
             if (activeAmenities.length) {
-                hasContent = true;
                 document.getElementById('amenitiesRow').innerHTML = activeAmenities.map(([key]) => {
                     const meta = AMENITY_LABELS[key];
                     return meta ? `<span class="amenity"><i class="fas ${meta.icon}" aria-hidden="true"></i> ${meta.label}</span>` : '';
                 }).join('');
             }
+            document.getElementById('amenitiesSection').classList.remove('hidden');
 
             if (profile.address) {
                 hasContent = true;
@@ -785,6 +796,7 @@
 
             const social = profile.social || {};
             const socialIcons = [];
+            if (social.whatsapp) socialIcons.push(`<a href="${social.whatsapp}" target="_blank" rel="noopener" class="social-icon-link" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>`);
             if (social.instagram) socialIcons.push(`<a href="${social.instagram}" target="_blank" rel="noopener" class="social-icon-link" aria-label="Instagram"><i class="fab fa-instagram"></i></a>`);
             if (social.facebook) socialIcons.push(`<a href="${social.facebook}" target="_blank" rel="noopener" class="social-icon-link" aria-label="Facebook"><i class="fab fa-facebook"></i></a>`);
             if (socialIcons.length) {
@@ -1134,50 +1146,46 @@
         function renderCalendar() {
             const monthYear = document.getElementById('currentMonth');
             const grid = document.getElementById('calendarGrid');
-            
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-            
-            monthYear.textContent = currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-            
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
             const today = nowBR();
             today.setHours(0, 0, 0, 0);
-            
+
+            // Mostra uma faixa de 7 dias a partir de "currentDate" (nunca antes de hoje)
+            if (currentDate < today) currentDate = new Date(today);
+            const startDate = new Date(currentDate);
+
+            monthYear.textContent = startDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
             let html = '';
-            
-            for (let i = 0; i < firstDay; i++) {
-                html += '<div class="calendar-day disabled"></div>';
-            }
-            
-            for (let day = 1; day <= daysInMonth; day++) {
-                const date = new Date(year, month, day, 12, 0, 0);
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                date.setHours(12, 0, 0, 0);
+
                 const dayOfWeek = date.getDay();
                 const isPast = date < today;
                 const isWorkingDay = scheduleConfig[dayOfWeek]?.active || false;
-                const isToday = date.getDate() === today.getDate() && 
-                               date.getMonth() === today.getMonth() && 
+                const isToday = date.getDate() === today.getDate() &&
+                               date.getMonth() === today.getMonth() &&
                                date.getFullYear() === today.getFullYear();
-                
-                const isSelected = selectedDate && 
-                                 selectedDate.getDate() === day && 
-                                 selectedDate.getMonth() === month && 
-                                 selectedDate.getFullYear() === year;
-                
+
+                const isSelected = selectedDate &&
+                                 selectedDate.getDate() === date.getDate() &&
+                                 selectedDate.getMonth() === date.getMonth() &&
+                                 selectedDate.getFullYear() === date.getFullYear();
+
                 const isDisabled = isPast || !isWorkingDay;
-                
+
                 html += `
                     <div class="calendar-day ${isDisabled ? 'disabled' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}"
-                         onclick="${!isDisabled ? `selectDate(${year}, ${month}, ${day})` : ''}">
-                        <div>${day}</div>
-                        <small style="font-size: 10px; color: var(--ivory-muted);">
-                            ${date.toLocaleDateString('pt-BR', { weekday: 'short' })}
-                        </small>
+                         onclick="${!isDisabled ? `selectDate(${date.getFullYear()}, ${date.getMonth()}, ${date.getDate()})` : ''}">
+                        <small>${date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}</small>
+                        <div>${date.getDate()}</div>
                     </div>
                 `;
             }
-            
+
             grid.innerHTML = html;
         }
 
@@ -1257,20 +1265,48 @@
             }
 
             const slots = generateTimeSlots();
-            
-            container.innerHTML = `
-                <h4 style="margin-top: 20px; margin-bottom: 10px; color: var(--brass-light);">
-                    <i class="fas fa-clock"></i> Horários Disponíveis
-                </h4>
-                <div class="time-slots">
-                    ${slots.map(slot => `
-                        <div class="time-slot ${slot.isBooked ? 'disabled' : ''} ${selectedTime === slot.time ? 'selected' : ''}"
-                             onclick="${!slot.isBooked ? `selectTime('${slot.time}')` : ''}">
-                            <span>${slot.time}</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
+
+            if (!slots.length) {
+                container.innerHTML = `
+                    <div class="time-period-header" style="margin-top: 20px;">
+                        <h5><i class="fas fa-clock"></i> Horários</h5>
+                    </div>
+                    <p style="color: var(--ivory-muted); font-size: 13px;">Nenhum horário disponível neste dia.</p>
+                `;
+                return;
+            }
+
+            // Agrupa por periodo do dia, igual ao print de referencia
+            const periods = [
+                { key: 'manha', label: 'Manhã', test: h => h < 12 },
+                { key: 'tarde', label: 'Tarde', test: h => h >= 12 && h < 18 },
+                { key: 'noite', label: 'Noite', test: h => h >= 18 }
+            ];
+
+            let html = '';
+            periods.forEach(period => {
+                const periodSlots = slots.filter(s => period.test(parseInt(s.time.split(':')[0])));
+                if (!periodSlots.length) return;
+
+                const availableCount = periodSlots.filter(s => !s.isBooked).length;
+
+                html += `
+                    <div class="time-period-header">
+                        <h5>${period.label}</h5>
+                        <span>${availableCount} horário${availableCount !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="time-slots">
+                        ${periodSlots.map(slot => `
+                            <div class="time-slot ${slot.isBooked ? 'disabled' : ''} ${selectedTime === slot.time ? 'selected' : ''}"
+                                 onclick="${!slot.isBooked ? `selectTime('${slot.time}')` : ''}">
+                                <span>${slot.time}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
         }
 
         function generateTimeSlots() {
@@ -1499,12 +1535,12 @@
         });
 
         document.getElementById('prevMonth').addEventListener('click', () => {
-            currentDate.setMonth(currentDate.getMonth() - 1);
+            currentDate.setDate(currentDate.getDate() - 7);
             renderCalendar();
         });
 
         document.getElementById('nextMonth').addEventListener('click', () => {
-            currentDate.setMonth(currentDate.getMonth() + 1);
+            currentDate.setDate(currentDate.getDate() + 7);
             renderCalendar();
         });
 
