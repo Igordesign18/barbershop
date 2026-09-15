@@ -201,11 +201,88 @@
             openLookup();
         }
 
+        // ==================== Instalar app (PWA) ====================
+        let deferredInstallPrompt = null;
+
+        function setupPWA() {
+            // manifesto dinamico com nome/logo/cores da barbearia
+            const manifestLink = document.createElement('link');
+            manifestLink.rel = 'manifest';
+            manifestLink.href = `${API_URL}/manifest.json`;
+            document.head.appendChild(manifestLink);
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            }
+
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            if (isStandalone) return; // ja instalado, nao precisa oferecer de novo
+
+            const dismissKey = 'installBannerDismissed_' + TENANT_SLUG;
+            if (localStorage.getItem(dismissKey)) return;
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredInstallPrompt = e;
+                showInstallBanner(false);
+            });
+
+            window.addEventListener('appinstalled', () => {
+                hideInstallBanner();
+                localStorage.setItem(dismissKey, '1');
+            });
+
+            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+            if (isIOS) {
+                // iOS nao dispara beforeinstallprompt - so da pra orientar a instalar manualmente
+                showInstallBanner(true);
+            }
+        }
+
+        function showInstallBanner(isIOSInstructions) {
+            const banner = document.getElementById('installBanner');
+            if (!banner) return;
+            banner.dataset.ios = isIOSInstructions ? '1' : '0';
+            banner.classList.remove('hidden');
+        }
+
+        function hideInstallBanner() {
+            const banner = document.getElementById('installBanner');
+            if (banner) banner.classList.add('hidden');
+        }
+
+        function dismissInstallBanner() {
+            hideInstallBanner();
+            localStorage.setItem('installBannerDismissed_' + TENANT_SLUG, '1');
+        }
+
+        async function handleInstallClick() {
+            const banner = document.getElementById('installBanner');
+            if (banner && banner.dataset.ios === '1') {
+                document.getElementById('iosInstallModal').classList.remove('hidden');
+                return;
+            }
+            if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            const choice = await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            hideInstallBanner();
+            if (choice.outcome === 'accepted') {
+                localStorage.setItem('installBannerDismissed_' + TENANT_SLUG, '1');
+            }
+        }
+
+        function closeIOSInstallModal() {
+            document.getElementById('iosInstallModal').classList.add('hidden');
+        }
+
         async function initializeApp() {
             if (!TENANT_SLUG) {
                 showTenantError('Link inválido. Peça o link correto da sua barbearia.');
                 return;
             }
+
+            setupPWA();
 
             try {
                 const infoResponse = await fetch(`${API_URL}/info`);

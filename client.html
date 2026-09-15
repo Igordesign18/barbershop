@@ -50,6 +50,16 @@
             </div>
 
             <div class="container" style="padding-top:22px; padding-bottom:110px;">
+                <div class="install-banner hidden" id="installBanner">
+                    <div class="install-banner-icon"><i class="fas fa-mobile-screen-button"></i></div>
+                    <div class="install-banner-text">
+                        <strong>Instale o app</strong>
+                        <span>Acesso rápido pela tela inicial, sem baixar de loja nenhuma</span>
+                    </div>
+                    <button class="install-banner-btn" onclick="handleInstallClick()">Instalar</button>
+                    <button class="install-banner-close" onclick="dismissInstallBanner()" aria-label="Fechar"><i class="fas fa-times"></i></button>
+                </div>
+
                 <div class="quick-actions">
                     <button class="quick-action" onclick="goToBookScreen()">
                         <span class="quick-action-icon"><i class="fas fa-calendar-plus"></i></span>
@@ -302,6 +312,19 @@
             <div class="modal-details" id="modalDetails"></div>
             <button class="btn" onclick="closeModalAndOpenLookup()" style="margin-top:6px;">Ver meus agendamentos</button>
             <button class="modal-close-btn" onclick="closeModal()">Voltar para o início</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="iosInstallModal">
+        <div class="modal-content" style="text-align:center;">
+            <div class="modal-icon"><i class="fas fa-mobile-screen-button"></i></div>
+            <h2 style="font-size:19px;">Instalar o app</h2>
+            <p style="color: var(--ivory-muted); font-size:13.5px; margin-bottom:20px;">
+                No Safari, toque no ícone de compartilhar
+                <i class="fas fa-arrow-up-from-bracket" aria-hidden="true"></i>
+                e depois em <strong>"Adicionar à Tela de Início"</strong>.
+            </p>
+            <button class="btn" onclick="closeIOSInstallModal()">Entendi</button>
         </div>
     </div>
 

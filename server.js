@@ -31,6 +31,7 @@ app.use(express.json());
 
 // Fotos de barbeiros enviadas via upload
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/pwa', express.static(path.join(__dirname, 'pwa')));
 
 // --- API ---
 app.use('/api/auth', authRoutes);
@@ -59,6 +60,7 @@ app.get('/admin.css', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.cs
 app.get('/admin.js', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.js')));
 app.get('/client.css', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'client.css')));
 app.get('/client.js', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'client.js')));
+app.get('/sw.js', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'sw.js')));
 
 app.get('/', (req, res) => {
   res.send('BarberSync no ar. Acesse o link da sua barbearia (ex: /nome-da-loja) ou /admin para entrar no painel.');

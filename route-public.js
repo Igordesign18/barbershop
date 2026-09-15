@@ -63,6 +63,59 @@ router.get('/:slug/settings', (req, res) => {
   res.json(result);
 });
 
+// Cores de cada tema, usadas para colorir a tela de splash do PWA instalado (mesma paleta do client.js)
+const THEME_COLORS = {
+  ouro_negro: { bg: '#0e0c0a', accent: '#c6a15b' },
+  meia_noite: { bg: '#0a0e14', accent: '#6f9bc7' },
+  esmeralda: { bg: '#0a120e', accent: '#4f9d6e' },
+  grafite: { bg: '#121212', accent: '#c17d4f' },
+  marfim: { bg: '#f5f0e6', accent: '#8a5a3a' },
+  vinho_tinto: { bg: '#170a0c', accent: '#c9a15c' },
+  petroleo: { bg: '#07141a', accent: '#c97a4d' },
+  roxo_real: { bg: '#120a18', accent: '#caa06a' },
+  preto_neon: { bg: '#0a0a0a', accent: '#39e6a0' },
+  areia_dourada: { bg: '#faf6ee', accent: '#b8863a' },
+  cinza_urbano: { bg: '#f4f4f4', accent: '#1c1c1c' },
+  azul_nautico: { bg: '#f2f6fa', accent: '#2f5d8a' },
+  verde_salvia: { bg: '#f4f7f1', accent: '#5c8a52' },
+  aurora: { bg: '#120a1c', accent: '#6fd8c9' },
+  por_do_sol: { bg: '#1a0e10', accent: '#e8935a' },
+  oceano_profundo: { bg: '#04121c', accent: '#4fa8d8' },
+  neon_cyber: { bg: '#0c0616', accent: '#ff5fd1' }
+};
+
+// Manifesto do PWA, gerado na hora com o nome, logo e cores da barbearia — permite "Instalar app"
+router.get('/:slug/manifest.json', (req, res) => {
+  const rows = db.prepare("SELECT key, value FROM settings WHERE tenant_id = ? AND key IN ('logo_url', 'theme')").all(req.tenantId);
+  const settings = {};
+  rows.forEach(r => { settings[r.key] = r.value; });
+
+  const colors = THEME_COLORS[settings.theme] || THEME_COLORS.ouro_negro;
+  const icons = settings.logo_url
+    ? [
+        { src: settings.logo_url, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: settings.logo_url, sizes: '512x512', type: 'image/png', purpose: 'any' }
+      ]
+    : [
+        { src: '/pwa/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: '/pwa/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }
+      ];
+
+  res.set('Content-Type', 'application/manifest+json');
+  res.json({
+    name: req.tenant.name,
+    short_name: req.tenant.name.slice(0, 20),
+    description: `Agende seu horário na ${req.tenant.name}`,
+    start_url: `/${req.tenant.slug}`,
+    scope: `/${req.tenant.slug}`,
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: colors.bg,
+    theme_color: colors.bg,
+    icons
+  });
+});
+
 // Progresso de fidelidade do cliente (mostrado na pagina publica, sem precisar de login)
 router.get('/:slug/loyalty/status', (req, res) => {
   const { phone } = req.query;
