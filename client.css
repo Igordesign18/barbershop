@@ -11,13 +11,14 @@
             --ivory-muted: #a69c8c;
             --green: #6fae7a;
             --red: #c15c5c;
+            --body-gradient: var(--ebony);
         }
         html { scroll-behavior: smooth; }
         body {
             font-family: 'Manrope', sans-serif;
             background:
                 radial-gradient(ellipse 1200px 600px at 50% -10%, rgba(198,161,91,0.08), transparent),
-                var(--ebony);
+                var(--body-gradient);
             color: var(--ivory);
             min-height: 100vh;
             line-height: 1.55;

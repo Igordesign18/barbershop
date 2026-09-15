@@ -384,7 +384,15 @@
             vinho_tinto: { label: 'Vinho Tinto', desc: 'Bordô profundo + dourado', bg:'#170a0c', accent:'#c9a15c', accent2:'#5c1a26' },
             petroleo: { label: 'Azul Petróleo', desc: 'Petróleo escuro + cobre', bg:'#07141a', accent:'#c97a4d', accent2:'#1f4d54' },
             roxo_real: { label: 'Roxo Real', desc: 'Roxo profundo + dourado', bg:'#120a18', accent:'#caa06a', accent2:'#4a2352' },
-            preto_neon: { label: 'Preto Neon', desc: 'Preto puro + verde neon', bg:'#0a0a0a', accent:'#39e6a0', accent2:'#2a2a2a' }
+            preto_neon: { label: 'Preto Neon', desc: 'Preto puro + verde neon', bg:'#0a0a0a', accent:'#39e6a0', accent2:'#2a2a2a' },
+            areia_dourada: { label: 'Areia Dourada', desc: 'Creme quente + dourado', bg:'#faf6ee', accent:'#b8863a', accent2:'#8a4a2e' },
+            cinza_urbano: { label: 'Cinza Urbano', desc: 'Cinza claro + preto, minimalista', bg:'#f4f4f4', accent:'#1c1c1c', accent2:'#555555' },
+            azul_nautico: { label: 'Azul Náutico', desc: 'Branco + azul-marinho', bg:'#f2f6fa', accent:'#2f5d8a', accent2:'#1c3652' },
+            verde_salvia: { label: 'Verde Sálvia', desc: 'Creme + verde sálvia', bg:'#f4f7f1', accent:'#5c8a52', accent2:'#3d5c38' },
+            aurora: { label: 'Aurora', desc: 'Degradê roxo, azul e verde', bg:'linear-gradient(135deg, #150a24, #0d1f2e, #0a231d)', accent:'#6fd8c9', accent2:'#2a3d5c' },
+            por_do_sol: { label: 'Pôr do Sol', desc: 'Degradê vinho, laranja e terra', bg:'linear-gradient(135deg, #23101c, #4a1a1f, #331206)', accent:'#e8935a', accent2:'#7a2f3f' },
+            oceano_profundo: { label: 'Oceano Profundo', desc: 'Degradê azul-marinho profundo', bg:'linear-gradient(135deg, #030d16, #082234, #04121c)', accent:'#4fa8d8', accent2:'#123049' },
+            neon_cyber: { label: 'Neon Cyber', desc: 'Degradê roxo, rosa e azul neon', bg:'linear-gradient(135deg, #0c0616, #1a0a2e, #061224)', accent:'#ff5fd1', accent2:'#3a1a52' }
         };
 
         let currentThemeKey = 'ouro_negro';
