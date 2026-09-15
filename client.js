@@ -511,15 +511,16 @@
                 </div>
             `).join('');
 
-            const servicesHtml = services.map(service => `
-                <div class="service-item" onclick="selectService(${service.id})">
-                    <div class="service-info">
-                        <h4><i class="fas fa-scissors"></i> ${service.name}</h4>
-                        <p><i class="fas fa-clock"></i> ${service.duration} minutos</p>
+            // Cada serviço aparece em círculo (com foto do corte, se o gestor tiver enviado)
+            const servicesHtml = services.length ? `<div class="barbers-grid" style="margin-top: ${packages.length ? '14px' : '0'};">` + services.map(service => `
+                <div class="barber-item" onclick="selectService(${service.id})">
+                    <div class="barber-photo-circle">
+                        ${service.photo_url ? `<img src="${service.photo_url}" alt="${service.name}">` : '<i class="fas fa-scissors"></i>'}
                     </div>
-                    <div class="service-price">R$ ${service.price.toFixed(2)}</div>
+                    <div class="barber-name">${service.name}</div>
+                    <div class="barber-specialty">R$ ${service.price.toFixed(2)} · ${service.duration}min</div>
                 </div>
-            `).join('');
+            `).join('') + `</div>` : '';
 
             container.innerHTML = packagesHtml + servicesHtml;
         }
@@ -563,7 +564,7 @@
 
         function selectService(id, overrideItem) {
             selectedService = overrideItem || services.find(s => s.id === id);
-            document.querySelectorAll('.service-item').forEach(el => el.classList.remove('selected'));
+            document.querySelectorAll('#servicesList .service-item, #servicesList .barber-item').forEach(el => el.classList.remove('selected'));
             event.currentTarget.classList.add('selected');
             
             selectedBarber = null;

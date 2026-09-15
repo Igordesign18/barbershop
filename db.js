@@ -170,6 +170,7 @@ ensureColumn('bookings', 'package_id', 'INTEGER REFERENCES packages(id)');
 ensureColumn('bookings', 'item_price', 'REAL');
 ensureColumn('bookings', 'item_duration', 'INTEGER');
 ensureColumn('bookings', 'item_name', 'TEXT');
+ensureColumn('services', 'photo_url', 'TEXT');
 
 const DEFAULT_SCHEDULE = {
   0: { active: true, periods: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },

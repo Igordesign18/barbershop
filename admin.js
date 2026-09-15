@@ -1399,9 +1399,14 @@
                 container.innerHTML = `<h3 style="margin: 20px 0 15px; color: var(--lime); font-size: 16px;">Serviços Cadastrados</h3>` + 
                     data.map(service => 
                         `<div class="service-item">
-                            <div class="service-info">
-                                <h4>${service.name}</h4>
-                                <p>R$ ${service.price.toFixed(2)} • ${service.duration} minutos</p>
+                            <div class="service-info" style="display:flex; align-items:center; gap:12px;">
+                                ${service.photo_url
+                                    ? `<img src="${service.photo_url}" alt="" style="width:40px; height:40px; border-radius:50%; object-fit:cover; flex-shrink:0;">`
+                                    : `<div style="width:40px; height:40px; border-radius:50%; background:var(--dark-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="fas fa-cut" style="color:var(--text-muted); font-size:14px;"></i></div>`}
+                                <div>
+                                    <h4>${service.name}</h4>
+                                    <p>R$ ${service.price.toFixed(2)} • ${service.duration} minutos</p>
+                                </div>
                             </div>
                             <div class="service-actions">
                                 <button class="btn-edit" onclick="editService(${service.id})" aria-label="Editar serviço ${service.name}">
@@ -1588,6 +1593,19 @@
                 document.getElementById('editServiceName').value = data.name;
                 document.getElementById('editServicePrice').value = data.price;
                 document.getElementById('editServiceDuration').value = data.duration;
+
+                const preview = document.getElementById('editServicePhotoPreview');
+                const removeBtn = document.getElementById('removeServicePhotoBtn');
+                if (data.photo_url) {
+                    preview.src = data.photo_url;
+                    preview.style.display = 'block';
+                    removeBtn.classList.remove('hidden');
+                } else {
+                    preview.style.display = 'none';
+                    removeBtn.classList.add('hidden');
+                }
+                document.getElementById('editServicePhotoInput').value = '';
+
                 document.getElementById('editServiceModal').classList.remove('hidden');
             } catch (error) {
                 showNotification('Erro ao carregar serviço: ' + error.message, 'error');
@@ -1596,6 +1614,51 @@
 
         function closeEditServiceModal() {
             document.getElementById('editServiceModal').classList.add('hidden');
+        }
+
+        document.getElementById('editServicePhotoInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            const id = document.getElementById('editServiceId').value;
+            if (!file || !id) return;
+
+            if (file.size > 3 * 1024 * 1024) {
+                showNotification('Foto muito grande! Máximo 3MB.', 'error');
+                e.target.value = '';
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('photo', file);
+                const result = await apiFetch(`/services/${id}/photo`, { method: 'POST', body: formData });
+
+                const preview = document.getElementById('editServicePhotoPreview');
+                preview.src = result.photo_url;
+                preview.style.display = 'block';
+                document.getElementById('removeServicePhotoBtn').classList.remove('hidden');
+                showNotification('Foto do serviço atualizada!', 'success');
+                loadServices();
+            } catch (error) {
+                showNotification('Erro ao enviar foto: ' + error.message, 'error');
+            } finally {
+                e.target.value = '';
+            }
+        });
+
+        async function removeServicePhoto() {
+            const id = document.getElementById('editServiceId').value;
+            if (!id) return;
+            if (!(await customConfirm('Remover a foto deste serviço?'))) return;
+
+            try {
+                await apiFetch(`/services/${id}/photo`, { method: 'DELETE' });
+                document.getElementById('editServicePhotoPreview').style.display = 'none';
+                document.getElementById('removeServicePhotoBtn').classList.add('hidden');
+                showNotification('Foto removida.', 'info');
+                loadServices();
+            } catch (error) {
+                showNotification('Erro ao remover foto: ' + error.message, 'error');
+            }
         }
 
         document.getElementById('editServiceForm').addEventListener('submit', async (e) => {
