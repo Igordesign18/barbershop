@@ -30,7 +30,43 @@
         let scheduleConfig = {};
         let intervalTime = 30;
 
-        const mainApp = document.getElementById('mainApp');
+        // ==================== Tela de abertura (splash) ====================
+        function enterApp() {
+            document.getElementById('bottomNav').classList.remove('hidden');
+            showScreen('home');
+        }
+
+        function enterAppAndOpenLookup() {
+            enterApp();
+            openLookup();
+        }
+
+        // ==================== Navegação entre telas (estilo app) ====================
+        function showScreen(name) {
+            document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
+            const target = document.getElementById(`screen-${name}`);
+            if (target) target.classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.screen === name);
+            });
+            window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+
+        function goToBookScreen() {
+            showScreen('book');
+            updateStepProgress(selectedService ? (selectedBarber ? (selectedDate ? 'time' : 'date') : 'barber') : 'service');
+        }
+
+        function updateStepProgress(activeStep) {
+            const order = ['service', 'barber', 'date', 'time'];
+            const activeIndex = order.indexOf(activeStep);
+            document.querySelectorAll('#stepProgress .step-node').forEach(node => {
+                const idx = order.indexOf(node.dataset.step);
+                node.classList.remove('active', 'done');
+                if (idx < activeIndex) node.classList.add('done');
+                else if (idx === activeIndex) node.classList.add('active');
+            });
+        }
 
         // Função para formatar telefone
         function formatPhoneInput(inputElement) {
@@ -98,20 +134,28 @@
         }
 
         function updateStatusBadge() {
-            const statusBadge = document.getElementById('statusBadge');
-            const statusText = document.getElementById('statusText');
+            const badges = [
+                { badge: document.getElementById('statusBadge'), text: document.getElementById('statusText') },
+                { badge: document.getElementById('statusBadgeProfile'), text: document.getElementById('statusTextProfile') }
+            ].filter(pair => pair.badge && pair.text);
+
+            const setState = (cls, message) => {
+                badges.forEach(({ badge, text }) => {
+                    badge.classList.remove('open', 'closed');
+                    badge.classList.add(cls);
+                    text.textContent = message;
+                });
+            };
+
             const now = nowBR();
             const currentDay = now.getDay();
-            
+
             if (!scheduleConfig[currentDay] || !scheduleConfig[currentDay].active) {
-                statusBadge.classList.remove('open');
-                statusBadge.classList.add('closed');
-                statusText.textContent = 'Fechado • Não abre hoje';
+                setState('closed', 'Fechado • Não abre hoje');
                 return;
             }
 
             const currentTime = now.getHours() * 60 + now.getMinutes();
-            let isOpen = false;
             let nextPeriod = null;
 
             for (let period of scheduleConfig[currentDay].periods) {
@@ -121,10 +165,7 @@
                 const endMinutes = endHour * 60 + endMin;
 
                 if (currentTime >= startMinutes && currentTime < endMinutes) {
-                    isOpen = true;
-                    statusBadge.classList.remove('closed');
-                    statusBadge.classList.add('open');
-                    statusText.textContent = `Aberto • ${period.start} - ${period.end}`;
+                    setState('open', `Aberto • ${period.start} - ${period.end}`);
                     return;
                 }
 
@@ -133,20 +174,18 @@
                 }
             }
 
-            if (!isOpen) {
-                statusBadge.classList.remove('open');
-                statusBadge.classList.add('closed');
-                if (nextPeriod) {
-                    statusText.textContent = `Fechado • Abre às ${nextPeriod.start}`;
-                } else {
-                    statusText.textContent = 'Fechado • Abre amanhã';
-                }
-            }
+            setState('closed', nextPeriod ? `Fechado • Abre às ${nextPeriod.start}` : 'Fechado • Abre amanhã');
         }
 
         function closeModal() {
             document.getElementById('confirmationModal').classList.add('hidden');
-            window.scrollTo(0, 0);
+            showScreen('home');
+        }
+
+        function closeModalAndOpenLookup() {
+            document.getElementById('confirmationModal').classList.add('hidden');
+            showScreen('home');
+            openLookup();
         }
 
         async function initializeApp() {
@@ -164,15 +203,17 @@
                 }
                 const info = await infoResponse.json();
                 document.title = `${info.name} - Agendamento`;
-                const nameEl = document.querySelector('.hero h1');
+                const nameEl = document.getElementById('shopNameHeading');
                 if (nameEl) nameEl.textContent = info.name;
+                const profileNameEl = document.getElementById('profileShopName');
+                if (profileNameEl) profileNameEl.textContent = info.name;
+                const splashNameEl = document.getElementById('splashShopName');
+                if (splashNameEl) splashNameEl.textContent = info.name;
             } catch (error) {
                 showTenantError('Não foi possível conectar ao servidor. Tente novamente em instantes.');
                 return;
             }
 
-            mainApp.style.display = 'block';
-            
             await loadSettings();
             await loadServices();
             await loadPackages();
@@ -209,12 +250,18 @@
                     const banner = document.getElementById('heroBanner');
                     banner.style.backgroundImage = `url('${data.banner_url}')`;
                     banner.classList.add('loaded');
+                    const splashBanner = document.getElementById('splashBanner');
+                    if (splashBanner) splashBanner.style.backgroundImage = `url('${data.banner_url}')`;
                 }
                 if (data.logo_url) {
                     document.getElementById('barberPhoto').innerHTML = `<img src="${data.logo_url}" alt="Logo da barbearia">`;
+                    const splashCrest = document.getElementById('splashCrest');
+                    if (splashCrest) splashCrest.innerHTML = `<img src="${data.logo_url}" alt="Logo da barbearia">`;
                 }
                 if (data.tagline) {
                     document.getElementById('heroTagline').textContent = data.tagline;
+                    const splashTagline = document.getElementById('splashTagline');
+                    if (splashTagline) splashTagline.textContent = data.tagline;
                 }
 
                 if (data.gallery) {
@@ -504,15 +551,26 @@
         }
 
         function renderServices() {
+            renderServicesWizard();
+            renderServicesPreview();
+            renderServicesFullList();
+        }
+
+        function isSelected(id, isPackage) {
+            return !!(selectedService && selectedService.id === id && !!selectedService.isPackage === !!isPackage);
+        }
+
+        function renderServicesWizard() {
             const container = document.getElementById('servicesList');
-            
+            if (!container) return;
+
             if (services.length === 0 && packages.length === 0) {
                 container.innerHTML = '<p style="color: var(--ivory-muted); text-align: center;">Nenhum serviço disponível</p>';
                 return;
             }
 
             const packagesHtml = packages.map(pkg => `
-                <div class="service-item" onclick="selectPackage(${pkg.id})" style="border-color: rgba(198,161,91,0.35);">
+                <div class="service-item ${isSelected(pkg.id, true) ? 'selected' : ''}" onclick="selectPackage(${pkg.id})" style="border-color: rgba(198,161,91,0.35);">
                     <div class="service-info">
                         <h4><i class="fas fa-box-open"></i> ${pkg.name} <span style="font-size:10px; background:var(--brass); color:var(--ebony); padding:2px 8px; border-radius:100px; font-weight:700; margin-left:6px;">PACOTE</span></h4>
                         <p><i class="fas fa-clock"></i> ${pkg.total_duration} minutos • ${pkg.services.map(s => s.name).join(' + ')}</p>
@@ -523,7 +581,7 @@
 
             // Cada serviço aparece em círculo, em carrossel horizontal (com foto do corte, se enviada)
             const servicesHtml = services.length ? `<div class="services-carousel" style="margin-top: ${packages.length ? '14px' : '0'};">` + services.map(service => `
-                <div class="barber-item" onclick="selectService(${service.id})">
+                <div class="barber-item ${isSelected(service.id, false) ? 'selected' : ''}" onclick="selectService(${service.id})">
                     <div class="barber-photo-circle">
                         ${service.photo_url ? `<img src="${service.photo_url}" alt="${service.name}">` : '<i class="fas fa-scissors"></i>'}
                     </div>
@@ -533,6 +591,60 @@
             `).join('') + `</div>` : '';
 
             container.innerHTML = packagesHtml + servicesHtml;
+        }
+
+        function renderServicesPreview() {
+            const strip = document.getElementById('servicesPreviewStrip');
+            if (!strip) return;
+            if (!services.length && !packages.length) { strip.innerHTML = ''; return; }
+
+            const items = [...packages.map(p => ({ ...p, isPackage: true })), ...services].slice(0, 8);
+            strip.innerHTML = items.map(item => `
+                <div class="service-thumb-card" onclick="${item.isPackage ? `selectPackage(${item.id})` : `selectService(${item.id})`}">
+                    <div class="service-thumb-photo">
+                        ${item.photo_url ? `<img src="${item.photo_url}" alt="${item.name}">` : `<i class="fas ${item.isPackage ? 'fa-box-open' : 'fa-scissors'}"></i>`}
+                    </div>
+                    <div class="name">${item.name}</div>
+                    <div class="price">A partir de R$ ${item.price.toFixed(2)}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderServicesFullList() {
+            const list = document.getElementById('servicesFullList');
+            if (!list) return;
+            if (!services.length && !packages.length) {
+                list.innerHTML = '<p style="color: var(--ivory-muted); text-align: center; padding: 30px 0;">Nenhum serviço disponível</p>';
+                return;
+            }
+
+            const packagesHtml = packages.map(pkg => `
+                <div class="service-row-card" onclick="selectPackage(${pkg.id})">
+                    <div class="service-row-photo"><i class="fas fa-box-open"></i></div>
+                    <div class="service-row-content">
+                        <h4>${pkg.name} <span class="pkg-badge">PACOTE</span></h4>
+                        <p>${pkg.services.map(s => s.name).join(' + ')} · ${pkg.total_duration}min</p>
+                        <div class="price">A partir de R$ ${pkg.price.toFixed(2)}</div>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            `).join('');
+
+            const servicesHtml = services.map(service => `
+                <div class="service-row-card" onclick="selectService(${service.id})">
+                    <div class="service-row-photo">
+                        ${service.photo_url ? `<img src="${service.photo_url}" alt="${service.name}">` : '<i class="fas fa-scissors"></i>'}
+                    </div>
+                    <div class="service-row-content">
+                        <h4>${service.name}</h4>
+                        <p>${service.duration} minutos</p>
+                        <div class="price">A partir de R$ ${service.price.toFixed(2)}</div>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            `).join('');
+
+            list.innerHTML = packagesHtml + servicesHtml;
         }
 
         function selectPackage(id) {
@@ -574,29 +686,32 @@
 
         function selectService(id, overrideItem) {
             selectedService = overrideItem || services.find(s => s.id === id);
-            document.querySelectorAll('#servicesList .service-item, #servicesList .barber-item').forEach(el => el.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
-            
+
             selectedBarber = null;
             selectedDate = null;
             selectedTime = null;
-            
-            // Marca o card de serviço como completo
+
+            // Vai para a tela de agendamento e mostra o passo atual
+            showScreen('book');
+            updateStepProgress('barber');
+
+            // Marca o card de serviço como completo e realça a seleção nas listas
             const serviceCard = document.getElementById('serviceCard');
             serviceCard.classList.add('completed');
-            
+            renderServicesWizard();
+
             // Ativa e exibe o card do barbeiro
             const barberCard = document.getElementById('barberCard');
             const barberSelection = document.getElementById('barberSelection');
             barberSelection.style.display = 'block';
             barberCard.classList.add('active');
             renderBarbers();
-            
+
             // Scroll suave para o próximo passo
             setTimeout(() => {
                 barberCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 100);
-            
+
             renderCalendar();
             document.getElementById('confirmBooking').classList.add('hidden');
         }
@@ -623,7 +738,8 @@
             // Ativa o card de agendamento
             const scheduleCard = document.getElementById('scheduleCard');
             scheduleCard.classList.add('active');
-            
+            updateStepProgress('date');
+
             // Scroll suave para o calendário
             setTimeout(() => {
                 scheduleCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -640,38 +756,44 @@
             const today = nowBR();
             today.setHours(0, 0, 0, 0);
 
-            // Mostra uma faixa de 7 dias a partir de "currentDate" (nunca antes de hoje)
-            if (currentDate < today) currentDate = new Date(today);
-            const startDate = new Date(currentDate);
+            // Nunca mostra um mês antes do atual
+            const todayMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            if (currentDate < todayMonthStart) currentDate = new Date(todayMonthStart);
 
-            monthYear.textContent = startDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            monthYear.textContent = new Date(year, month, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+            const firstOfMonth = new Date(year, month, 1);
+            // Semana começa na segunda-feira: getDay() 0=Dom..6=Sáb -> desloca para 0=Seg..6=Dom
+            const leadingBlanks = (firstOfMonth.getDay() + 6) % 7;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
 
             let html = '';
+            for (let i = 0; i < leadingBlanks; i++) {
+                html += `<div class="calendar-day other-month"></div>`;
+            }
 
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                date.setHours(12, 0, 0, 0);
-
-                const dayOfWeek = date.getDay();
-                const isPast = date < today;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const cmpDate = new Date(year, month, d);
+                cmpDate.setHours(0, 0, 0, 0);
+                const dayOfWeek = cmpDate.getDay();
+                const isPast = cmpDate < today;
                 const isWorkingDay = scheduleConfig[dayOfWeek]?.active || false;
-                const isToday = date.getDate() === today.getDate() &&
-                               date.getMonth() === today.getMonth() &&
-                               date.getFullYear() === today.getFullYear();
+                const isToday = cmpDate.getTime() === today.getTime();
 
                 const isSelected = selectedDate &&
-                                 selectedDate.getDate() === date.getDate() &&
-                                 selectedDate.getMonth() === date.getMonth() &&
-                                 selectedDate.getFullYear() === date.getFullYear();
+                                 selectedDate.getDate() === d &&
+                                 selectedDate.getMonth() === month &&
+                                 selectedDate.getFullYear() === year;
 
                 const isDisabled = isPast || !isWorkingDay;
 
                 html += `
                     <div class="calendar-day ${isDisabled ? 'disabled' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}"
-                         onclick="${!isDisabled ? `selectDate(${date.getFullYear()}, ${date.getMonth()}, ${date.getDate()})` : ''}">
-                        <small>${date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')}</small>
-                        <div>${date.getDate()}</div>
+                         onclick="${!isDisabled ? `selectDate(${year}, ${month}, ${d})` : ''}">
+                        ${d}
                     </div>
                 `;
             }
@@ -692,6 +814,7 @@
             
             selectedDate = new Date(year, month, day, 12, 0, 0);
             selectedTime = null;
+            updateStepProgress('time');
             renderCalendar();
             await loadBookedSlots();
             renderTimeSlots();
@@ -1005,15 +1128,12 @@
                 document.getElementById('barberCard').classList.remove('completed', 'active');
                 document.getElementById('scheduleCard').classList.remove('completed', 'active');
                 
-                document.querySelectorAll('.service-item').forEach(el => el.classList.remove('selected'));
-                document.querySelectorAll('.barber-item').forEach(el => el.classList.remove('selected'));
                 document.getElementById('confirmBooking').classList.add('hidden');
                 document.getElementById('barberSelection').style.display = 'none';
                 document.getElementById('timeSlotsContainer').innerHTML = '';
+                renderServices();
                 renderCalendar();
-                
-                // Scroll para o topo
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                updateStepProgress('service');
                 
             } catch (error) {
                 alert('Erro ao confirmar agendamento: ' + error.message);
@@ -1025,41 +1145,17 @@
         });
 
         document.getElementById('prevMonth').addEventListener('click', () => {
-            currentDate.setDate(currentDate.getDate() - 7);
+            const candidate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+            const today = nowBR();
+            const todayMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            if (candidate < todayMonthStart) return;
+            currentDate = candidate;
             renderCalendar();
         });
 
         document.getElementById('nextMonth').addEventListener('click', () => {
-            currentDate.setDate(currentDate.getDate() + 7);
+            currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
             renderCalendar();
         });
-
-        // Efeito de particulas douradas caindo no topo (puramente decorativo)
-        function initHeroParticles() {
-            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            if (prefersReducedMotion) return;
-
-            const container = document.getElementById('heroParticles');
-            const count = 22;
-            let html = '';
-
-            for (let i = 0; i < count; i++) {
-                const size = (Math.random() * 3 + 1.5).toFixed(1);
-                const left = (Math.random() * 100).toFixed(1);
-                const duration = (Math.random() * 6 + 7).toFixed(1);
-                const delay = (Math.random() * -12).toFixed(1);
-                const drift = (Math.random() * 60 - 30).toFixed(0);
-                const opacity = (Math.random() * 0.35 + 0.35).toFixed(2);
-
-                html += `<span class="hero-particle" style="
-                    width:${size}px; height:${size}px; left:${left}%;
-                    animation-duration:${duration}s; animation-delay:${delay}s;
-                    --drift:${drift}px; --particle-opacity:${opacity};
-                "></span>`;
-            }
-
-            container.innerHTML = html;
-        }
-        initHeroParticles();
 
         initializeApp();
