@@ -366,7 +366,7 @@
                 document.getElementById('filterDate').value = today;
                 document.getElementById('filterStatus').value = 'confirmed';
                 
-                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection(), loadThemeSelector()]);
+                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadCoverImages(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection(), loadThemeSelector()]);
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
                 showNotification('Erro ao carregar dados do dashboard', 'error');
@@ -517,6 +517,63 @@
                 loadBranding();
             } catch (error) {
                 showNotification('Erro ao remover logo: ' + error.message, 'error');
+            }
+        }
+
+        // ==================== Imagens da Capa (carrossel) ====================
+        async function loadCoverImages() {
+            try {
+                const data = await apiFetch('/settings/cover-images');
+                const grid = document.getElementById('coverImagesGrid');
+                if (!data.photos || !data.photos.length) {
+                    grid.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma imagem de capa ainda — a "Foto de capa" única está sendo usada.</p>';
+                    return;
+                }
+                grid.innerHTML = data.photos.map(url => `
+                    <div style="position:relative; width:90px; height:90px;">
+                        <img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:8px; border:1px solid var(--hairline, rgba(198,161,91,0.2));">
+                        <button onclick="removeCoverImage('${url}')" title="Remover"
+                            style="position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:50%; background:var(--red); color:#fff; border:none; cursor:pointer; font-size:11px;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erro ao carregar imagens da capa:', error);
+            }
+        }
+
+        document.getElementById('coverImageInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.size > 4 * 1024 * 1024) {
+                showNotification('Arquivo muito grande! Máximo 4MB.', 'error');
+                e.target.value = '';
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('photo', file);
+                await apiFetch('/settings/cover-images', { method: 'POST', body: formData });
+                showNotification('Imagem adicionada à capa!', 'success');
+                e.target.value = '';
+                loadCoverImages();
+            } catch (error) {
+                showNotification('Erro ao enviar imagem: ' + error.message, 'error');
+                e.target.value = '';
+            }
+        });
+
+        async function removeCoverImage(url) {
+            if (!(await customConfirm('Remover essa imagem da capa?'))) return;
+            try {
+                await apiFetch('/settings/cover-images', { method: 'DELETE', body: JSON.stringify({ url }) });
+                showNotification('Imagem removida.', 'info');
+                loadCoverImages();
+            } catch (error) {
+                showNotification('Erro ao remover imagem: ' + error.message, 'error');
             }
         }
 

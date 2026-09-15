@@ -50,6 +50,40 @@ const uploadGalleryPhoto = multer({
 
 const MAX_GALLERY_PHOTOS = 8;
 
+const COVER_DIR = path.join(__dirname, 'uploads', 'cover');
+if (!fs.existsSync(COVER_DIR)) fs.mkdirSync(COVER_DIR, { recursive: true });
+
+const coverStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, COVER_DIR),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  }
+});
+const uploadCoverImage = multer({
+  storage: coverStorage,
+  limits: { fileSize: 4 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) return cb(new Error('Arquivo deve ser uma imagem'));
+    cb(null, true);
+  }
+});
+
+const MAX_COVER_IMAGES = 5;
+
+function getCoverImages(tenantId) {
+  const row = db.prepare("SELECT value FROM settings WHERE tenant_id = ? AND key = 'cover_images'").get(tenantId);
+  if (!row?.value) return [];
+  try { return JSON.parse(row.value); } catch { return []; }
+}
+
+function saveCoverImages(tenantId, images) {
+  db.prepare(`
+    INSERT INTO settings (tenant_id, key, value) VALUES (?, 'cover_images', ?)
+    ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value
+  `).run(tenantId, JSON.stringify(images));
+}
+
 function getGallery(tenantId) {
   const row = db.prepare("SELECT value FROM settings WHERE tenant_id = ? AND key = 'gallery'").get(tenantId);
   if (!row?.value) return [];
@@ -168,6 +202,35 @@ router.delete('/gallery', (req, res) => {
   saveGallery(req.tenantId, gallery);
   fs.unlink(path.join(GALLERY_DIR, path.basename(url)), () => {});
   res.json({ photos: gallery });
+});
+
+// Imagens da capa (carrossel de ate 5 fotos que trocam sozinhas a cada 5s na tela inicial/abertura)
+router.get('/cover-images', (req, res) => {
+  res.json({ photos: getCoverImages(req.tenantId) });
+});
+
+router.post('/cover-images', uploadCoverImage.single('photo'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Envie uma imagem' });
+
+  const images = getCoverImages(req.tenantId);
+  if (images.length >= MAX_COVER_IMAGES) {
+    fs.unlink(path.join(COVER_DIR, req.file.filename), () => {});
+    return res.status(400).json({ error: `Máximo de ${MAX_COVER_IMAGES} imagens na capa` });
+  }
+
+  images.push(`/uploads/cover/${req.file.filename}`);
+  saveCoverImages(req.tenantId, images);
+  res.status(201).json({ photos: images });
+});
+
+router.delete('/cover-images', (req, res) => {
+  const { url } = req.body || {};
+  if (!url) return res.status(400).json({ error: 'Informe a url da imagem' });
+
+  const images = getCoverImages(req.tenantId).filter(p => p !== url);
+  saveCoverImages(req.tenantId, images);
+  fs.unlink(path.join(COVER_DIR, path.basename(url)), () => {});
+  res.json({ photos: images });
 });
 
 // Perfil da barbearia: comodidades, formas de pagamento, redes sociais, contato e endereco

@@ -236,6 +236,35 @@
             `;
         }
         
+        // Monta um carrossel de imagens de fundo (capa) que troca sozinho a cada 5 segundos.
+        // Funciona tanto com 1 imagem só (sem troca) quanto com até 5 imagens.
+        function setupBannerCarousel(container, images) {
+            if (!container) return;
+            if (container._carouselTimer) clearInterval(container._carouselTimer);
+            container.innerHTML = '';
+            const slides = (images || []).filter(Boolean).slice(0, 5);
+            if (!slides.length) return;
+
+            slides.forEach((url, i) => {
+                const slide = document.createElement('div');
+                slide.className = 'banner-slide' + (i === 0 ? ' active' : '');
+                slide.style.backgroundImage = `url('${url}')`;
+                container.appendChild(slide);
+            });
+            container.classList.add('loaded');
+
+            if (slides.length > 1) {
+                let idx = 0;
+                container._carouselTimer = setInterval(() => {
+                    const els = container.querySelectorAll('.banner-slide');
+                    if (!els.length) return;
+                    els[idx].classList.remove('active');
+                    idx = (idx + 1) % els.length;
+                    els[idx].classList.add('active');
+                }, 5000);
+            }
+        }
+
         async function loadSettings() {
             try {
                 const response = await fetch(`${API_URL}/settings`);
@@ -246,12 +275,14 @@
 
                 applyTheme(data.theme);
 
-                if (data.banner_url) {
-                    const banner = document.getElementById('heroBanner');
-                    banner.style.backgroundImage = `url('${data.banner_url}')`;
-                    banner.classList.add('loaded');
-                    const splashBanner = document.getElementById('splashBanner');
-                    if (splashBanner) splashBanner.style.backgroundImage = `url('${data.banner_url}')`;
+                let coverImages = [];
+                if (data.cover_images) {
+                    try { coverImages = JSON.parse(data.cover_images); } catch (_) { coverImages = []; }
+                }
+                if (!coverImages.length && data.banner_url) coverImages = [data.banner_url];
+                if (coverImages.length) {
+                    setupBannerCarousel(document.getElementById('heroBanner'), coverImages);
+                    setupBannerCarousel(document.getElementById('splashBanner'), coverImages);
                 }
                 if (data.logo_url) {
                     document.getElementById('barberPhoto').innerHTML = `<img src="${data.logo_url}" alt="Logo da barbearia">`;
