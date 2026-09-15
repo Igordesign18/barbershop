@@ -1,10 +1,10 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const multer = require('multer');
 const { db } = require('./db');
 const { requireManager } = require('./auth');
 const { requireActiveTenant } = require('./tenant');
+const { makeUpload } = require('./image-upload');
 
 const router = express.Router();
 router.use(requireManager, requireActiveTenant);
@@ -12,21 +12,7 @@ router.use(requireManager, requireActiveTenant);
 const UPLOAD_DIR = path.join(__dirname, 'uploads', 'services');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
-    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
-  }
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 15 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) return cb(new Error('Arquivo deve ser uma imagem'));
-    cb(null, true);
-  }
-});
+const upload = makeUpload(UPLOAD_DIR);
 
 router.get('/', (req, res) => {
   const services = db.prepare('SELECT * FROM services WHERE tenant_id = ? ORDER BY id ASC').all(req.tenantId);
