@@ -1715,6 +1715,31 @@
                 <div class="services-list" id="servicesList" role="region" aria-label="Lista de serviços"></div>
             </div>
 
+            <div class="card full-width" id="packagesCard">
+                <h2><i class="fas fa-box-open" aria-hidden="true"></i> Gerenciar Pacotes</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">
+                    Combo de 2 ou mais serviços por um preço fechado (ex: "Corte + Barba" por R$55, em vez da soma avulsa).
+                </p>
+                <div class="form-group">
+                    <label for="packageName">Nome do pacote</label>
+                    <input type="text" id="packageName" placeholder="Ex: Corte + Barba">
+                </div>
+                <div class="form-group">
+                    <label for="packagePrice">Preço do pacote (R$)</label>
+                    <input type="number" id="packagePrice" placeholder="55.00" min="0.01" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Serviços incluídos (selecione 2 ou mais)</label>
+                    <div id="packageServiceChecklist" style="display:flex; flex-wrap:wrap; gap:12px; padding:10px; background:var(--dark-bg); border-radius:8px;">
+                        <span style="color:var(--text-muted); font-size:13px;">Cadastre serviços primeiro para poder formar um pacote.</span>
+                    </div>
+                </div>
+                <button class="btn" onclick="addPackage()">
+                    <i class="fas fa-plus" aria-hidden="true"></i> Adicionar Pacote
+                </button>
+                <div class="services-list" id="packagesList" role="region" aria-label="Lista de pacotes"></div>
+            </div>
+
             <div class="card">
                 <h2><i class="fas fa-user-tie" aria-hidden="true"></i> Gerenciar Barbeiros</h2>
                 <div class="form-group">
@@ -1780,6 +1805,68 @@
                 </div>
             </div>
 
+            <div class="card full-width" id="galleryCard">
+                <h2><i class="fas fa-images" aria-hidden="true"></i> Galeria de Fotos</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">
+                    Fotos do ambiente da barbearia (até 8), aparecem em carrossel na página do cliente.
+                </p>
+                <div id="galleryGrid" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;"></div>
+                <div class="form-group">
+                    <div class="file-input-wrapper">
+                        <input type="file" id="galleryPhotoInput" accept="image/*">
+                        <label for="galleryPhotoInput" class="file-input-label">
+                            <i class="fas fa-camera"></i>
+                            <span>Adicionar foto à galeria</span>
+                            <small>JPG ou PNG (máx. 4MB cada, até 8 fotos)</small>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card full-width" id="shopProfileCard">
+                <h2><i class="fas fa-store" aria-hidden="true"></i> Perfil da Barbearia</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">
+                    Comodidades, formas de pagamento, redes sociais e contato — tudo isso aparece na página pública do cliente.
+                </p>
+
+                <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:8px;">Comodidades</label>
+                <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="amenityWifi"> <i class="fas fa-wifi"></i> Wi-Fi</label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="amenityParking"> <i class="fas fa-car"></i> Estacionamento</label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="amenityAccessible"> <i class="fas fa-wheelchair"></i> Acessível</label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="amenityPets"> <i class="fas fa-paw"></i> Aceita pets</label>
+                </div>
+
+                <label style="font-size:13px; color:var(--text-muted); display:block; margin-bottom:8px;">Formas de pagamento aceitas</label>
+                <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="paymentDinheiro"> Dinheiro</label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="paymentPix"> Pix</label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="paymentCreditCard"> Cartão de Crédito</label>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="paymentDebitCard"> Cartão de Débito</label>
+                </div>
+
+                <div class="form-group">
+                    <label for="shopAddress">Endereço</label>
+                    <input type="text" id="shopAddress" placeholder="Rua, número - Bairro - Cidade/UF">
+                </div>
+                <div class="form-group">
+                    <label for="shopPhone">Telefone de contato (exibido na página)</label>
+                    <input type="text" id="shopPhone" placeholder="(88) 99999-9999">
+                </div>
+                <div class="form-group">
+                    <label for="socialInstagram">Instagram (link completo)</label>
+                    <input type="text" id="socialInstagram" placeholder="https://instagram.com/sualoja">
+                </div>
+                <div class="form-group">
+                    <label for="socialFacebook">Facebook (link completo)</label>
+                    <input type="text" id="socialFacebook" placeholder="https://facebook.com/sualoja">
+                </div>
+
+                <button class="btn" onclick="saveShopProfile()">
+                    <i class="fas fa-save" aria-hidden="true"></i> Salvar Perfil
+                </button>
+            </div>
+
             <div class="card full-width" id="whatsappCard">
                 <h2><i class="fab fa-whatsapp" aria-hidden="true"></i> WhatsApp da Barbearia</h2>
                 <p style="color: var(--text-muted); margin-bottom: 15px;">
@@ -1814,6 +1901,119 @@
                 <button class="btn" onclick="saveWhatsappTemplate()">
                     <i class="fas fa-save" aria-hidden="true"></i> Salvar Mensagem
                 </button>
+            </div>
+
+            <div class="card full-width" id="subscriptionsCard">
+                <h2><i class="fas fa-sync-alt" aria-hidden="true"></i> Assinaturas</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">
+                    Planos recorrentes cobrados manualmente por você (dinheiro, Pix ou cartão na maquininha) — o sistema não processa pagamento, só ajuda a controlar quem está em dia.
+                </p>
+
+                <h3 style="color: var(--lime); font-size: 15px; margin-bottom: 12px;">Planos</h3>
+                <div class="form-group">
+                    <label for="planName">Nome do plano</label>
+                    <input type="text" id="planName" placeholder="Ex: Plano VIP">
+                </div>
+                <div class="form-group">
+                    <label for="planPrice">Preço mensal (R$)</label>
+                    <input type="number" id="planPrice" step="0.01" min="0.01" placeholder="140.00">
+                </div>
+                <div class="form-group">
+                    <label for="planDescription">Descrição (o que está incluso)</label>
+                    <input type="text" id="planDescription" placeholder="Ex: 4 cortes por mês">
+                </div>
+                <button class="btn" onclick="addPlan()">
+                    <i class="fas fa-plus" aria-hidden="true"></i> Criar Plano
+                </button>
+                <div class="services-list" id="plansList" style="margin-top:16px;"></div>
+
+                <hr style="border-color: var(--hairline, #333); margin: 24px 0;">
+
+                <h3 style="color: var(--lime); font-size: 15px; margin-bottom: 12px;">Assinar um cliente</h3>
+                <div class="form-group">
+                    <label for="subscribeClientSelect">Cliente</label>
+                    <select id="subscribeClientSelect"></select>
+                </div>
+                <div class="form-group">
+                    <label for="subscribePlanSelect">Plano</label>
+                    <select id="subscribePlanSelect"></select>
+                </div>
+                <button class="btn" onclick="subscribeClient()">
+                    <i class="fas fa-user-plus" aria-hidden="true"></i> Assinar Cliente
+                </button>
+
+                <h3 style="color: var(--lime); font-size: 15px; margin: 24px 0 12px;">Clientes Assinantes</h3>
+                <div id="subscriptionsList"></div>
+            </div>
+
+            <div class="card full-width" id="loyaltyCard">
+                <h2><i class="fas fa-gift" aria-hidden="true"></i> Programa de Fidelidade</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">
+                    Quando ativado, a recompensa é aplicada automaticamente no agendamento assim que o cliente atinge a meta — sem precisar fazer nada manualmente.
+                </p>
+
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin-bottom:20px;">
+                    <input type="checkbox" id="loyaltyEnabled" style="width:18px; height:18px;">
+                    <span>Ativar fidelidade nesta barbearia</span>
+                </label>
+
+                <div id="loyaltyFields">
+                    <div class="form-group">
+                        <label for="loyaltyMode">Como o progresso é contado</label>
+                        <select id="loyaltyMode" onchange="toggleLoyaltyModeFields()">
+                            <option value="stamps">Selo por visita (ex: a cada 10 cortes, 1 grátis)</option>
+                            <option value="points">Pontos por valor gasto (ex: 1 ponto a cada R$1)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="pointsPerCurrencyGroup" style="display:none;">
+                        <label for="loyaltyPointsPerCurrency">Pontos por R$1 gasto</label>
+                        <input type="number" id="loyaltyPointsPerCurrency" step="0.1" min="0.1" value="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loyaltyThreshold" id="loyaltyThresholdLabel">Quantas visitas até a recompensa</label>
+                        <input type="number" id="loyaltyThreshold" step="1" min="1" value="10">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loyaltyRewardType">Tipo de recompensa</label>
+                        <select id="loyaltyRewardType" onchange="toggleLoyaltyModeFields()">
+                            <option value="free_service">Serviço grátis (100% de desconto)</option>
+                            <option value="discount_percent">Desconto em porcentagem</option>
+                            <option value="discount_fixed">Desconto em valor fixo (R$)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="rewardValueGroup" style="display:none;">
+                        <label for="loyaltyRewardValue" id="rewardValueLabel">Valor do desconto</label>
+                        <input type="number" id="loyaltyRewardValue" step="1" min="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loyaltyRewardDescription">Descrição da recompensa (aparece pro cliente)</label>
+                        <input type="text" id="loyaltyRewardDescription" placeholder="Ex: Corte grátis, 20% de desconto...">
+                    </div>
+                </div>
+
+                <button class="btn" onclick="saveLoyaltyConfig()">
+                    <i class="fas fa-save" aria-hidden="true"></i> Salvar Programa de Fidelidade
+                </button>
+            </div>
+
+            <div class="card full-width" id="reviewsCard">
+                <h2><i class="fas fa-star" aria-hidden="true"></i> Avaliações dos Clientes</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">
+                    Feedback interno — o cliente só consegue avaliar depois que você marca o atendimento como concluído. Isso não aparece na página pública.
+                </p>
+                <div id="reviewsSummary" style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
+                    <div style="font-family:'Fraunces',serif; font-size:36px; font-weight:700; color:var(--lime);" id="reviewsAverage">–</div>
+                    <div>
+                        <div id="reviewsStars" style="color:var(--lime); font-size:18px;"></div>
+                        <div style="font-size:12px; color:var(--text-muted);" id="reviewsTotal">Nenhuma avaliação ainda</div>
+                    </div>
+                </div>
+                <div id="reviewsList"></div>
             </div>
 
             <div class="card full-width">
@@ -1965,6 +2165,70 @@
                         <i class="fas fa-save" aria-hidden="true"></i> Salvar Alterações
                     </button>
                     <button type="button" class="btn btn-secondary" style="flex: 1; min-width: 150px;" onclick="closeEditServiceModal()">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="paymentModal" class="modal hidden" role="dialog" aria-labelledby="paymentModalTitle" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="paymentModalTitle"><i class="fas fa-hand-holding-usd" aria-hidden="true"></i> Registrar Pagamento</h2>
+                <button class="close-modal" onclick="closePaymentModal()" aria-label="Fechar modal">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+            <input type="hidden" id="paymentSubscriptionId">
+            <div class="form-group">
+                <label for="paymentAmount">Valor recebido (R$)</label>
+                <input type="number" id="paymentAmount" step="0.01" min="0.01">
+            </div>
+            <div class="form-group">
+                <label for="paymentMethodSelect">Forma de pagamento</label>
+                <select id="paymentMethodSelect">
+                    <option value="dinheiro">Dinheiro</option>
+                    <option value="pix">Pix</option>
+                    <option value="cartao">Cartão</option>
+                </select>
+            </div>
+            <button class="btn" style="width:100%;" onclick="submitPayment()">
+                <i class="fas fa-check" aria-hidden="true"></i> Confirmar Recebimento
+            </button>
+        </div>
+    </div>
+
+    <div id="editPackageModal" class="modal hidden" role="dialog" aria-labelledby="editPackageModalTitle" aria-modal="true">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="editPackageModalTitle"><i class="fas fa-edit" aria-hidden="true"></i> Editar Pacote</h2>
+                <button class="close-modal" onclick="closeEditPackageModal()" aria-label="Fechar modal">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+            <form id="editPackageForm">
+                <input type="hidden" id="editPackageId">
+                <div class="form-group">
+                    <label for="editPackageName">Nome do Pacote</label>
+                    <input type="text" id="editPackageName" required>
+                </div>
+                <div class="form-group">
+                    <label for="editPackagePrice">Preço (R$)</label>
+                    <input type="number" id="editPackagePrice" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Serviços incluídos</label>
+                    <div id="editPackageServiceChecklist" style="display:flex; flex-wrap:wrap; gap:12px; padding:10px; background:var(--dark-bg); border-radius:8px;"></div>
+                </div>
+                <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer;">
+                    <input type="checkbox" id="editPackageActive"> <span>Pacote ativo (visível na página do cliente)</span>
+                </label>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="submit" class="btn" style="flex: 1; min-width: 150px;">
+                        <i class="fas fa-save" aria-hidden="true"></i> Salvar Alterações
+                    </button>
+                    <button type="button" class="btn btn-secondary" style="flex: 1; min-width: 150px;" onclick="closeEditPackageModal()">
                         Cancelar
                     </button>
                 </div>
@@ -2344,7 +2608,7 @@
                 document.getElementById('filterDate').value = today;
                 document.getElementById('filterStatus').value = 'confirmed';
                 
-                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding()]);
+                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection()]);
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
                 showNotification('Erro ao carregar dados do dashboard', 'error');
@@ -2409,6 +2673,401 @@
                 loadBranding();
             } catch (error) {
                 showNotification('Erro ao remover banner: ' + error.message, 'error');
+            }
+        }
+
+        // ==================== Galeria de Fotos ====================
+        async function loadGallery() {
+            try {
+                const data = await apiFetch('/settings/gallery');
+                const grid = document.getElementById('galleryGrid');
+                if (!data.photos || !data.photos.length) {
+                    grid.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma foto na galeria ainda.</p>';
+                    return;
+                }
+                grid.innerHTML = data.photos.map(url => `
+                    <div style="position:relative; width:90px; height:90px;">
+                        <img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:8px; border:1px solid var(--hairline, rgba(198,161,91,0.2));">
+                        <button onclick="removeGalleryPhoto('${url}')" title="Remover"
+                            style="position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:50%; background:var(--red); color:#fff; border:none; cursor:pointer; font-size:11px;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erro ao carregar galeria:', error);
+            }
+        }
+
+        document.getElementById('galleryPhotoInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.size > 4 * 1024 * 1024) {
+                showNotification('Arquivo muito grande! Máximo 4MB.', 'error');
+                e.target.value = '';
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('photo', file);
+                await apiFetch('/settings/gallery', { method: 'POST', body: formData });
+                showNotification('Foto adicionada à galeria!', 'success');
+                e.target.value = '';
+                loadGallery();
+            } catch (error) {
+                showNotification('Erro ao enviar foto: ' + error.message, 'error');
+                e.target.value = '';
+            }
+        });
+
+        async function removeGalleryPhoto(url) {
+            if (!(await customConfirm('Remover essa foto da galeria?'))) return;
+            try {
+                await apiFetch('/settings/gallery', { method: 'DELETE', body: JSON.stringify({ url }) });
+                showNotification('Foto removida.', 'info');
+                loadGallery();
+            } catch (error) {
+                showNotification('Erro ao remover foto: ' + error.message, 'error');
+            }
+        }
+
+        // ==================== Perfil da Barbearia ====================
+        async function loadShopProfile() {
+            try {
+                const data = await apiFetch('/settings');
+                const profile = data.shop_profile ? JSON.parse(data.shop_profile) : {};
+                const amenities = profile.amenities || {};
+                const payments = profile.payment_methods || [];
+                const social = profile.social || {};
+
+                document.getElementById('amenityWifi').checked = !!amenities.wifi;
+                document.getElementById('amenityParking').checked = !!amenities.parking;
+                document.getElementById('amenityAccessible').checked = !!amenities.accessible;
+                document.getElementById('amenityPets').checked = !!amenities.pets;
+
+                document.getElementById('paymentDinheiro').checked = payments.includes('dinheiro');
+                document.getElementById('paymentPix').checked = payments.includes('pix');
+                document.getElementById('paymentCreditCard').checked = payments.includes('cartao_credito');
+                document.getElementById('paymentDebitCard').checked = payments.includes('cartao_debito');
+
+                document.getElementById('shopAddress').value = profile.address || '';
+                document.getElementById('shopPhone').value = profile.phone || '';
+                document.getElementById('socialInstagram').value = social.instagram || '';
+                document.getElementById('socialFacebook').value = social.facebook || '';
+            } catch (error) {
+                console.error('Erro ao carregar perfil da barbearia:', error);
+            }
+        }
+
+        async function saveShopProfile() {
+            const payment_methods = [];
+            if (document.getElementById('paymentDinheiro').checked) payment_methods.push('dinheiro');
+            if (document.getElementById('paymentPix').checked) payment_methods.push('pix');
+            if (document.getElementById('paymentCreditCard').checked) payment_methods.push('cartao_credito');
+            if (document.getElementById('paymentDebitCard').checked) payment_methods.push('cartao_debito');
+
+            const body = {
+                amenities: {
+                    wifi: document.getElementById('amenityWifi').checked,
+                    parking: document.getElementById('amenityParking').checked,
+                    accessible: document.getElementById('amenityAccessible').checked,
+                    pets: document.getElementById('amenityPets').checked
+                },
+                payment_methods,
+                social: {
+                    instagram: document.getElementById('socialInstagram').value.trim(),
+                    facebook: document.getElementById('socialFacebook').value.trim()
+                },
+                address: document.getElementById('shopAddress').value.trim(),
+                phone: document.getElementById('shopPhone').value.trim()
+            };
+
+            try {
+                await apiFetch('/settings/profile', { method: 'PUT', body: JSON.stringify(body) });
+                showNotification('Perfil da barbearia salvo com sucesso!', 'success');
+            } catch (error) {
+                showNotification('Erro ao salvar perfil: ' + error.message, 'error');
+            }
+        }
+
+        // ==================== Avaliações (interno) ====================
+        function starsHtml(rating) {
+            let html = '';
+            for (let i = 1; i <= 5; i++) {
+                html += `<i class="fas fa-star" style="${i > rating ? 'opacity:0.2;' : ''}"></i>`;
+            }
+            return html;
+        }
+
+        // ==================== Assinaturas ====================
+        let cachedClientsForSubscriptions = [];
+
+        async function loadSubscriptionsSection() {
+            try {
+                const [plans, subs, clients] = await Promise.all([
+                    apiFetch('/subscriptions/plans'),
+                    apiFetch('/subscriptions'),
+                    apiFetch('/clients')
+                ]);
+                cachedClientsForSubscriptions = clients;
+
+                renderPlans(plans);
+                renderSubscribeSelects(clients, plans);
+                renderSubscriptions(subs);
+            } catch (error) {
+                console.error('Erro ao carregar assinaturas:', error);
+            }
+        }
+
+        function renderPlans(plans) {
+            const container = document.getElementById('plansList');
+            if (!plans.length) {
+                container.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhum plano criado ainda.</p>';
+                return;
+            }
+            container.innerHTML = plans.map(p => `
+                <div class="service-item">
+                    <div class="service-info">
+                        <h4>${p.name} ${!p.active ? '<span style="color:var(--red); font-size:11px;">(inativo)</span>' : ''}</h4>
+                        <p>R$ ${p.price.toFixed(2)}/mês ${p.description ? '• ' + p.description : ''}</p>
+                    </div>
+                    <div class="service-actions">
+                        <button class="btn-delete" onclick="deletePlan(${p.id})" aria-label="Excluir plano ${p.name}">
+                            <i class="fas fa-trash" aria-hidden="true"></i> Excluir
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderSubscribeSelects(clients, plans) {
+            const clientSelect = document.getElementById('subscribeClientSelect');
+            const planSelect = document.getElementById('subscribePlanSelect');
+
+            clientSelect.innerHTML = clients.length
+                ? clients.map(c => `<option value="${c.id}">${c.full_name || 'Sem nome'} (${c.phone || 'sem telefone'})</option>`).join('')
+                : '<option value="">Nenhum cliente cadastrado ainda</option>';
+
+            const activePlans = plans.filter(p => p.active);
+            planSelect.innerHTML = activePlans.length
+                ? activePlans.map(p => `<option value="${p.id}">${p.name} - R$ ${p.price.toFixed(2)}/mês</option>`).join('')
+                : '<option value="">Crie um plano primeiro</option>';
+        }
+
+        function renderSubscriptions(subs) {
+            const container = document.getElementById('subscriptionsList');
+            if (!subs.length) {
+                container.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhum cliente assinante ainda.</p>';
+                return;
+            }
+
+            container.innerHTML = subs.map(s => {
+                const nextDate = s.next_billing_date.split('-').reverse().join('/');
+                const statusColor = s.status === 'cancelled' ? 'var(--text-muted)' : s.overdue ? 'var(--red)' : 'var(--lime)';
+                const statusLabel = s.status === 'cancelled' ? 'Cancelada' : s.overdue ? 'Atrasada' : 'Em dia';
+
+                return `
+                    <div class="client-item" style="display:block;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <strong>${s.client.full_name || 'Cliente'}</strong>
+                            <span style="color:${statusColor}; font-size:11.5px; font-weight:700;">${statusLabel}</span>
+                        </div>
+                        <div style="font-size:12.5px; color:var(--text-muted); margin-bottom:8px;">
+                            ${s.plan.name} • R$ ${s.plan.price.toFixed(2)}/mês • próxima cobrança: ${nextDate}
+                        </div>
+                        ${s.status === 'active' ? `
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button class="btn-edit" onclick="openPaymentModal(${s.id}, ${s.plan.price})">
+                                    <i class="fas fa-hand-holding-usd" aria-hidden="true"></i> Registrar Pagamento
+                                </button>
+                                <button class="btn-delete" onclick="cancelSubscription(${s.id})">
+                                    <i class="fas fa-times" aria-hidden="true"></i> Cancelar
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function addPlan() {
+            const name = document.getElementById('planName').value.trim();
+            const price = parseFloat(document.getElementById('planPrice').value);
+            const description = document.getElementById('planDescription').value.trim();
+
+            if (!name || name.length < 3) { showNotification('Nome do plano inválido!', 'error'); return; }
+            if (!price || price <= 0) { showNotification('Preço inválido!', 'error'); return; }
+
+            try {
+                await apiFetch('/subscriptions/plans', { method: 'POST', body: JSON.stringify({ name, price, description }) });
+                showNotification('Plano criado com sucesso!', 'success');
+                document.getElementById('planName').value = '';
+                document.getElementById('planPrice').value = '';
+                document.getElementById('planDescription').value = '';
+                loadSubscriptionsSection();
+            } catch (error) {
+                showNotification('Erro ao criar plano: ' + error.message, 'error');
+            }
+        }
+
+        async function deletePlan(id) {
+            if (!(await customConfirm('Excluir este plano? Isso não cancela assinaturas já existentes.'))) return;
+            try {
+                await apiFetch(`/subscriptions/plans/${id}`, { method: 'DELETE' });
+                showNotification('Plano excluído.', 'info');
+                loadSubscriptionsSection();
+            } catch (error) {
+                showNotification('Erro ao excluir plano: ' + error.message, 'error');
+            }
+        }
+
+        async function subscribeClient() {
+            const user_id = document.getElementById('subscribeClientSelect').value;
+            const plan_id = document.getElementById('subscribePlanSelect').value;
+
+            if (!user_id) { showNotification('Cadastre um cliente primeiro!', 'error'); return; }
+            if (!plan_id) { showNotification('Crie um plano primeiro!', 'error'); return; }
+
+            try {
+                await apiFetch('/subscriptions', { method: 'POST', body: JSON.stringify({ user_id: parseInt(user_id), plan_id: parseInt(plan_id) }) });
+                showNotification('Cliente assinado com sucesso!', 'success');
+                loadSubscriptionsSection();
+            } catch (error) {
+                showNotification('Erro ao assinar cliente: ' + error.message, 'error');
+            }
+        }
+
+        function openPaymentModal(subscriptionId, planPrice) {
+            document.getElementById('paymentSubscriptionId').value = subscriptionId;
+            document.getElementById('paymentAmount').value = planPrice;
+            document.getElementById('paymentMethodSelect').value = 'pix';
+            document.getElementById('paymentModal').classList.remove('hidden');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('paymentModal').classList.add('hidden');
+        }
+
+        async function submitPayment() {
+            const id = document.getElementById('paymentSubscriptionId').value;
+            const amount = parseFloat(document.getElementById('paymentAmount').value);
+            const payment_method = document.getElementById('paymentMethodSelect').value;
+
+            if (!amount || amount <= 0) { showNotification('Valor inválido!', 'error'); return; }
+
+            try {
+                await apiFetch(`/subscriptions/${id}/payments`, { method: 'POST', body: JSON.stringify({ amount, payment_method }) });
+                showNotification('Pagamento registrado com sucesso!', 'success');
+                closePaymentModal();
+                loadSubscriptionsSection();
+            } catch (error) {
+                showNotification('Erro ao registrar pagamento: ' + error.message, 'error');
+            }
+        }
+
+        async function cancelSubscription(id) {
+            if (!(await customConfirm('Cancelar esta assinatura?'))) return;
+            try {
+                await apiFetch(`/subscriptions/${id}/cancel`, { method: 'PATCH' });
+                showNotification('Assinatura cancelada.', 'info');
+                loadSubscriptionsSection();
+            } catch (error) {
+                showNotification('Erro ao cancelar: ' + error.message, 'error');
+            }
+        }
+
+        // ==================== Fidelidade ====================
+        function toggleLoyaltyModeFields() {
+            const mode = document.getElementById('loyaltyMode').value;
+            document.getElementById('pointsPerCurrencyGroup').style.display = mode === 'points' ? 'block' : 'none';
+            document.getElementById('loyaltyThresholdLabel').textContent = mode === 'points' ? 'Quantos pontos até a recompensa' : 'Quantas visitas até a recompensa';
+
+            const rewardType = document.getElementById('loyaltyRewardType').value;
+            const valueGroup = document.getElementById('rewardValueGroup');
+            const valueLabel = document.getElementById('rewardValueLabel');
+            if (rewardType === 'free_service') {
+                valueGroup.style.display = 'none';
+            } else {
+                valueGroup.style.display = 'block';
+                valueLabel.textContent = rewardType === 'discount_percent' ? 'Porcentagem de desconto (%)' : 'Valor do desconto (R$)';
+            }
+        }
+
+        async function loadLoyaltyConfig() {
+            try {
+                const config = await apiFetch('/settings/loyalty');
+                document.getElementById('loyaltyEnabled').checked = !!config.enabled;
+                document.getElementById('loyaltyMode').value = config.mode || 'stamps';
+                document.getElementById('loyaltyPointsPerCurrency').value = config.points_per_currency || 1;
+                document.getElementById('loyaltyThreshold').value = config.threshold || 10;
+                document.getElementById('loyaltyRewardType').value = config.reward_type || 'free_service';
+                document.getElementById('loyaltyRewardValue').value = config.reward_value || '';
+                document.getElementById('loyaltyRewardDescription').value = config.reward_description || '';
+                toggleLoyaltyModeFields();
+            } catch (error) {
+                console.error('Erro ao carregar fidelidade:', error);
+            }
+        }
+
+        async function saveLoyaltyConfig() {
+            const body = {
+                enabled: document.getElementById('loyaltyEnabled').checked,
+                mode: document.getElementById('loyaltyMode').value,
+                points_per_currency: parseFloat(document.getElementById('loyaltyPointsPerCurrency').value) || 1,
+                threshold: parseFloat(document.getElementById('loyaltyThreshold').value),
+                reward_type: document.getElementById('loyaltyRewardType').value,
+                reward_value: parseFloat(document.getElementById('loyaltyRewardValue').value) || 0,
+                reward_description: document.getElementById('loyaltyRewardDescription').value.trim()
+            };
+
+            if (!body.threshold || body.threshold <= 0) {
+                showNotification('Informe uma meta válida (maior que zero)!', 'error');
+                return;
+            }
+            if (body.reward_type !== 'free_service' && body.reward_value <= 0) {
+                showNotification('Informe o valor do desconto!', 'error');
+                return;
+            }
+
+            try {
+                await apiFetch('/settings/loyalty', { method: 'PUT', body: JSON.stringify(body) });
+                showNotification('Programa de fidelidade salvo com sucesso!', 'success');
+            } catch (error) {
+                showNotification('Erro ao salvar fidelidade: ' + error.message, 'error');
+            }
+        }
+
+        async function loadReviews() {
+            try {
+                const data = await apiFetch('/reviews');
+                document.getElementById('reviewsAverage').textContent = data.total ? data.average.toFixed(1) : '–';
+                document.getElementById('reviewsStars').innerHTML = data.total ? starsHtml(Math.round(data.average)) : '';
+                document.getElementById('reviewsTotal').textContent = data.total
+                    ? `${data.total} avaliação${data.total > 1 ? 'ões' : ''}`
+                    : 'Nenhuma avaliação ainda';
+
+                const listEl = document.getElementById('reviewsList');
+                if (!data.reviews.length) {
+                    listEl.innerHTML = '';
+                    return;
+                }
+
+                listEl.innerHTML = data.reviews.map(r => `
+                    <div class="client-item" style="display:block;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <strong>${r.customer_full_name || 'Cliente'}</strong>
+                            <span style="color:var(--lime); font-size:14px;">${starsHtml(r.rating)}</span>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-muted); margin-bottom:6px;">
+                            ${r.service_name || ''} ${r.barber_name ? '• ' + r.barber_name : ''} • ${r.booking_date.split('-').reverse().join('/')}
+                        </div>
+                        ${r.comment ? `<p style="font-size:13.5px;">"${r.comment}"</p>` : ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erro ao carregar avaliações:', error);
             }
         }
 
@@ -2757,6 +3416,7 @@
                                     <p><i class="fas fa-user-tie" aria-hidden="true"></i> Barbeiro: ${booking.barbers?.name || 'Não especificado'}</p>
                                     <p><i class="fas fa-phone" aria-hidden="true"></i> ${clientPhone}</p>
                                     <p><i class="fas fa-dollar-sign" aria-hidden="true"></i> R$ ${booking.services?.price?.toFixed(2) || '0.00'} • <i class="fas fa-hourglass-half" aria-hidden="true"></i> ${booking.services?.duration || 0}min</p>
+                                    ${booking.reward_label ? `<p style="color:var(--lime);"><i class="fas fa-gift" aria-hidden="true"></i> ${booking.reward_label} (-R$ ${booking.discount_applied.toFixed(2)})</p>` : ''}
                                 </div>
                                 <span class="booking-status status-${booking.status}">
                                     ${booking.status === 'confirmed' ? 'Confirmado' : 
@@ -2886,6 +3546,7 @@
                 const container = document.getElementById('servicesList');
                 if (!data || data.length === 0) {
                     container.innerHTML = '<div class="empty-state" style="padding: 20px;"><i class="fas fa-cut" aria-hidden="true"></i><p>Nenhum serviço cadastrado</p></div>';
+                    renderPackageServiceChecklist([]);
                     return;
                 }
                 
@@ -2906,9 +3567,140 @@
                             </div>
                         </div>`
                     ).join('');
+
+                renderPackageServiceChecklist(data);
             } catch (error) {
                 console.error('Erro ao carregar serviços:', error);
                 showNotification('Erro ao carregar serviços', 'error');
+            }
+        }
+
+        // ==================== Pacotes ====================
+        function renderPackageServiceChecklist(services) {
+            const box = document.getElementById('packageServiceChecklist');
+            if (!services.length) {
+                box.innerHTML = '<span style="color:var(--text-muted); font-size:13px;">Cadastre serviços primeiro para poder formar um pacote.</span>';
+                return;
+            }
+            box.innerHTML = services.map(s => `
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13.5px;">
+                    <input type="checkbox" class="package-service-checkbox" value="${s.id}"> ${s.name} (R$ ${s.price.toFixed(2)})
+                </label>
+            `).join('');
+        }
+
+        async function loadPackages() {
+            try {
+                const data = await apiFetch('/packages');
+                const container = document.getElementById('packagesList');
+
+                if (!data || !data.length) {
+                    container.innerHTML = '<div class="empty-state" style="padding: 20px;"><i class="fas fa-box-open" aria-hidden="true"></i><p>Nenhum pacote cadastrado</p></div>';
+                    return;
+                }
+
+                container.innerHTML = data.map(pkg => `
+                    <div class="service-item">
+                        <div class="service-info">
+                            <h4>${pkg.name} ${!pkg.active ? '<span style="color:var(--red); font-size:11px;">(inativo)</span>' : ''}</h4>
+                            <p>R$ ${pkg.price.toFixed(2)} • ${pkg.total_duration} minutos • ${pkg.services.map(s => s.name).join(' + ')}</p>
+                        </div>
+                        <div class="service-actions">
+                            <button class="btn-edit" onclick="openEditPackageModal(${pkg.id})" aria-label="Editar pacote ${pkg.name}">
+                                <i class="fas fa-edit" aria-hidden="true"></i> Editar
+                            </button>
+                            <button class="btn-delete" onclick="deletePackage(${pkg.id})" aria-label="Excluir pacote ${pkg.name}">
+                                <i class="fas fa-trash" aria-hidden="true"></i> Excluir
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erro ao carregar pacotes:', error);
+            }
+        }
+
+        async function addPackage() {
+            const name = document.getElementById('packageName').value.trim();
+            const price = parseFloat(document.getElementById('packagePrice').value);
+            const service_ids = [...document.querySelectorAll('.package-service-checkbox:checked')].map(cb => parseInt(cb.value));
+
+            if (!name || name.length < 3) { showNotification('Nome do pacote inválido!', 'error'); return; }
+            if (!price || price <= 0) { showNotification('Preço inválido!', 'error'); return; }
+            if (service_ids.length < 2) { showNotification('Selecione pelo menos 2 serviços!', 'error'); return; }
+
+            try {
+                await apiFetch('/packages', { method: 'POST', body: JSON.stringify({ name, price, service_ids }) });
+                showNotification('Pacote adicionado com sucesso!', 'success');
+                document.getElementById('packageName').value = '';
+                document.getElementById('packagePrice').value = '';
+                document.querySelectorAll('.package-service-checkbox').forEach(cb => cb.checked = false);
+                loadPackages();
+            } catch (error) {
+                showNotification('Erro ao adicionar pacote: ' + error.message, 'error');
+            }
+        }
+
+        async function openEditPackageModal(id) {
+            try {
+                const packages = await apiFetch('/packages');
+                const pkg = packages.find(p => p.id === id);
+                if (!pkg) return;
+
+                const services = await apiFetch('/services');
+
+                document.getElementById('editPackageId').value = pkg.id;
+                document.getElementById('editPackageName').value = pkg.name;
+                document.getElementById('editPackagePrice').value = pkg.price;
+                document.getElementById('editPackageActive').checked = pkg.active;
+
+                const includedIds = pkg.services.map(s => s.id);
+                document.getElementById('editPackageServiceChecklist').innerHTML = services.map(s => `
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13.5px;">
+                        <input type="checkbox" class="edit-package-service-checkbox" value="${s.id}" ${includedIds.includes(s.id) ? 'checked' : ''}> ${s.name} (R$ ${s.price.toFixed(2)})
+                    </label>
+                `).join('');
+
+                document.getElementById('editPackageModal').classList.remove('hidden');
+            } catch (error) {
+                showNotification('Erro ao carregar pacote: ' + error.message, 'error');
+            }
+        }
+
+        function closeEditPackageModal() {
+            document.getElementById('editPackageModal').classList.add('hidden');
+        }
+
+        document.getElementById('editPackageForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editPackageId').value;
+            const name = document.getElementById('editPackageName').value.trim();
+            const price = parseFloat(document.getElementById('editPackagePrice').value);
+            const active = document.getElementById('editPackageActive').checked;
+            const service_ids = [...document.querySelectorAll('.edit-package-service-checkbox:checked')].map(cb => parseInt(cb.value));
+
+            if (!name || name.length < 3) { showNotification('Nome do pacote inválido!', 'error'); return; }
+            if (!price || price <= 0) { showNotification('Preço inválido!', 'error'); return; }
+            if (service_ids.length < 2) { showNotification('Selecione pelo menos 2 serviços!', 'error'); return; }
+
+            try {
+                await apiFetch(`/packages/${id}`, { method: 'PUT', body: JSON.stringify({ name, price, active, service_ids }) });
+                showNotification('Pacote atualizado com sucesso!', 'success');
+                closeEditPackageModal();
+                loadPackages();
+            } catch (error) {
+                showNotification('Erro ao atualizar pacote: ' + error.message, 'error');
+            }
+        });
+
+        async function deletePackage(id) {
+            if (!(await customConfirm('Tem certeza que deseja excluir este pacote?'))) return;
+            try {
+                await apiFetch(`/packages/${id}`, { method: 'DELETE' });
+                showNotification('Pacote excluído com sucesso!', 'success');
+                loadPackages();
+            } catch (error) {
+                showNotification('Erro ao excluir pacote: ' + error.message, 'error');
             }
         }
 
@@ -3222,6 +4014,11 @@
                                         <i class="fas fa-user-clock" aria-hidden="true"></i> 
                                         Cliente desde ${memberSince}
                                     </span>
+                                    ${client.loyalty_progress > 0 ? `
+                                    <span class="client-stat" style="color:var(--lime);">
+                                        <i class="fas fa-gift" aria-hidden="true"></i> 
+                                        Fidelidade: ${client.loyalty_progress}
+                                    </span>` : ''}
                                 </div>
                             </div>
                             <div class="client-actions">

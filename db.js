@@ -92,12 +92,84 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- Avaliacao do cliente sobre um atendimento (so depois que o gestor marca como concluido).
+  -- Interna: so o gestor ve, nao aparece na pagina publica.
+  CREATE TABLE IF NOT EXISTS reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    booking_id INTEGER NOT NULL UNIQUE REFERENCES bookings(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  -- Pacotes: combo de servicos por um preco fechado (ex: "Corte + Barba" por R$60 em vez da soma avulsa)
+  CREATE TABLE IF NOT EXISTS packages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    price REAL NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1
+  );
+
+  CREATE TABLE IF NOT EXISTS package_services (
+    package_id INTEGER NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    PRIMARY KEY (package_id, service_id)
+  );
+
+  -- Assinaturas: plano recorrente que o gestor cria e cobra manualmente (dinheiro/Pix/cartao na maquininha).
+  -- Nao ha processamento de pagamento automatico - o gestor so registra que recebeu.
+  CREATE TABLE IF NOT EXISTS subscription_plans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    price REAL NOT NULL,
+    description TEXT,
+    active INTEGER NOT NULL DEFAULT 1
+  );
+
+  CREATE TABLE IF NOT EXISTS client_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id INTEGER NOT NULL REFERENCES subscription_plans(id),
+    status TEXT NOT NULL DEFAULT 'active',
+    started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    next_billing_date TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS subscription_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    client_subscription_id INTEGER NOT NULL REFERENCES client_subscriptions(id) ON DELETE CASCADE,
+    amount REAL NOT NULL,
+    payment_method TEXT NOT NULL,
+    paid_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE INDEX IF NOT EXISTS idx_bookings_tenant_date ON bookings(tenant_id, booking_date);
   CREATE INDEX IF NOT EXISTS idx_bookings_barber ON bookings(barber_id);
   CREATE INDEX IF NOT EXISTS idx_services_tenant ON services(tenant_id);
   CREATE INDEX IF NOT EXISTS idx_barbers_tenant ON barbers(tenant_id);
   CREATE INDEX IF NOT EXISTS idx_users_tenant ON users(tenant_id);
 `);
+
+// Migracao leve: adiciona colunas novas em bancos que ja existiam antes do modulo de Fidelidade.
+// CREATE TABLE IF NOT EXISTS nao adiciona coluna em tabela ja criada, entao verificamos na mao.
+function ensureColumn(table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
+  if (!columns.includes(column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+ensureColumn('users', 'loyalty_progress', 'REAL NOT NULL DEFAULT 0');
+ensureColumn('bookings', 'discount_applied', 'REAL NOT NULL DEFAULT 0');
+ensureColumn('bookings', 'reward_label', 'TEXT');
+ensureColumn('bookings', 'package_id', 'INTEGER REFERENCES packages(id)');
+ensureColumn('bookings', 'item_price', 'REAL');
+ensureColumn('bookings', 'item_duration', 'INTEGER');
+ensureColumn('bookings', 'item_name', 'TEXT');
 
 const DEFAULT_SCHEDULE = {
   0: { active: true, periods: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },
@@ -118,6 +190,17 @@ const DEFAULT_WHATSAPP_TEMPLATE =
   'Valor: R$ {{valor}}\n\n' +
   'Qualquer imprevisto, e so chamar por aqui. Ate ja!';
 
+// Fidelidade comeca desligada - o gestor liga e escolhe a regra no painel
+const DEFAULT_LOYALTY_CONFIG = {
+  enabled: false,
+  mode: 'stamps', // 'stamps' (selo por visita) ou 'points' (pontos por valor gasto)
+  threshold: 10,
+  points_per_currency: 1,
+  reward_type: 'free_service', // 'free_service' | 'discount_percent' | 'discount_fixed'
+  reward_value: 0,
+  reward_description: 'Corte grátis'
+};
+
 function seedTenantDefaults(tenantId) {
   const upsert = db.prepare(`
     INSERT INTO settings (tenant_id, key, value) VALUES (?, ?, ?)
@@ -126,6 +209,7 @@ function seedTenantDefaults(tenantId) {
   upsert.run(tenantId, 'schedule_config', JSON.stringify(DEFAULT_SCHEDULE));
   upsert.run(tenantId, 'interval_time', '30');
   upsert.run(tenantId, 'whatsapp_template', DEFAULT_WHATSAPP_TEMPLATE);
+  upsert.run(tenantId, 'loyalty_config', JSON.stringify(DEFAULT_LOYALTY_CONFIG));
 }
 
 const superAdminCount = db.prepare('SELECT COUNT(*) AS c FROM super_admins').get().c;
@@ -137,4 +221,4 @@ if (superAdminCount === 0) {
   console.log(`[setup] Super admin criado automaticamente: ${email} (defina SUPERADMIN_EMAIL/SUPERADMIN_PASSWORD no .env para mudar)`);
 }
 
-module.exports = { db, seedTenantDefaults, DEFAULT_SCHEDULE, DEFAULT_WHATSAPP_TEMPLATE };
+module.exports = { db, seedTenantDefaults, DEFAULT_SCHEDULE, DEFAULT_WHATSAPP_TEMPLATE, DEFAULT_LOYALTY_CONFIG };

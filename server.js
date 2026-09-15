@@ -18,6 +18,9 @@ const settingsRoutes = require('./route-settings');
 const clientsRoutes = require('./route-clients');
 const eventsRoutes = require('./route-events');
 const whatsappRoutes = require('./route-whatsapp');
+const reviewsRoutes = require('./route-reviews');
+const packagesRoutes = require('./route-packages');
+const subscriptionsRoutes = require('./route-subscriptions');
 const publicRoutes = require('./route-public');
 
 const app = express();
@@ -39,6 +42,9 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/clients', clientsRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/reviews', reviewsRoutes);
+app.use('/api/packages', packagesRoutes);
+app.use('/api/subscriptions', subscriptionsRoutes);
 app.use('/api/public', publicRoutes); // /api/public/:slug/...
 
 // --- Paginas ---

@@ -126,6 +126,44 @@
             border-radius: 8px; height: 58px; margin-bottom: 10px;
         }
 
+        /* Galeria de fotos */
+        .gallery-carousel { position: relative; padding: 20px 0; border-bottom: 1px solid var(--hairline); }
+        .gallery-track {
+            display: flex; gap: 12px; overflow-x: auto; scroll-behavior: smooth;
+            padding: 0 24px; scrollbar-width: none;
+        }
+        .gallery-track::-webkit-scrollbar { display: none; }
+        .gallery-track img {
+            width: 240px; height: 160px; object-fit: cover; border-radius: 12px;
+            flex-shrink: 0; border: 1px solid var(--hairline);
+            animation: cardIn 0.4s ease both;
+        }
+        .gallery-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--hairline);
+            background: var(--surface); color: var(--brass-light); cursor: pointer; font-size: 13px;
+            display: none; align-items: center; justify-content: center;
+        }
+        .gallery-carousel:hover .gallery-nav { display: flex; }
+        .gallery-prev { left: 8px; } .gallery-next { right: 8px; }
+        .gallery-dots { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
+        .gallery-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--hairline); }
+        .gallery-dots span.active { background: var(--brass); }
+
+        /* Sobre a barbearia */
+        .amenities-row { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; }
+        .amenities-row .amenity { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ivory-muted); }
+        .amenities-row .amenity i { color: var(--brass); }
+        .profile-block { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-top: 1px solid var(--hairline); font-size: 13.5px; color: var(--ivory-muted); }
+        .profile-block:first-of-type { border-top: none; }
+        .profile-block i { color: var(--brass); width: 16px; margin-top: 2px; }
+        .payment-pill { background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 100px; padding: 4px 12px; font-size: 12px; }
+        .social-icon-link { color: var(--brass-light); font-size: 20px; transition: opacity 0.2s; }
+        .social-icon-link:hover { opacity: 0.7; }
+        .star-input { color: var(--hairline); cursor: pointer; transition: transform 0.15s, color 0.15s; }
+        .star-input:hover, .star-input.active { color: var(--brass); transform: scale(1.15); }
+        .star-input.active { font-weight: 900; }
+
         /* Layout */
         .main-app { padding-top: 48px; }
         .card {
@@ -333,8 +371,16 @@
                 </div>
             </div>
             <button class="btn" onclick="searchMyBookings()" style="margin-bottom:18px;">Buscar</button>
+            <div id="loyaltyProgressBox"></div>
             <div id="lookupResults"></div>
         </div>
+    </div>
+
+    <div class="gallery-carousel hidden" id="galleryCarousel">
+        <div class="gallery-track" id="galleryTrack"></div>
+        <button class="gallery-nav gallery-prev" onclick="galleryScroll(-1)" aria-label="Foto anterior"><i class="fas fa-chevron-left"></i></button>
+        <button class="gallery-nav gallery-next" onclick="galleryScroll(1)" aria-label="Próxima foto"><i class="fas fa-chevron-right"></i></button>
+        <div class="gallery-dots" id="galleryDots"></div>
     </div>
 
     <div class="main-app container" id="mainApp" style="display:none;">
@@ -401,6 +447,62 @@
         </div>
     </div>
 
+    <div class="container hidden" id="shopProfileSection">
+        <div class="card">
+            <h3><i class="fas fa-info-circle" aria-hidden="true" style="color:var(--brass);"></i> Sobre a barbearia</h3>
+
+            <div id="amenitiesRow" class="amenities-row"></div>
+
+            <div id="addressBlock" class="profile-block hidden">
+                <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+                <span id="addressText"></span>
+            </div>
+
+            <div id="hoursBlock" class="profile-block">
+                <i class="fas fa-clock" aria-hidden="true"></i>
+                <div id="hoursText"></div>
+            </div>
+
+            <div id="paymentBlock" class="profile-block hidden">
+                <i class="fas fa-credit-card" aria-hidden="true"></i>
+                <div id="paymentText" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+            </div>
+
+            <div id="socialBlock" class="profile-block hidden">
+                <i class="fas fa-share-alt" aria-hidden="true"></i>
+                <div id="socialLinks" style="display:flex; gap:14px;"></div>
+            </div>
+
+            <div id="phoneBlock" class="profile-block hidden">
+                <i class="fas fa-phone" aria-hidden="true"></i>
+                <span id="phoneText"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay hidden" id="reviewModal">
+        <div class="modal-content" style="text-align:center;">
+            <h2 style="font-size:19px; margin-bottom:6px;">Como foi seu atendimento?</h2>
+            <p id="reviewServiceName" style="color:var(--ivory-muted); font-size:13px; margin-bottom:20px;"></p>
+            <div id="starRating" style="display:flex; justify-content:center; gap:8px; margin-bottom:20px; font-size:32px;">
+                <i class="far fa-star star-input" data-value="1"></i>
+                <i class="far fa-star star-input" data-value="2"></i>
+                <i class="far fa-star star-input" data-value="3"></i>
+                <i class="far fa-star star-input" data-value="4"></i>
+                <i class="far fa-star star-input" data-value="5"></i>
+            </div>
+            <div class="form-group" style="text-align:left;">
+                <label for="reviewComment">Comentário (opcional)</label>
+                <textarea id="reviewComment" rows="3" placeholder="Conte como foi sua experiência..." style="width:100%; padding:12px 14px; border-radius:8px; background:var(--ebony); border:1px solid var(--hairline); color:var(--ivory); font-family:inherit; font-size:14px; resize:vertical;"></textarea>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:8px;">
+                <button class="btn" style="flex:1;" onclick="submitReview()">Enviar avaliação</button>
+                <button class="modal-close-btn" style="flex:1; margin-top:0;" onclick="closeReviewModal()">Cancelar</button>
+            </div>
+            <p id="reviewError" style="color:var(--red); font-size:12.5px; margin-top:10px;"></p>
+        </div>
+    </div>
+
     <div class="modal-overlay hidden" id="confirmationModal">
         <div class="modal-content">
             <div class="modal-icon"><i class="fas fa-check-circle"></i></div>
@@ -425,6 +527,7 @@
         let selectedDate = null;
         let selectedTime = null;
         let services = [];
+        let packages = [];
         let barbers = [];
         let bookedSlots = {}; 
         let scheduleConfig = {};
@@ -575,6 +678,7 @@
             
             await loadSettings();
             await loadServices();
+            await loadPackages();
             await loadBarbers();
             renderCalendar();
             updateStatusBadge();
@@ -611,10 +715,102 @@
                     document.getElementById('heroTagline').textContent = data.tagline;
                 }
 
+                if (data.gallery) {
+                    try { renderGallery(JSON.parse(data.gallery)); } catch (_) {}
+                }
+
+                if (data.shop_profile) {
+                    try { renderShopProfile(JSON.parse(data.shop_profile)); } catch (_) {}
+                }
+                renderHours();
+
                 updateStatusBadge();
             } catch (error) {
                 console.error('Erro ao carregar configurações:', error);
             }
+        }
+
+        // ==================== Galeria de fotos ====================
+        function renderGallery(photos) {
+            if (!photos || !photos.length) return;
+            const carousel = document.getElementById('galleryCarousel');
+            const track = document.getElementById('galleryTrack');
+            const dots = document.getElementById('galleryDots');
+
+            track.innerHTML = photos.map((url, i) => `<img src="${url}" alt="Foto da barbearia" style="animation-delay:${i * 0.06}s">`).join('');
+            dots.innerHTML = photos.map((_, i) => `<span class="${i === 0 ? 'active' : ''}"></span>`).join('');
+            carousel.classList.remove('hidden');
+        }
+
+        function galleryScroll(direction) {
+            const track = document.getElementById('galleryTrack');
+            track.scrollBy({ left: direction * 260, behavior: 'smooth' });
+        }
+
+        // ==================== Perfil / Sobre a barbearia ====================
+        const AMENITY_LABELS = {
+            wifi: { icon: 'fa-wifi', label: 'Wi-Fi' },
+            parking: { icon: 'fa-car', label: 'Estacionamento' },
+            accessible: { icon: 'fa-wheelchair', label: 'Acessível' },
+            pets: { icon: 'fa-paw', label: 'Aceita pets' }
+        };
+        const PAYMENT_LABELS = {
+            dinheiro: 'Dinheiro', pix: 'Pix', cartao_credito: 'Cartão de Crédito', cartao_debito: 'Cartão de Débito'
+        };
+
+        function renderShopProfile(profile) {
+            let hasContent = false;
+
+            const activeAmenities = Object.entries(profile.amenities || {}).filter(([, v]) => v);
+            if (activeAmenities.length) {
+                hasContent = true;
+                document.getElementById('amenitiesRow').innerHTML = activeAmenities.map(([key]) => {
+                    const meta = AMENITY_LABELS[key];
+                    return meta ? `<span class="amenity"><i class="fas ${meta.icon}" aria-hidden="true"></i> ${meta.label}</span>` : '';
+                }).join('');
+            }
+
+            if (profile.address) {
+                hasContent = true;
+                document.getElementById('addressText').textContent = profile.address;
+                document.getElementById('addressBlock').classList.remove('hidden');
+            }
+
+            if (profile.payment_methods && profile.payment_methods.length) {
+                hasContent = true;
+                document.getElementById('paymentText').innerHTML = profile.payment_methods
+                    .map(p => `<span class="payment-pill">${PAYMENT_LABELS[p] || p}</span>`).join('');
+                document.getElementById('paymentBlock').classList.remove('hidden');
+            }
+
+            const social = profile.social || {};
+            const socialIcons = [];
+            if (social.instagram) socialIcons.push(`<a href="${social.instagram}" target="_blank" rel="noopener" class="social-icon-link" aria-label="Instagram"><i class="fab fa-instagram"></i></a>`);
+            if (social.facebook) socialIcons.push(`<a href="${social.facebook}" target="_blank" rel="noopener" class="social-icon-link" aria-label="Facebook"><i class="fab fa-facebook"></i></a>`);
+            if (socialIcons.length) {
+                hasContent = true;
+                document.getElementById('socialLinks').innerHTML = socialIcons.join('');
+                document.getElementById('socialBlock').classList.remove('hidden');
+            }
+
+            if (profile.phone) {
+                hasContent = true;
+                document.getElementById('phoneText').textContent = profile.phone;
+                document.getElementById('phoneBlock').classList.remove('hidden');
+            }
+
+            if (hasContent) document.getElementById('shopProfileSection').classList.remove('hidden');
+        }
+
+        function renderHours() {
+            const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+            const lines = dayNames.map((name, i) => {
+                const day = scheduleConfig[i];
+                if (!day || !day.active || !day.periods?.length) return `<div style="display:flex; justify-content:space-between;"><span>${name}</span><span>Fechado</span></div>`;
+                const periods = day.periods.map(p => `${p.start}–${p.end}`).join(', ');
+                return `<div style="display:flex; justify-content:space-between;"><span>${name}</span><span>${periods}</span></div>`;
+            }).join('');
+            document.getElementById('hoursText').innerHTML = lines;
         }
 
         // Consulta de agendamentos pelo telefone (sem precisar de login)
@@ -625,10 +821,43 @@
         function closeLookup() {
             document.getElementById('lookupModal').classList.add('hidden');
         }
+        let lookupPhoneCache = '';
+
+        async function fetchLoyaltyStatus(phone) {
+            const box = document.getElementById('loyaltyProgressBox');
+            box.innerHTML = '';
+            try {
+                const response = await fetch(`${API_URL}/loyalty/status?phone=${encodeURIComponent(phone)}`);
+                const status = await response.json();
+                if (!status.enabled) return;
+
+                const unit = status.mode === 'points' ? 'pontos' : 'visitas';
+                const pct = Math.min(100, (status.progress / status.threshold) * 100);
+
+                box.innerHTML = `
+                    <div style="border:1px solid var(--brass); border-radius:10px; padding:14px 16px; margin-bottom:14px; background:rgba(198,161,91,0.06);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12.5px; margin-bottom:8px;">
+                            <span><i class="fas fa-gift" aria-hidden="true" style="color:var(--brass);"></i> Fidelidade</span>
+                            <span style="color:var(--brass-light); font-weight:700;">${status.progress}/${status.threshold} ${unit}</span>
+                        </div>
+                        <div style="height:6px; border-radius:100px; background:var(--surface-raised); overflow:hidden;">
+                            <div style="height:100%; width:${pct}%; background:linear-gradient(90deg, var(--brass), var(--brass-light)); transition: width 0.5s ease;"></div>
+                        </div>
+                        <p style="font-size:12px; color:var(--ivory-muted); margin-top:8px;">
+                            ${status.ready ? `🎉 Você já pode resgatar: ${status.reward_description}! Vale no próximo agendamento.` : `Faltam ${status.remaining} ${unit} para: ${status.reward_description}`}
+                        </p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Erro ao carregar fidelidade:', error);
+            }
+        }
+
         async function searchMyBookings() {
             const phoneInput = document.getElementById('lookupPhone');
             const resultsEl = document.getElementById('lookupResults');
             const phone = phoneInput.value.replace(/\D/g, '');
+            lookupPhoneCache = phone;
 
             if (phone.length < 10) {
                 resultsEl.innerHTML = '<p style="color:var(--red); font-size:13px;">Digite um telefone válido (DDD + número).</p>';
@@ -636,6 +865,9 @@
             }
 
             resultsEl.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
+
+            // Progresso de fidelidade (se a barbearia tiver o programa ativado)
+            fetchLoyaltyStatus(phone);
 
             try {
                 const response = await fetch(`${API_URL}/bookings/lookup?phone=${encodeURIComponent(phone)}`);
@@ -660,10 +892,76 @@
                             &nbsp;•&nbsp; <i class="fas fa-clock" aria-hidden="true"></i> ${b.booking_time.substring(0,5)}
                             ${b.barber_name ? `&nbsp;•&nbsp; <i class="fas fa-user-tie" aria-hidden="true"></i> ${b.barber_name}` : ''}
                         </p>
+                        ${b.can_review ? `
+                            <button class="btn" style="margin-top:10px; padding:9px;" onclick="openReviewModal(${b.id}, '${(b.service_name || '').replace(/'/g, "\\'")}')">
+                                <i class="fas fa-star" aria-hidden="true"></i> Avaliar atendimento
+                            </button>
+                        ` : b.has_review ? `
+                            <p style="margin-top:8px; font-size:12px; color:var(--brass-light);"><i class="fas fa-check" aria-hidden="true"></i> Você já avaliou este atendimento</p>
+                        ` : ''}
                     </div>
                 `).join('');
             } catch (error) {
                 resultsEl.innerHTML = '<p style="color:var(--red); font-size:13px;">Erro ao buscar agendamentos. Tente novamente.</p>';
+            }
+        }
+
+        // ==================== Avaliação (só liberada após atendimento concluído) ====================
+        let reviewBookingId = null;
+        let reviewRating = 0;
+
+        function openReviewModal(bookingId, serviceName) {
+            reviewBookingId = bookingId;
+            reviewRating = 0;
+            document.getElementById('reviewServiceName').textContent = serviceName || '';
+            document.getElementById('reviewComment').value = '';
+            document.querySelectorAll('.star-input').forEach(s => { s.className = 'far fa-star star-input'; });
+            document.getElementById('reviewModal').classList.remove('hidden');
+        }
+
+        function closeReviewModal() {
+            document.getElementById('reviewModal').classList.add('hidden');
+        }
+
+        document.querySelectorAll('.star-input').forEach(star => {
+            star.addEventListener('click', () => {
+                reviewRating = parseInt(star.dataset.value);
+                document.querySelectorAll('.star-input').forEach(s => {
+                    const val = parseInt(s.dataset.value);
+                    s.className = val <= reviewRating ? 'fas fa-star star-input active' : 'far fa-star star-input';
+                });
+            });
+        });
+
+        async function submitReview() {
+            const errorEl = document.getElementById('reviewError');
+            errorEl.textContent = '';
+
+            if (!reviewRating) {
+                errorEl.textContent = 'Escolha de 1 a 5 estrelas antes de enviar.';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/bookings/${reviewBookingId}/review`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: lookupPhoneCache,
+                        rating: reviewRating,
+                        comment: document.getElementById('reviewComment').value.trim()
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.error || 'Erro ao enviar avaliação');
+                }
+
+                closeReviewModal();
+                searchMyBookings();
+            } catch (error) {
+                errorEl.textContent = error.message;
             }
         }
         
@@ -682,6 +980,17 @@
             }
         }
 
+        async function loadPackages() {
+            try {
+                const response = await fetch(`${API_URL}/packages`);
+                if (!response.ok) return;
+                packages = await response.json();
+                renderServices();
+            } catch (error) {
+                console.error('Erro ao carregar pacotes:', error);
+            }
+        }
+
         async function loadBarbers() {
             try {
                 const response = await fetch(`${API_URL}/barbers`);
@@ -696,12 +1005,22 @@
         function renderServices() {
             const container = document.getElementById('servicesList');
             
-            if (services.length === 0) {
+            if (services.length === 0 && packages.length === 0) {
                 container.innerHTML = '<p style="color: var(--ivory-muted); text-align: center;">Nenhum serviço disponível</p>';
                 return;
             }
 
-            container.innerHTML = services.map(service => `
+            const packagesHtml = packages.map(pkg => `
+                <div class="service-item" onclick="selectPackage(${pkg.id})" style="border-color: rgba(198,161,91,0.35);">
+                    <div class="service-info">
+                        <h4><i class="fas fa-box-open"></i> ${pkg.name} <span style="font-size:10px; background:var(--brass); color:var(--ebony); padding:2px 8px; border-radius:100px; font-weight:700; margin-left:6px;">PACOTE</span></h4>
+                        <p><i class="fas fa-clock"></i> ${pkg.total_duration} minutos • ${pkg.services.map(s => s.name).join(' + ')}</p>
+                    </div>
+                    <div class="service-price">R$ ${pkg.price.toFixed(2)}</div>
+                </div>
+            `).join('');
+
+            const servicesHtml = services.map(service => `
                 <div class="service-item" onclick="selectService(${service.id})">
                     <div class="service-info">
                         <h4><i class="fas fa-scissors"></i> ${service.name}</h4>
@@ -710,6 +1029,14 @@
                     <div class="service-price">R$ ${service.price.toFixed(2)}</div>
                 </div>
             `).join('');
+
+            container.innerHTML = packagesHtml + servicesHtml;
+        }
+
+        function selectPackage(id) {
+            const pkg = packages.find(p => p.id === id);
+            if (!pkg) return;
+            selectService(id, { ...pkg, duration: pkg.total_duration, isPackage: true });
         }
 
         function renderBarbers() {
@@ -743,8 +1070,8 @@
             }).join('');
         }
 
-        function selectService(id) {
-            selectedService = services.find(s => s.id === id);
+        function selectService(id, overrideItem) {
+            selectedService = overrideItem || services.find(s => s.id === id);
             document.querySelectorAll('.service-item').forEach(el => el.classList.remove('selected'));
             event.currentTarget.classList.add('selected');
             
@@ -1079,7 +1406,7 @@
                     body: JSON.stringify({
                         customer_full_name: bookingFullName,
                         customer_phone: finalPhoneFormatted,
-                        service_id: selectedService.id,
+                        ...(selectedService.isPackage ? { package_id: selectedService.id } : { service_id: selectedService.id }),
                         barber_id: barberIdToSave,
                         booking_date: dateStr,
                         booking_time: selectedTime
@@ -1131,6 +1458,10 @@
                         <strong><i class="fas fa-clock"></i> Horário:</strong>
                         <span>${selectedTime}</span>
                     </p>
+                    ${bookingData.reward_label ? `
+                    <p style="background: rgba(198,161,91,0.1); border: 1px solid var(--brass); border-radius: 8px; padding: 10px; margin-top: 12px; color: var(--brass-light); font-weight: 600;">
+                        <i class="fas fa-gift"></i> ${bookingData.reward_label}${bookingData.final_price === 0 ? ' — grátis!' : ` — valor final: R$ ${bookingData.final_price.toFixed(2)}`}
+                    </p>` : ''}
                     <p style="color: var(--green); font-weight: bold; margin-top: 15px;">
                         <i class="fas fa-check-circle"></i> Agendamento Confirmado com Sucesso!
                     </p>

@@ -10,7 +10,7 @@ router.use(requireManager, requireActiveTenant);
 router.get('/', (req, res) => {
   const nameFilter = (req.query.name || '').toLowerCase();
 
-  const users = db.prepare('SELECT id, full_name, email, phone, created_at FROM users WHERE tenant_id = ? ORDER BY created_at DESC').all(req.tenantId);
+  const users = db.prepare('SELECT id, full_name, email, phone, loyalty_progress, created_at FROM users WHERE tenant_id = ? ORDER BY created_at DESC').all(req.tenantId);
   const filtered = nameFilter
     ? users.filter(u => (u.full_name || '').toLowerCase().includes(nameFilter))
     : users;
