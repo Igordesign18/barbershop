@@ -1767,17 +1767,31 @@
                 <div class="services-list" id="barbersList" role="region" aria-label="Lista de barbeiros"></div>
             </div>
 
+            <div class="card full-width" id="themeCard">
+                <h2><i class="fas fa-palette" aria-hidden="true"></i> Tema Visual</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">
+                    Escolha a identidade visual da página de agendamento do seu cliente. Aplica na hora.
+                </p>
+                <div id="themeGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:14px;"></div>
+            </div>
+
             <div class="card full-width" id="brandingCard">
                 <h2><i class="fas fa-image" aria-hidden="true"></i> Personalização da Página Pública</h2>
                 <p style="color: var(--text-muted); margin-bottom: 15px;">
-                    Suba uma foto de capa e uma frase de efeito pra deixar a página de agendamento com a cara da sua barbearia.
+                    Suba uma foto de capa, um logo e uma frase de efeito pra deixar a página de agendamento com a cara da sua barbearia.
                 </p>
 
-                <div id="brandingPreviewBox" style="border-radius: 10px; overflow: hidden; margin-bottom: 18px; height: 140px; background: var(--dark-bg); display:flex; align-items:center; justify-content:center; border: 1px solid var(--hairline);">
-                    <img id="brandingPreviewImg" src="" alt="Prévia do banner" style="width:100%; height:100%; object-fit:cover; display:none;">
-                    <span id="brandingPreviewEmpty" style="color: var(--text-muted); font-size: 13px;">
-                        <i class="fas fa-image" aria-hidden="true"></i> Nenhum banner enviado ainda
-                    </span>
+                <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; margin-bottom:18px;">
+                    <div id="brandingPreviewBox" style="border-radius: 10px; overflow: hidden; flex:1; min-width:180px; height: 140px; background: var(--dark-bg); display:flex; align-items:center; justify-content:center; border: 1px solid var(--hairline);">
+                        <img id="brandingPreviewImg" src="" alt="Prévia do banner" style="width:100%; height:100%; object-fit:cover; display:none;">
+                        <span id="brandingPreviewEmpty" style="color: var(--text-muted); font-size: 13px;">
+                            <i class="fas fa-image" aria-hidden="true"></i> Nenhum banner enviado ainda
+                        </span>
+                    </div>
+                    <div id="logoPreviewBox" style="border-radius: 50%; overflow: hidden; width:100px; height:100px; flex-shrink:0; background: var(--dark-bg); display:flex; align-items:center; justify-content:center; border: 1px solid var(--hairline);">
+                        <img id="logoPreviewImg" src="" alt="Prévia do logo" style="width:100%; height:100%; object-fit:cover; display:none;">
+                        <i id="logoPreviewEmpty" class="fas fa-scissors" aria-hidden="true" style="color: var(--text-muted); font-size: 22px;"></i>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -1792,6 +1806,17 @@
                     </div>
                 </div>
                 <div class="form-group">
+                    <label>Logo / foto de perfil (círculo no topo da página)</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="brandingLogoInput" accept="image/*">
+                        <label for="brandingLogoInput" class="file-input-label">
+                            <i class="fas fa-camera"></i>
+                            <span>Clique para selecionar uma imagem</span>
+                            <small>JPG ou PNG, formato quadrado funciona melhor (máx. 4MB)</small>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label for="brandingTagline">Frase de efeito (aparece embaixo do nome da barbearia)</label>
                     <input type="text" id="brandingTagline" placeholder="Ex: Tradição e estilo desde 2010">
                 </div>
@@ -1801,6 +1826,9 @@
                     </button>
                     <button class="btn btn-secondary hidden" id="removeBannerBtn" onclick="removeBanner()">
                         <i class="fas fa-trash" aria-hidden="true"></i> Remover Banner
+                    </button>
+                    <button class="btn btn-secondary hidden" id="removeLogoBtn" onclick="removeLogo()">
+                        <i class="fas fa-trash" aria-hidden="true"></i> Remover Logo
                     </button>
                 </div>
             </div>
@@ -2612,7 +2640,7 @@
                 document.getElementById('filterDate').value = today;
                 document.getElementById('filterStatus').value = 'confirmed';
                 
-                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection()]);
+                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection(), loadThemeSelector()]);
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
                 showNotification('Erro ao carregar dados do dashboard', 'error');
@@ -2620,6 +2648,58 @@
         }
 
         // ==================== Personalização (banner / tagline) ====================
+        // ==================== Tema Visual ====================
+        const THEMES = {
+            ouro_negro: { label: 'Ouro Negro', desc: 'Preto + latão dourado', bg:'#0e0c0a', accent:'#c6a15b', accent2:'#7a2f3f' },
+            meia_noite: { label: 'Azul Meia-Noite', desc: 'Navy + prata executivo', bg:'#0a0e14', accent:'#6f9bc7', accent2:'#35506b' },
+            esmeralda: { label: 'Verde Esmeralda', desc: 'Verde floresta + bronze', bg:'#0a120e', accent:'#4f9d6e', accent2:'#8a6a2e' },
+            grafite: { label: 'Grafite Moderno', desc: 'Cinza chumbo + cobre', bg:'#121212', accent:'#c17d4f', accent2:'#5c4a3a' },
+            marfim: { label: 'Marfim Clássico', desc: 'Tema claro e elegante', bg:'#f5f0e6', accent:'#8a5a3a', accent2:'#7a2f3f' }
+        };
+
+        let currentThemeKey = 'ouro_negro';
+
+        async function loadThemeSelector() {
+            try {
+                const data = await apiFetch('/settings');
+                currentThemeKey = data.theme || 'ouro_negro';
+                renderThemeGrid();
+            } catch (error) {
+                console.error('Erro ao carregar tema:', error);
+            }
+        }
+
+        function renderThemeGrid() {
+            const grid = document.getElementById('themeGrid');
+            grid.innerHTML = Object.entries(THEMES).map(([key, t]) => {
+                const isSelected = key === currentThemeKey;
+                return `
+                    <div onclick="selectTheme('${key}')" style="cursor:pointer; border-radius:12px; overflow:hidden; border:2px solid ${isSelected ? 'var(--lime)' : 'transparent'}; transition: var(--transition);">
+                        <div style="background:${t.bg}; height:70px; display:flex; align-items:center; justify-content:center; gap:8px;">
+                            <div style="width:22px; height:22px; border-radius:50%; background:${t.accent};"></div>
+                            <div style="width:22px; height:22px; border-radius:50%; background:${t.accent2};"></div>
+                        </div>
+                        <div style="background:var(--dark-card); padding:10px; text-align:center;">
+                            <div style="font-size:12.5px; font-weight:700; color:var(--text);">${t.label}</div>
+                            <div style="font-size:10.5px; color:var(--text-muted); margin-top:2px;">${t.desc}</div>
+                            ${isSelected ? '<div style="font-size:10px; color:var(--lime); margin-top:4px;"><i class="fas fa-check-circle" aria-hidden="true"></i> Ativo</div>' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function selectTheme(themeKey) {
+            try {
+                await apiFetch('/settings/theme', { method: 'PUT', body: JSON.stringify({ theme: themeKey }) });
+                currentThemeKey = themeKey;
+                renderThemeGrid();
+                showNotification(`Tema "${THEMES[themeKey].label}" aplicado na página do cliente!`, 'success');
+            } catch (error) {
+                showNotification('Erro ao aplicar tema: ' + error.message, 'error');
+            }
+        }
+
         async function loadBranding() {
             try {
                 const data = await apiFetch('/settings');
@@ -2638,6 +2718,21 @@
                     removeBtn.classList.add('hidden');
                 }
 
+                const logoImg = document.getElementById('logoPreviewImg');
+                const logoEmpty = document.getElementById('logoPreviewEmpty');
+                const removeLogoBtn = document.getElementById('removeLogoBtn');
+
+                if (data.logo_url) {
+                    logoImg.src = data.logo_url;
+                    logoImg.style.display = 'block';
+                    logoEmpty.style.display = 'none';
+                    removeLogoBtn.classList.remove('hidden');
+                } else {
+                    logoImg.style.display = 'none';
+                    logoEmpty.style.display = 'block';
+                    removeLogoBtn.classList.add('hidden');
+                }
+
                 document.getElementById('brandingTagline').value = data.tagline || '';
             } catch (error) {
                 console.error('Erro ao carregar personalização:', error);
@@ -2645,24 +2740,32 @@
         }
 
         async function saveBranding() {
-            const fileInput = document.getElementById('brandingBannerInput');
+            const bannerInput = document.getElementById('brandingBannerInput');
+            const logoInput = document.getElementById('brandingLogoInput');
             const tagline = document.getElementById('brandingTagline').value.trim();
-            const file = fileInput.files[0];
+            const bannerFile = bannerInput.files[0];
+            const logoFile = logoInput.files[0];
 
-            if (file && file.size > 4 * 1024 * 1024) {
-                showNotification('Arquivo muito grande! Máximo 4MB.', 'error');
+            if (bannerFile && bannerFile.size > 4 * 1024 * 1024) {
+                showNotification('Foto de capa muito grande! Máximo 4MB.', 'error');
+                return;
+            }
+            if (logoFile && logoFile.size > 4 * 1024 * 1024) {
+                showNotification('Logo muito grande! Máximo 4MB.', 'error');
                 return;
             }
 
             try {
                 const formData = new FormData();
-                if (file) formData.append('banner', file);
+                if (bannerFile) formData.append('banner', bannerFile);
+                if (logoFile) formData.append('logo', logoFile);
                 formData.append('tagline', tagline);
 
                 await apiFetch('/settings/branding', { method: 'PUT', body: formData });
 
                 showNotification('Personalização salva com sucesso!', 'success');
-                fileInput.value = '';
+                bannerInput.value = '';
+                logoInput.value = '';
                 loadBranding();
             } catch (error) {
                 showNotification('Erro ao salvar personalização: ' + error.message, 'error');
@@ -2677,6 +2780,17 @@
                 loadBranding();
             } catch (error) {
                 showNotification('Erro ao remover banner: ' + error.message, 'error');
+            }
+        }
+
+        async function removeLogo() {
+            if (!(await customConfirm('Remover o logo da página pública?'))) return;
+            try {
+                await apiFetch('/settings/branding/logo', { method: 'DELETE' });
+                showNotification('Logo removido.', 'info');
+                loadBranding();
+            } catch (error) {
+                showNotification('Erro ao remover logo: ' + error.message, 'error');
             }
         }
 

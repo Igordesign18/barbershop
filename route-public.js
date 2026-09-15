@@ -57,7 +57,7 @@ router.get('/:slug/barbers', (req, res) => {
 });
 
 router.get('/:slug/settings', (req, res) => {
-  const rows = db.prepare("SELECT key, value FROM settings WHERE tenant_id = ? AND key IN ('schedule_config', 'interval_time', 'banner_url', 'tagline', 'gallery', 'shop_profile')").all(req.tenantId);
+  const rows = db.prepare("SELECT key, value FROM settings WHERE tenant_id = ? AND key IN ('schedule_config', 'interval_time', 'banner_url', 'logo_url', 'tagline', 'gallery', 'shop_profile', 'theme')").all(req.tenantId);
   const result = {};
   rows.forEach(r => { result[r.key] = r.value; });
   res.json(result);

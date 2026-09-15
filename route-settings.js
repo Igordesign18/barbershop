@@ -87,7 +87,7 @@ router.put('/', (req, res) => {
 });
 
 // Banner (foto de capa) e frase de efeito da pagina publica da barbearia
-router.put('/branding', upload.single('banner'), (req, res) => {
+router.put('/branding', upload.fields([{ name: 'banner', maxCount: 1 }, { name: 'logo', maxCount: 1 }]), (req, res) => {
   const tagline = (req.body.tagline || '').trim();
 
   const upsert = db.prepare(`
@@ -95,13 +95,25 @@ router.put('/branding', upload.single('banner'), (req, res) => {
     ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value
   `);
 
-  if (req.file) {
+  const bannerFile = req.files?.banner?.[0];
+  const logoFile = req.files?.logo?.[0];
+
+  if (bannerFile) {
     const existing = db.prepare("SELECT value FROM settings WHERE tenant_id = ? AND key = 'banner_url'").get(req.tenantId);
     if (existing?.value) {
       const oldPath = path.join(UPLOAD_DIR, path.basename(existing.value));
       fs.unlink(oldPath, () => {});
     }
-    upsert.run(req.tenantId, 'banner_url', `/uploads/banners/${req.file.filename}`);
+    upsert.run(req.tenantId, 'banner_url', `/uploads/banners/${bannerFile.filename}`);
+  }
+
+  if (logoFile) {
+    const existing = db.prepare("SELECT value FROM settings WHERE tenant_id = ? AND key = 'logo_url'").get(req.tenantId);
+    if (existing?.value) {
+      const oldPath = path.join(UPLOAD_DIR, path.basename(existing.value));
+      fs.unlink(oldPath, () => {});
+    }
+    upsert.run(req.tenantId, 'logo_url', `/uploads/banners/${logoFile.filename}`);
   }
 
   if (req.body.tagline !== undefined) {
@@ -117,6 +129,15 @@ router.delete('/branding/banner', (req, res) => {
     fs.unlink(path.join(UPLOAD_DIR, path.basename(existing.value)), () => {});
   }
   db.prepare("DELETE FROM settings WHERE tenant_id = ? AND key = 'banner_url'").run(req.tenantId);
+  res.json({ ok: true });
+});
+
+router.delete('/branding/logo', (req, res) => {
+  const existing = db.prepare("SELECT value FROM settings WHERE tenant_id = ? AND key = 'logo_url'").get(req.tenantId);
+  if (existing?.value) {
+    fs.unlink(path.join(UPLOAD_DIR, path.basename(existing.value)), () => {});
+  }
+  db.prepare("DELETE FROM settings WHERE tenant_id = ? AND key = 'logo_url'").run(req.tenantId);
   res.json({ ok: true });
 });
 
@@ -200,6 +221,20 @@ router.put('/loyalty', (req, res) => {
   };
 
   saveLoyaltyConfig(req.tenantId, config);
+  res.json({ ok: true });
+});
+
+// Tema visual da pagina publica
+router.put('/theme', (req, res) => {
+  const { theme } = req.body || {};
+  const validThemes = ['ouro_negro', 'meia_noite', 'esmeralda', 'grafite', 'marfim'];
+  if (!validThemes.includes(theme)) return res.status(400).json({ error: 'Tema inválido' });
+
+  db.prepare(`
+    INSERT INTO settings (tenant_id, key, value) VALUES (?, 'theme', ?)
+    ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value
+  `).run(req.tenantId, theme);
+
   res.json({ ok: true });
 });
 

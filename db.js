@@ -209,6 +209,7 @@ function seedTenantDefaults(tenantId) {
   upsert.run(tenantId, 'schedule_config', JSON.stringify(DEFAULT_SCHEDULE));
   upsert.run(tenantId, 'interval_time', '30');
   upsert.run(tenantId, 'whatsapp_template', DEFAULT_WHATSAPP_TEMPLATE);
+  upsert.run(tenantId, 'theme', 'ouro_negro');
   upsert.run(tenantId, 'loyalty_config', JSON.stringify(DEFAULT_LOYALTY_CONFIG));
 }
 
