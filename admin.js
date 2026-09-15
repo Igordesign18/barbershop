@@ -380,7 +380,11 @@
             meia_noite: { label: 'Azul Meia-Noite', desc: 'Navy + prata executivo', bg:'#0a0e14', accent:'#6f9bc7', accent2:'#35506b' },
             esmeralda: { label: 'Verde Esmeralda', desc: 'Verde floresta + bronze', bg:'#0a120e', accent:'#4f9d6e', accent2:'#8a6a2e' },
             grafite: { label: 'Grafite Moderno', desc: 'Cinza chumbo + cobre', bg:'#121212', accent:'#c17d4f', accent2:'#5c4a3a' },
-            marfim: { label: 'Marfim Clássico', desc: 'Tema claro e elegante', bg:'#f5f0e6', accent:'#8a5a3a', accent2:'#7a2f3f' }
+            marfim: { label: 'Marfim Clássico', desc: 'Tema claro e elegante', bg:'#f5f0e6', accent:'#8a5a3a', accent2:'#7a2f3f' },
+            vinho_tinto: { label: 'Vinho Tinto', desc: 'Bordô profundo + dourado', bg:'#170a0c', accent:'#c9a15c', accent2:'#5c1a26' },
+            petroleo: { label: 'Azul Petróleo', desc: 'Petróleo escuro + cobre', bg:'#07141a', accent:'#c97a4d', accent2:'#1f4d54' },
+            roxo_real: { label: 'Roxo Real', desc: 'Roxo profundo + dourado', bg:'#120a18', accent:'#caa06a', accent2:'#4a2352' },
+            preto_neon: { label: 'Preto Neon', desc: 'Preto puro + verde neon', bg:'#0a0a0a', accent:'#39e6a0', accent2:'#2a2a2a' }
         };
 
         let currentThemeKey = 'ouro_negro';

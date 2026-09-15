@@ -290,7 +290,7 @@ router.put('/loyalty', (req, res) => {
 // Tema visual da pagina publica
 router.put('/theme', (req, res) => {
   const { theme } = req.body || {};
-  const validThemes = ['ouro_negro', 'meia_noite', 'esmeralda', 'grafite', 'marfim'];
+  const validThemes = ['ouro_negro', 'meia_noite', 'esmeralda', 'grafite', 'marfim', 'vinho_tinto', 'petroleo', 'roxo_real', 'preto_neon'];
   if (!validThemes.includes(theme)) return res.status(400).json({ error: 'Tema inválido' });
 
   db.prepare(`
