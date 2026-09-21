@@ -149,14 +149,16 @@ db.exec(`
   );
 
   -- Datas especificas em que a barbearia nao vai abrir (ex: feriado, viagem, imprevisto),
-  -- por fora do horario semanal recorrente em schedule_config.
+  -- por fora do horario semanal recorrente em schedule_config. period = '' bloqueia o dia
+  -- inteiro; 'manha'/'tarde'/'noite' bloqueia so aquele turno, permitindo abrir os demais.
   CREATE TABLE IF NOT EXISTS blocked_dates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     date TEXT NOT NULL,
+    period TEXT NOT NULL DEFAULT '',
     reason TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(tenant_id, date)
+    UNIQUE(tenant_id, date, period)
   );
 
   CREATE INDEX IF NOT EXISTS idx_bookings_tenant_date ON bookings(tenant_id, booking_date);
@@ -184,6 +186,30 @@ ensureColumn('bookings', 'item_duration', 'INTEGER');
 ensureColumn('bookings', 'item_name', 'TEXT');
 ensureColumn('services', 'photo_url', 'TEXT');
 ensureColumn('bookings', 'reminder_sent', 'INTEGER NOT NULL DEFAULT 0');
+
+// blocked_dates ja existia (sem coluna period) em bancos criados antes do bloqueio por turno.
+// ensureColumn nao resolve aqui porque tambem precisamos trocar a constraint UNIQUE
+// (antes so tenant_id+date, agora tenant_id+date+period), entao recriamos a tabela.
+(function ensureBlockedDatesPeriodColumn() {
+  const columns = db.prepare("PRAGMA table_info(blocked_dates)").all().map(c => c.name);
+  if (columns.length === 0 || columns.includes('period')) return;
+
+  db.exec(`
+    ALTER TABLE blocked_dates RENAME TO blocked_dates_old;
+    CREATE TABLE blocked_dates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      period TEXT NOT NULL DEFAULT '',
+      reason TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(tenant_id, date, period)
+    );
+    INSERT INTO blocked_dates (id, tenant_id, date, period, reason, created_at)
+      SELECT id, tenant_id, date, '', reason, created_at FROM blocked_dates_old;
+    DROP TABLE blocked_dates_old;
+  `);
+})();
 
 const DEFAULT_SCHEDULE = {
   0: { active: true, periods: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },

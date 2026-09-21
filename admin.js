@@ -2245,11 +2245,13 @@
             }
         }
 
-        // ==================== Datas Bloqueadas (dias que a barbearia nao vai abrir) ====================
+        // ==================== Datas Bloqueadas (dias/turnos que a barbearia nao vai abrir) ====================
         function formatDateBR(dateStr) {
             const [y, m, d] = dateStr.split('-');
             return `${d}/${m}/${y}`;
         }
+
+        const BLOCKED_PERIOD_LABELS = { '': 'Dia inteiro', manha: 'Manhã', tarde: 'Tarde', noite: 'Noite' };
 
         async function loadBlockedDates() {
             try {
@@ -2264,7 +2266,7 @@
                 container.innerHTML = data.map(item => `
                     <div class="service-item">
                         <div class="service-info">
-                            <h4>${formatDateBR(item.date)}</h4>
+                            <h4>${formatDateBR(item.date)} • ${BLOCKED_PERIOD_LABELS[item.period || ''] || 'Dia inteiro'}</h4>
                             <p>${item.reason ? item.reason : 'Sem motivo informado'}</p>
                         </div>
                         <div class="service-actions">
@@ -2282,6 +2284,7 @@
 
         async function addBlockedDate() {
             const dateInput = document.getElementById('blockedDateInput');
+            const periodInput = document.getElementById('blockedDatePeriod');
             const reasonInput = document.getElementById('blockedDateReason');
             const date = dateInput.value;
 
@@ -2293,19 +2296,20 @@
             try {
                 await apiFetch('/settings/blocked-dates', {
                     method: 'POST',
-                    body: JSON.stringify({ date, reason: reasonInput.value.trim() })
+                    body: JSON.stringify({ date, period: periodInput.value, reason: reasonInput.value.trim() })
                 });
-                showNotification('Data bloqueada com sucesso!', 'success');
+                showNotification('Bloqueio salvo com sucesso!', 'success');
                 dateInput.value = '';
+                periodInput.value = '';
                 reasonInput.value = '';
                 loadBlockedDates();
             } catch (error) {
-                showNotification('Erro ao bloquear data: ' + error.message, 'error');
+                showNotification('Erro ao bloquear: ' + error.message, 'error');
             }
         }
 
         async function removeBlockedDate(id) {
-            if (!(await customConfirm('Remover esse bloqueio? O dia volta a aparecer disponível para os clientes.'))) return;
+            if (!(await customConfirm('Remover esse bloqueio? O horário volta a aparecer disponível para os clientes.'))) return;
             try {
                 await apiFetch(`/settings/blocked-dates/${id}`, { method: 'DELETE' });
                 showNotification('Bloqueio removido.', 'info');

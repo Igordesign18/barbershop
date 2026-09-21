@@ -42,7 +42,13 @@
         let bookedSlots = {}; 
         let scheduleConfig = {};
         let intervalTime = 30;
-        let blockedDates = new Set(); // datas (YYYY-MM-DD) em que a barbearia avisou que nao vai abrir
+        let blockedDates = new Map(); // data (YYYY-MM-DD) -> Set de turnos bloqueados ('' = dia inteiro, 'manha'|'tarde'|'noite')
+
+        function getPeriodKey(hour) {
+            if (hour < 12) return 'manha';
+            if (hour < 18) return 'tarde';
+            return 'noite';
+        }
 
         // ==================== Tela de abertura (splash) ====================
         function enterApp() {
@@ -363,7 +369,13 @@
 
                 if (data.schedule_config) scheduleConfig = JSON.parse(data.schedule_config);
                 if (data.interval_time) intervalTime = parseInt(data.interval_time);
-                if (Array.isArray(data.blocked_dates)) blockedDates = new Set(data.blocked_dates.map(b => b.date));
+                if (Array.isArray(data.blocked_dates)) {
+                    blockedDates = new Map();
+                    data.blocked_dates.forEach(b => {
+                        if (!blockedDates.has(b.date)) blockedDates.set(b.date, new Set());
+                        blockedDates.get(b.date).add(b.period || '');
+                    });
+                }
 
                 applyTheme(data.theme);
 
@@ -904,7 +916,9 @@
                 const dayOfWeek = cmpDate.getDay();
                 const isPast = cmpDate < today;
                 const isWorkingDay = scheduleConfig[dayOfWeek]?.active || false;
-                const isBlocked = blockedDates.has(formatDateToYYYYMMDD(cmpDate));
+                const cmpDateStr = formatDateToYYYYMMDD(cmpDate);
+                const dateBlocks = blockedDates.get(cmpDateStr);
+                const isFullyBlocked = dateBlocks ? dateBlocks.has('') : false;
                 const isToday = cmpDate.getTime() === today.getTime();
 
                 const isSelected = selectedDate &&
@@ -912,11 +926,11 @@
                                  selectedDate.getMonth() === month &&
                                  selectedDate.getFullYear() === year;
 
-                const isDisabled = isPast || !isWorkingDay || isBlocked;
+                const isDisabled = isPast || !isWorkingDay || isFullyBlocked;
 
                 html += `
                     <div class="calendar-day ${isDisabled ? 'disabled' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}"
-                         title="${isBlocked ? 'Fechado nesse dia' : ''}"
+                         title="${isFullyBlocked ? 'Fechado nesse dia' : ''}"
                          onclick="${!isDisabled ? `selectDate(${year}, ${month}, ${d})` : ''}">
                         ${d}
                     </div>
@@ -1052,9 +1066,10 @@
             const dayOfWeek = selectedDate.getDay();
             const dayConfig = scheduleConfig[dayOfWeek];
             const selectedDateStr = formatDateToYYYYMMDD(selectedDate);
+            const dateBlocks = blockedDates.get(selectedDateStr);
 
             if (!dayConfig || !dayConfig.active) return slots;
-            if (blockedDates.has(selectedDateStr)) return slots;
+            if (dateBlocks && dateBlocks.has('')) return slots;
 
             const serviceDuration = selectedService ? selectedService.duration : 30;
 
@@ -1069,7 +1084,12 @@
                     const hour = Math.floor(currentMinutes / 60);
                     const minute = currentMinutes % 60;
                     const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-                    
+
+                    if (dateBlocks && dateBlocks.has(getPeriodKey(hour))) {
+                        currentMinutes += intervalTime;
+                        continue; // turno fechado nesse dia - nem aparece como opcao
+                    }
+
                     const isTimePassed = isTimeSlotPassed(selectedDateStr, time + ':00');
                     let isBlocked = isTimePassed;
 

@@ -64,7 +64,7 @@ router.get('/:slug/settings', (req, res) => {
   // Datas especificas em que a barbearia nao vai abrir (feriado, viagem, imprevisto).
   // So envia as de hoje em diante - datas passadas nao interessam pro calendario do cliente.
   const today = new Date().toISOString().slice(0, 10);
-  result.blocked_dates = db.prepare('SELECT date, reason FROM blocked_dates WHERE tenant_id = ? AND date >= ? ORDER BY date ASC').all(req.tenantId, today);
+  result.blocked_dates = db.prepare('SELECT date, period, reason FROM blocked_dates WHERE tenant_id = ? AND date >= ? ORDER BY date ASC').all(req.tenantId, today);
 
   res.json(result);
 });
@@ -214,9 +214,14 @@ router.post('/:slug/bookings', async (req, res) => {
     return res.status(400).json({ error: 'Dados do agendamento incompletos' });
   }
 
-  const blocked = db.prepare('SELECT 1 FROM blocked_dates WHERE tenant_id = ? AND date = ?').get(req.tenantId, booking_date);
-  if (blocked) {
-    return res.status(400).json({ error: 'A barbearia não vai abrir nessa data. Escolha outro dia.' });
+  const blockedRows = db.prepare('SELECT period FROM blocked_dates WHERE tenant_id = ? AND date = ?').all(req.tenantId, booking_date);
+  if (blockedRows.length) {
+    const bookingHour = parseInt(String(booking_time).split(':')[0], 10);
+    const bookingPeriod = bookingHour < 12 ? 'manha' : bookingHour < 18 ? 'tarde' : 'noite';
+    const isBlocked = blockedRows.some(r => r.period === '' || r.period === bookingPeriod);
+    if (isBlocked) {
+      return res.status(400).json({ error: 'A barbearia não vai abrir nesse horário. Escolha outro dia ou turno.' });
+    }
   }
 
   // Um agendamento e ou um servico avulso, ou um pacote - nunca os dois

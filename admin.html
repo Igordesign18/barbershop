@@ -701,12 +701,21 @@
                         <label for="blockedDateInput">Data</label>
                         <input type="date" id="blockedDateInput">
                     </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="blockedDatePeriod">Turno</label>
+                        <select id="blockedDatePeriod">
+                            <option value="">Dia inteiro</option>
+                            <option value="manha">Manhã</option>
+                            <option value="tarde">Tarde</option>
+                            <option value="noite">Noite</option>
+                        </select>
+                    </div>
                     <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 180px;">
                         <label for="blockedDateReason">Motivo (opcional)</label>
                         <input type="text" id="blockedDateReason" placeholder="Ex: Feriado, viagem...">
                     </div>
                     <button class="btn" onclick="addBlockedDate()">
-                        <i class="fas fa-plus" aria-hidden="true"></i> Bloquear Data
+                        <i class="fas fa-plus" aria-hidden="true"></i> Bloquear
                     </button>
                 </div>
                 <div class="services-list" id="blockedDatesList" role="region" aria-label="Datas bloqueadas" style="margin-top: 20px;">

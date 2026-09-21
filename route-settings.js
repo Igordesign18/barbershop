@@ -112,25 +112,31 @@ router.put('/reminder', (req, res) => {
 
 // Datas especificas em que a barbearia nao vai abrir (feriado, viagem, imprevisto),
 // por fora do horario semanal recorrente configurado em schedule_config.
+// period: '' = dia inteiro; 'manha' | 'tarde' | 'noite' = so aquele turno.
+const BLOCKED_DATE_PERIODS = ['', 'manha', 'tarde', 'noite'];
+const PERIOD_LABELS = { '': 'Dia inteiro', manha: 'Manhã', tarde: 'Tarde', noite: 'Noite' };
+
 router.get('/blocked-dates', (req, res) => {
-  const rows = db.prepare('SELECT id, date, reason FROM blocked_dates WHERE tenant_id = ? ORDER BY date ASC').all(req.tenantId);
+  const rows = db.prepare('SELECT id, date, period, reason FROM blocked_dates WHERE tenant_id = ? ORDER BY date ASC, period ASC').all(req.tenantId);
   res.json(rows);
 });
 
 router.post('/blocked-dates', (req, res) => {
   const { date, reason } = req.body || {};
+  const period = BLOCKED_DATE_PERIODS.includes(req.body?.period) ? req.body.period : '';
+
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return res.status(400).json({ error: 'Informe uma data válida' });
   }
 
   try {
     const info = db.prepare(`
-      INSERT INTO blocked_dates (tenant_id, date, reason) VALUES (?, ?, ?)
-    `).run(req.tenantId, date, (reason || '').trim() || null);
-    res.status(201).json({ id: info.lastInsertRowid, date, reason: (reason || '').trim() || null });
+      INSERT INTO blocked_dates (tenant_id, date, period, reason) VALUES (?, ?, ?, ?)
+    `).run(req.tenantId, date, period, (reason || '').trim() || null);
+    res.status(201).json({ id: info.lastInsertRowid, date, period, reason: (reason || '').trim() || null });
   } catch (err) {
     if (String(err.code || '').startsWith('SQLITE_CONSTRAINT')) {
-      return res.status(400).json({ error: 'Essa data já está bloqueada' });
+      return res.status(400).json({ error: `${PERIOD_LABELS[period]} desse dia já está bloqueado` });
     }
     throw err;
   }
