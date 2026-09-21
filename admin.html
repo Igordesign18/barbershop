@@ -494,6 +494,45 @@
                 </button>
             </div>
 
+            <div class="card full-width tab-panel" id="reminderCard" data-tab="marketing">
+                <h2><i class="fas fa-bell" aria-hidden="true"></i> Lembrete de Agendamento</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">
+                    Envia uma mensagem automática pro cliente um tempo antes do horário marcado, avisando do agendamento. Precisa do WhatsApp conectado acima.
+                </p>
+
+                <div class="form-group">
+                    <label for="reminderEnabled" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="reminderEnabled" style="width:auto;">
+                        Ativar lembrete automático
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="reminderHoursBefore">Enviar com quanto tempo de antecedência?</label>
+                    <select id="reminderHoursBefore">
+                        <option value="0.5">30 minutos antes</option>
+                        <option value="1">1 hora antes</option>
+                        <option value="2">2 horas antes</option>
+                        <option value="3">3 horas antes</option>
+                        <option value="6">6 horas antes</option>
+                        <option value="12">12 horas antes</option>
+                        <option value="24">1 dia antes</option>
+                        <option value="48">2 dias antes</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="reminderTemplate">Mensagem do lembrete</label>
+                    <textarea id="reminderTemplate" rows="8" style="width:100%; font-family: inherit; padding:10px; border-radius:8px; background: var(--dark-bg); color: var(--text); border: 1px solid rgba(135,206,235,0.3);"></textarea>
+                    <small style="color: var(--text-muted); display:block; margin-top:6px;">
+                        Use: <code>{{cliente}}</code> <code>{{barbearia}}</code> <code>{{servico}}</code> <code>{{barbeiro}}</code> <code>{{data}}</code> <code>{{hora}}</code> <code>{{valor}}</code>
+                    </small>
+                </div>
+                <button class="btn" onclick="saveReminderConfig()">
+                    <i class="fas fa-save" aria-hidden="true"></i> Salvar Lembrete
+                </button>
+            </div>
+
             <div class="card full-width tab-panel" id="subscriptionsCard" data-tab="financeiro">
                 <h2><i class="fas fa-sync-alt" aria-hidden="true"></i> Assinaturas</h2>
                 <p style="color: var(--text-muted); margin-bottom: 15px;">
@@ -650,6 +689,32 @@
                 <button class="btn" onclick="saveSchedule()" style="margin-top: 20px;">
                     <i class="fas fa-save" aria-hidden="true"></i> Salvar Configurações
                 </button>
+            </div>
+
+            <div class="card full-width tab-panel" data-tab="horarios">
+                <h2><i class="fas fa-calendar-times" aria-hidden="true"></i> Fechar um Dia Específico</h2>
+                <p style="color: var(--text-muted); font-size: 13px; margin-top: -8px; margin-bottom: 16px;">
+                    Use para datas fora da regra semanal normal — um feriado, uma viagem, um imprevisto. O dia some do calendário do cliente só naquela data.
+                </p>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="blockedDateInput">Data</label>
+                        <input type="date" id="blockedDateInput">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 180px;">
+                        <label for="blockedDateReason">Motivo (opcional)</label>
+                        <input type="text" id="blockedDateReason" placeholder="Ex: Feriado, viagem...">
+                    </div>
+                    <button class="btn" onclick="addBlockedDate()">
+                        <i class="fas fa-plus" aria-hidden="true"></i> Bloquear Data
+                    </button>
+                </div>
+                <div class="services-list" id="blockedDatesList" role="region" aria-label="Datas bloqueadas" style="margin-top: 20px;">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                        <p>Carregando...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

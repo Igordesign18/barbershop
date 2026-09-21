@@ -60,6 +60,12 @@ router.get('/:slug/settings', (req, res) => {
   const rows = db.prepare("SELECT key, value FROM settings WHERE tenant_id = ? AND key IN ('schedule_config', 'interval_time', 'banner_url', 'logo_url', 'tagline', 'gallery', 'cover_images', 'shop_profile', 'theme')").all(req.tenantId);
   const result = {};
   rows.forEach(r => { result[r.key] = r.value; });
+
+  // Datas especificas em que a barbearia nao vai abrir (feriado, viagem, imprevisto).
+  // So envia as de hoje em diante - datas passadas nao interessam pro calendario do cliente.
+  const today = new Date().toISOString().slice(0, 10);
+  result.blocked_dates = db.prepare('SELECT date, reason FROM blocked_dates WHERE tenant_id = ? AND date >= ? ORDER BY date ASC').all(req.tenantId, today);
+
   res.json(result);
 });
 
@@ -206,6 +212,11 @@ router.post('/:slug/bookings', async (req, res) => {
   if (!customer_phone) return res.status(400).json({ error: 'Telefone invalido' });
   if ((!service_id && !package_id) || !booking_date || !booking_time) {
     return res.status(400).json({ error: 'Dados do agendamento incompletos' });
+  }
+
+  const blocked = db.prepare('SELECT 1 FROM blocked_dates WHERE tenant_id = ? AND date = ?').get(req.tenantId, booking_date);
+  if (blocked) {
+    return res.status(400).json({ error: 'A barbearia não vai abrir nessa data. Escolha outro dia.' });
   }
 
   // Um agendamento e ou um servico avulso, ou um pacote - nunca os dois

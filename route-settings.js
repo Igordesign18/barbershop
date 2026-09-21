@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { db } = require('./db');
+const { db, DEFAULT_REMINDER_CONFIG } = require('./db');
 const { requireManager } = require('./auth');
 const { requireActiveTenant } = require('./tenant');
 const { getLoyaltyConfig, saveLoyaltyConfig } = require('./loyalty');
@@ -72,6 +72,73 @@ router.put('/', (req, res) => {
   upsert.run(req.tenantId, 'schedule_config', JSON.stringify(schedule_config));
   upsert.run(req.tenantId, 'interval_time', String(interval_time));
 
+  res.json({ ok: true });
+});
+
+// Lembrete automatico por WhatsApp, enviado com antecedencia configuravel antes do horario do agendamento
+const REMINDER_HOURS_OPTIONS = [0.5, 1, 2, 3, 6, 12, 24, 48];
+
+function getReminderConfig(tenantId) {
+  const row = db.prepare("SELECT value FROM settings WHERE tenant_id = ? AND key = 'reminder_config'").get(tenantId);
+  if (!row?.value) return { ...DEFAULT_REMINDER_CONFIG };
+  try { return { ...DEFAULT_REMINDER_CONFIG, ...JSON.parse(row.value) }; } catch { return { ...DEFAULT_REMINDER_CONFIG }; }
+}
+
+router.get('/reminder', (req, res) => {
+  res.json(getReminderConfig(req.tenantId));
+});
+
+router.put('/reminder', (req, res) => {
+  const { enabled, hours_before, template } = req.body || {};
+
+  const hoursNum = Number(hours_before);
+  if (!REMINDER_HOURS_OPTIONS.includes(hoursNum)) {
+    return res.status(400).json({ error: 'Antecedência inválida' });
+  }
+
+  const config = {
+    enabled: !!enabled,
+    hours_before: hoursNum,
+    template: (template || '').trim() || DEFAULT_REMINDER_CONFIG.template
+  };
+
+  db.prepare(`
+    INSERT INTO settings (tenant_id, key, value) VALUES (?, 'reminder_config', ?)
+    ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value
+  `).run(req.tenantId, JSON.stringify(config));
+
+  res.json({ ok: true });
+});
+
+// Datas especificas em que a barbearia nao vai abrir (feriado, viagem, imprevisto),
+// por fora do horario semanal recorrente configurado em schedule_config.
+router.get('/blocked-dates', (req, res) => {
+  const rows = db.prepare('SELECT id, date, reason FROM blocked_dates WHERE tenant_id = ? ORDER BY date ASC').all(req.tenantId);
+  res.json(rows);
+});
+
+router.post('/blocked-dates', (req, res) => {
+  const { date, reason } = req.body || {};
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'Informe uma data válida' });
+  }
+
+  try {
+    const info = db.prepare(`
+      INSERT INTO blocked_dates (tenant_id, date, reason) VALUES (?, ?, ?)
+    `).run(req.tenantId, date, (reason || '').trim() || null);
+    res.status(201).json({ id: info.lastInsertRowid, date, reason: (reason || '').trim() || null });
+  } catch (err) {
+    if (String(err.code || '').startsWith('SQLITE_CONSTRAINT')) {
+      return res.status(400).json({ error: 'Essa data já está bloqueada' });
+    }
+    throw err;
+  }
+});
+
+router.delete('/blocked-dates/:id', (req, res) => {
+  const info = db.prepare('DELETE FROM blocked_dates WHERE id = ? AND tenant_id = ?').run(req.params.id, req.tenantId);
+  if (info.changes === 0) return res.status(404).json({ error: 'Data não encontrada' });
   res.json({ ok: true });
 });
 

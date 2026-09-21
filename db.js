@@ -148,7 +148,19 @@ db.exec(`
     paid_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- Datas especificas em que a barbearia nao vai abrir (ex: feriado, viagem, imprevisto),
+  -- por fora do horario semanal recorrente em schedule_config.
+  CREATE TABLE IF NOT EXISTS blocked_dates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    date TEXT NOT NULL,
+    reason TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(tenant_id, date)
+  );
+
   CREATE INDEX IF NOT EXISTS idx_bookings_tenant_date ON bookings(tenant_id, booking_date);
+  CREATE INDEX IF NOT EXISTS idx_blocked_dates_tenant_date ON blocked_dates(tenant_id, date);
   CREATE INDEX IF NOT EXISTS idx_bookings_barber ON bookings(barber_id);
   CREATE INDEX IF NOT EXISTS idx_services_tenant ON services(tenant_id);
   CREATE INDEX IF NOT EXISTS idx_barbers_tenant ON barbers(tenant_id);
@@ -171,6 +183,7 @@ ensureColumn('bookings', 'item_price', 'REAL');
 ensureColumn('bookings', 'item_duration', 'INTEGER');
 ensureColumn('bookings', 'item_name', 'TEXT');
 ensureColumn('services', 'photo_url', 'TEXT');
+ensureColumn('bookings', 'reminder_sent', 'INTEGER NOT NULL DEFAULT 0');
 
 const DEFAULT_SCHEDULE = {
   0: { active: true, periods: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },
@@ -190,6 +203,21 @@ const DEFAULT_WHATSAPP_TEMPLATE =
   'Horario: {{hora}}\n' +
   'Valor: R$ {{valor}}\n\n' +
   'Qualquer imprevisto, e so chamar por aqui. Ate ja!';
+
+const DEFAULT_REMINDER_TEMPLATE =
+  'Ola {{cliente}}! Passando pra lembrar do seu agendamento na *{{barbearia}}*.\n\n' +
+  'Servico: {{servico}}\n' +
+  'Barbeiro: {{barbeiro}}\n' +
+  'Data: {{data}}\n' +
+  'Horario: {{hora}}\n\n' +
+  'Te esperamos!';
+
+// Lembrete comeca desligado - o gestor liga e escolhe a antecedencia no painel (em horas)
+const DEFAULT_REMINDER_CONFIG = {
+  enabled: false,
+  hours_before: 2,
+  template: DEFAULT_REMINDER_TEMPLATE
+};
 
 // Fidelidade comeca desligada - o gestor liga e escolhe a regra no painel
 const DEFAULT_LOYALTY_CONFIG = {
@@ -212,6 +240,7 @@ function seedTenantDefaults(tenantId) {
   upsert.run(tenantId, 'whatsapp_template', DEFAULT_WHATSAPP_TEMPLATE);
   upsert.run(tenantId, 'theme', 'ouro_negro');
   upsert.run(tenantId, 'loyalty_config', JSON.stringify(DEFAULT_LOYALTY_CONFIG));
+  upsert.run(tenantId, 'reminder_config', JSON.stringify(DEFAULT_REMINDER_CONFIG));
 }
 
 const superAdminCount = db.prepare('SELECT COUNT(*) AS c FROM super_admins').get().c;
@@ -223,4 +252,4 @@ if (superAdminCount === 0) {
   console.log(`[setup] Super admin criado automaticamente: ${email} (defina SUPERADMIN_EMAIL/SUPERADMIN_PASSWORD no .env para mudar)`);
 }
 
-module.exports = { db, seedTenantDefaults, DEFAULT_SCHEDULE, DEFAULT_WHATSAPP_TEMPLATE, DEFAULT_LOYALTY_CONFIG };
+module.exports = { db, seedTenantDefaults, DEFAULT_SCHEDULE, DEFAULT_WHATSAPP_TEMPLATE, DEFAULT_LOYALTY_CONFIG, DEFAULT_REMINDER_CONFIG, DEFAULT_REMINDER_TEMPLATE };

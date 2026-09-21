@@ -42,6 +42,7 @@
         let bookedSlots = {}; 
         let scheduleConfig = {};
         let intervalTime = 30;
+        let blockedDates = new Set(); // datas (YYYY-MM-DD) em que a barbearia avisou que nao vai abrir
 
         // ==================== Tela de abertura (splash) ====================
         function enterApp() {
@@ -362,6 +363,7 @@
 
                 if (data.schedule_config) scheduleConfig = JSON.parse(data.schedule_config);
                 if (data.interval_time) intervalTime = parseInt(data.interval_time);
+                if (Array.isArray(data.blocked_dates)) blockedDates = new Set(data.blocked_dates.map(b => b.date));
 
                 applyTheme(data.theme);
 
@@ -902,6 +904,7 @@
                 const dayOfWeek = cmpDate.getDay();
                 const isPast = cmpDate < today;
                 const isWorkingDay = scheduleConfig[dayOfWeek]?.active || false;
+                const isBlocked = blockedDates.has(formatDateToYYYYMMDD(cmpDate));
                 const isToday = cmpDate.getTime() === today.getTime();
 
                 const isSelected = selectedDate &&
@@ -909,10 +912,11 @@
                                  selectedDate.getMonth() === month &&
                                  selectedDate.getFullYear() === year;
 
-                const isDisabled = isPast || !isWorkingDay;
+                const isDisabled = isPast || !isWorkingDay || isBlocked;
 
                 html += `
                     <div class="calendar-day ${isDisabled ? 'disabled' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}"
+                         title="${isBlocked ? 'Fechado nesse dia' : ''}"
                          onclick="${!isDisabled ? `selectDate(${year}, ${month}, ${d})` : ''}">
                         ${d}
                     </div>
@@ -1047,10 +1051,11 @@
             const slots = [];
             const dayOfWeek = selectedDate.getDay();
             const dayConfig = scheduleConfig[dayOfWeek];
+            const selectedDateStr = formatDateToYYYYMMDD(selectedDate);
 
             if (!dayConfig || !dayConfig.active) return slots;
+            if (blockedDates.has(selectedDateStr)) return slots;
 
-            const selectedDateStr = formatDateToYYYYMMDD(selectedDate);
             const serviceDuration = selectedService ? selectedService.duration : 30;
 
             for (let period of dayConfig.periods) {

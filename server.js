@@ -8,6 +8,7 @@ const express = require('express');
 const cors = require('cors');
 
 require('./db'); // garante que o banco e as tabelas existam antes de tudo
+const { startReminderScheduler } = require('./reminders');
 
 const authRoutes = require('./route-auth');
 const superadminRoutes = require('./route-superadmin');
@@ -73,4 +74,5 @@ app.get('/:slug', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`BarberSync rodando em http://localhost:${PORT} (fuso: ${process.env.TZ})`);
+  startReminderScheduler();
 });

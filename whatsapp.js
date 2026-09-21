@@ -53,4 +53,4 @@ async function sendBookingConfirmation({ tenant, booking, clientName, clientPhon
   }
 }
 
-module.exports = { fillTemplate, sendBookingConfirmation };
+module.exports = { fillTemplate, sendBookingConfirmation, formatDateBR, formatCurrencyBRL };

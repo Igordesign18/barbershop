@@ -366,7 +366,7 @@
                 document.getElementById('filterDate').value = today;
                 document.getElementById('filterStatus').value = 'confirmed';
                 
-                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadCoverImages(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection(), loadThemeSelector()]);
+                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadCoverImages(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection(), loadThemeSelector(), loadWhatsappTemplate(), loadReminderConfig(), refreshWhatsappStatus()]);
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
                 showNotification('Erro ao carregar dados do dashboard', 'error');
@@ -1005,7 +1005,7 @@
                 `;
                 
                 const completedBookings = periodData?.filter(b => b.status === 'completed') || [];
-                const revenue = completedBookings.reduce((sum, booking) => sum + (booking.services?.price || 0), 0);
+                const revenue = completedBookings.reduce((sum, booking) => sum + Math.max(0, (booking.services?.price || 0) - (booking.discount_applied || 0)), 0);
                 const avgTicket = completedBookings.length ? (revenue / completedBookings.length) : 0;
                 
                 animateCountUp('periodRevenue', revenue, 'R$ ', '', 2);
@@ -1242,7 +1242,8 @@
                 bookingsData.forEach(booking => {
                     if (booking.status === 'completed') {
                         const month = booking.booking_date.substring(0, 7);
-                        monthlyRevenue[month] = (monthlyRevenue[month] || 0) + (booking.services?.price || 0);
+                        const paid = Math.max(0, (booking.services?.price || 0) - (booking.discount_applied || 0));
+                        monthlyRevenue[month] = (monthlyRevenue[month] || 0) + paid;
                     }
                 });
                 
@@ -2118,9 +2119,11 @@
                     if (data.interval_time) document.getElementById('intervalTime').value = data.interval_time;
                 }
                 renderSchedule();
+                loadBlockedDates();
             } catch (error) {
                 console.error('Erro ao carregar configurações:', error);
                 renderSchedule();
+                loadBlockedDates();
             }
         }
 
@@ -2242,6 +2245,76 @@
             }
         }
 
+        // ==================== Datas Bloqueadas (dias que a barbearia nao vai abrir) ====================
+        function formatDateBR(dateStr) {
+            const [y, m, d] = dateStr.split('-');
+            return `${d}/${m}/${y}`;
+        }
+
+        async function loadBlockedDates() {
+            try {
+                const data = await apiFetch('/settings/blocked-dates');
+                const container = document.getElementById('blockedDatesList');
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<div class="empty-state" style="padding: 20px;"><i class="fas fa-calendar-check" aria-hidden="true"></i><p>Nenhuma data bloqueada</p></div>';
+                    return;
+                }
+
+                container.innerHTML = data.map(item => `
+                    <div class="service-item">
+                        <div class="service-info">
+                            <h4>${formatDateBR(item.date)}</h4>
+                            <p>${item.reason ? item.reason : 'Sem motivo informado'}</p>
+                        </div>
+                        <div class="service-actions">
+                            <button class="btn-delete" onclick="removeBlockedDate(${item.id})" aria-label="Remover bloqueio de ${formatDateBR(item.date)}">
+                                <i class="fas fa-trash" aria-hidden="true"></i> Remover
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erro ao carregar datas bloqueadas:', error);
+                showNotification('Erro ao carregar datas bloqueadas', 'error');
+            }
+        }
+
+        async function addBlockedDate() {
+            const dateInput = document.getElementById('blockedDateInput');
+            const reasonInput = document.getElementById('blockedDateReason');
+            const date = dateInput.value;
+
+            if (!date) {
+                showNotification('Escolha uma data!', 'warning');
+                return;
+            }
+
+            try {
+                await apiFetch('/settings/blocked-dates', {
+                    method: 'POST',
+                    body: JSON.stringify({ date, reason: reasonInput.value.trim() })
+                });
+                showNotification('Data bloqueada com sucesso!', 'success');
+                dateInput.value = '';
+                reasonInput.value = '';
+                loadBlockedDates();
+            } catch (error) {
+                showNotification('Erro ao bloquear data: ' + error.message, 'error');
+            }
+        }
+
+        async function removeBlockedDate(id) {
+            if (!(await customConfirm('Remover esse bloqueio? O dia volta a aparecer disponível para os clientes.'))) return;
+            try {
+                await apiFetch(`/settings/blocked-dates/${id}`, { method: 'DELETE' });
+                showNotification('Bloqueio removido.', 'info');
+                loadBlockedDates();
+            } catch (error) {
+                showNotification('Erro ao remover bloqueio: ' + error.message, 'error');
+            }
+        }
+
         // ==================== WhatsApp (Evolution API) ====================
         let whatsappPollInterval = null;
 
@@ -2346,6 +2419,34 @@
                 showNotification('Mensagem salva com sucesso!', 'success');
             } catch (error) {
                 showNotification('Erro ao salvar mensagem: ' + error.message, 'error');
+            }
+        }
+
+        // ==================== Lembrete de Agendamento (WhatsApp) ====================
+        async function loadReminderConfig() {
+            try {
+                const config = await apiFetch('/settings/reminder');
+                document.getElementById('reminderEnabled').checked = !!config.enabled;
+                document.getElementById('reminderHoursBefore').value = String(config.hours_before);
+                document.getElementById('reminderTemplate').value = config.template || '';
+            } catch (error) {
+                console.error('Erro ao carregar configuração de lembrete:', error);
+            }
+        }
+
+        async function saveReminderConfig() {
+            const enabled = document.getElementById('reminderEnabled').checked;
+            const hours_before = document.getElementById('reminderHoursBefore').value;
+            const template = document.getElementById('reminderTemplate').value.trim();
+
+            try {
+                await apiFetch('/settings/reminder', {
+                    method: 'PUT',
+                    body: JSON.stringify({ enabled, hours_before, template })
+                });
+                showNotification('Lembrete salvo com sucesso!', 'success');
+            } catch (error) {
+                showNotification('Erro ao salvar lembrete: ' + error.message, 'error');
             }
         }
 
