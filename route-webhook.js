@@ -18,7 +18,7 @@ function buildWebhookUrl(baseUrl, instanceName) {
 
 // A Evolution GO pode mandar a midia inteira em base64 no webhook (WEBHOOK_FILES), por isso o limite folgado.
 // A mesma rota atende os dois motores (Evolution API v2 e Evolution GO).
-router.post('/evolution/:instance/:secret', express.json({ limit: '50mb' }), (req, res) => {
+router.post('/evolution/:instance/:secret', express.json({ limit: '50mb' }), express.urlencoded({ extended: false, limit: '50mb' }), (req, res) => {
   const { instance, secret } = req.params;
   const expected = webhookSecret(instance);
   if (secret.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(secret), Buffer.from(expected))) {
@@ -27,7 +27,12 @@ router.post('/evolution/:instance/:secret', express.json({ limit: '50mb' }), (re
 
   // Responde na hora (a Evolution nao precisa esperar a IA) e processa em segundo plano
   res.json({ ok: true });
-  handleWebhookEvent(instance, req.body).catch(err => console.error('[webhook] erro:', err.message));
+  // WuzAPI no formato padrao (form) manda o evento como texto JSON no campo jsonData
+  let body = req.body;
+  if (body && typeof body.jsonData === 'string') {
+    try { body = { ...JSON.parse(body.jsonData), instanceName: body.instanceName }; } catch (_) { /* mantem como veio */ }
+  }
+  handleWebhookEvent(instance, body).catch(err => console.error('[webhook] erro:', err.message));
 });
 
 module.exports = { router, buildWebhookUrl };

@@ -1,29 +1,35 @@
 // Camada unica de WhatsApp: o resto do sistema chama estas funcoes e nao precisa saber
-// se a barbearia usa a Evolution API v2 (Baileys) ou a Evolution GO (whatsmeow).
+// se a barbearia usa a Evolution API v2 (Baileys), a Evolution GO (whatsmeow) ou a WuzAPI (whatsmeow).
 // O motor de cada barbearia e escolhido no /superadmin (tenants.whatsapp_provider).
 
 const { db } = require('./db');
 const evolution = require('./evolution');
 const evogo = require('./evolution-go');
+const wuzapi = require('./wuzapi');
 const crypto = require('crypto');
 
 const PROVIDERS = {
   evolution: 'Evolution API v2',
-  evogo: 'Evolution GO'
+  evogo: 'Evolution GO',
+  wuzapi: 'WuzAPI'
 };
 
 function normalizeProvider(value) {
-  return value === 'evogo' ? 'evogo' : 'evolution';
+  return value === 'evogo' || value === 'wuzapi' ? value : 'evolution';
 }
 
 function isConfigured(provider) {
-  return normalizeProvider(provider) === 'evogo' ? evogo.isConfigured() : evolution.isConfigured();
+  const p = normalizeProvider(provider);
+  if (p === 'evogo') return evogo.isConfigured();
+  if (p === 'wuzapi') return wuzapi.isConfigured();
+  return evolution.isConfigured();
 }
 
 function notConfiguredMessage(provider) {
-  return normalizeProvider(provider) === 'evogo'
-    ? 'Evolution GO não configurada no servidor. Peça para o suporte preencher EVOGO_API_URL e EVOGO_API_KEY.'
-    : 'Evolution API não configurada no servidor. Peça para o suporte preencher EVOLUTION_API_URL e EVOLUTION_API_KEY.';
+  const p = normalizeProvider(provider);
+  if (p === 'evogo') return 'Evolution GO não configurada no servidor. Peça para o suporte preencher EVOGO_API_URL e EVOGO_API_KEY.';
+  if (p === 'wuzapi') return 'WuzAPI não configurada no servidor. Peça para o suporte preencher WUZAPI_URL e WUZAPI_ADMIN_TOKEN.';
+  return 'Evolution API não configurada no servidor. Peça para o suporte preencher EVOLUTION_API_URL e EVOLUTION_API_KEY.';
 }
 
 // IDs enviados pelo sistema (os dois motores) - usado para a IA saber quando o gestor respondeu na mao
@@ -64,11 +70,11 @@ function isNotRegisteredError(err) {
 }
 
 // Executa um envio no GO; se o numero "nao existe", tenta de novo pelo LID do contato
-async function goSend(number, fn) {
+async function goSend(number, fn, retryOnAnyError = false) {
   try {
     return await fn(number);
   } catch (err) {
-    const lid = isNotRegisteredError(err) ? altJidFor(number) : null;
+    const lid = (retryOnAnyError || isNotRegisteredError(err)) && !String(number).endsWith('@lid') ? altJidFor(number) : null;
     if (!lid) throw err;
     console.warn(`[whatsapp] ${onlyDigits(number)} recusado pelo GO, reenviando pelo LID ${lid}`);
     return fn(lid);
@@ -114,11 +120,66 @@ async function connectTenant(tenant, webhookUrl) {
     return { qrcode_base64: qrData?.base64 || qrData?.qrcode?.base64 || null, status: 'connecting' };
   }
 
+  if (provider === 'wuzapi') return connectWuzapi(tenant, instance, instanceName, webhookUrl);
+
   // Evolution GO
   return connectEvoGo(tenant, instance, instanceName, webhookUrl);
 }
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ==================== WuzAPI: conexao ====================
+
+async function createWuzapiUser(tenantId, instanceName) {
+  const created = await wuzapi.createUser(instanceName);
+  db.prepare(`
+    INSERT INTO whatsapp_instances (tenant_id, instance_name, status, provider, instance_token, external_id)
+    VALUES (?, ?, 'connecting', 'wuzapi', ?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET provider = 'wuzapi', instance_name = excluded.instance_name,
+      instance_token = excluded.instance_token, external_id = excluded.external_id,
+      status = 'connecting', updated_at = datetime('now')
+  `).run(tenantId, instanceName, created.token, created.id === null ? null : String(created.id));
+  return getInstance(tenantId);
+}
+
+// Espera a WuzAPI gerar o QR (ou perceber que ja esta pareada)
+async function waitWuzapiQr(instance, maxMs = 20000) {
+  const started = Date.now();
+  while (Date.now() - started < maxMs) {
+    await sleep(1500);
+    try {
+      if (await wuzapi.getStatus(instance.instance_token) === 'connected') return { qrcode_base64: null, status: 'connected' };
+    } catch (_) { /* segue tentando */ }
+    try {
+      const qr = await wuzapi.getQr(instance.instance_token);
+      if (qr) return { qrcode_base64: qr, status: 'connecting' };
+    } catch (err) {
+      if (/already logged in|logged in/i.test(err.message)) return { qrcode_base64: null, status: 'connected' };
+    }
+  }
+  return null;
+}
+
+async function connectWuzapi(tenant, instance, instanceName, webhookUrl) {
+  if (!instance || !instance.instance_token) {
+    instance = await createWuzapiUser(tenant.id, instanceName);
+  }
+  await wuzapi.connect(instance.instance_token, webhookUrl);
+  let result = await waitWuzapiQr(instance);
+
+  // Sem QR: sessao travada. Desconecta e tenta de novo uma vez.
+  if (!result) {
+    console.warn(`[whatsapp] WuzAPI sem QR para ${instanceName}, reconectando`);
+    await wuzapi.logout(instance.instance_token).catch(() => {});
+    await sleep(1500);
+    await wuzapi.connect(instance.instance_token, webhookUrl);
+    result = await waitWuzapiQr(instance, 20000);
+  }
+  if (!result) throw new Error('a WuzAPI não gerou o QR code. Veja o log do container da WuzAPI.');
+
+  setStatus(tenant.id, result.status);
+  return result;
+}
 
 // Cria (ou recria) a instancia no GO e grava token/id no banco
 async function createEvoGoInstance(tenantId, instanceName) {
@@ -189,6 +250,9 @@ async function connectEvoGo(tenant, instance, instanceName, webhookUrl) {
 
 // QR atual (o GO troca o QR a cada ~20s; o painel busca de novo enquanto espera a leitura)
 async function currentQr(instance) {
+  if (normalizeProvider(instance.provider) === 'wuzapi') {
+    return instance.instance_token ? wuzapi.getQr(instance.instance_token).catch(() => null) : null;
+  }
   if (normalizeProvider(instance.provider) !== 'evogo' || !instance.external_id) return null;
   return evogo.qrFromInfo(await evogo.getInfo(instance.external_id));
 }
@@ -199,6 +263,8 @@ async function refreshStatus(instance) {
   let status;
   if (provider === 'evogo') {
     status = instance.instance_token ? await evogo.getStatus(instance.instance_token) : 'disconnected';
+  } else if (provider === 'wuzapi') {
+    status = instance.instance_token ? await wuzapi.getStatus(instance.instance_token) : 'disconnected';
   } else {
     const state = await evolution.getConnectionState(instance.instance_name);
     status = state === 'open' ? 'connected' : state === 'connecting' ? 'connecting' : 'disconnected';
@@ -212,6 +278,8 @@ async function disconnect(instance) {
   if (!isConfigured(provider)) return;
   if (provider === 'evogo') {
     if (instance.instance_token) await evogo.logout(instance.instance_token);
+  } else if (provider === 'wuzapi') {
+    if (instance.instance_token) await wuzapi.logout(instance.instance_token);
   } else {
     await evolution.logoutInstance(instance.instance_name);
   }
@@ -221,6 +289,7 @@ async function disconnect(instance) {
 async function setWebhook(instance, webhookUrl) {
   const provider = normalizeProvider(instance.provider);
   if (provider === 'evogo') return evogo.connect(instance.instance_token, webhookUrl);
+  if (provider === 'wuzapi') return wuzapi.setWebhook(instance.instance_token, webhookUrl);
   return evolution.setWebhook(instance.instance_name, webhookUrl);
 }
 
@@ -228,6 +297,11 @@ async function sendText(instance, number, text) {
   const provider = normalizeProvider(instance.provider);
   if (provider === 'evogo') {
     const id = await goSend(number, to => evogo.sendText(instance.instance_token, to, text));
+    rememberSentId(id);
+    return id;
+  }
+  if (provider === 'wuzapi') {
+    const id = await goSend(number, to => wuzapi.sendText(instance.instance_token, to, text), true);
     rememberSentId(id);
     return id;
   }
@@ -239,6 +313,8 @@ async function sendText(instance, number, text) {
 // Recursos interativos de cada motor.
 function supports(instance, kind) {
   if (kind === 'poll') return !!instance;
+  // WuzAPI so faz enquete de escolha unica
+  if (kind === 'poll_multi') return !!instance && normalizeProvider(instance.provider) !== 'wuzapi';
   return kind === 'buttons' || kind === 'list';
 }
 
@@ -247,6 +323,8 @@ async function sendPoll(instance, number, { question, options, maxAnswer }) {
   let id;
   if (normalizeProvider(instance.provider) === 'evogo') {
     id = await goSend(number, to => evogo.sendPoll(instance.instance_token, to, { question, options, maxAnswer }));
+  } else if (normalizeProvider(instance.provider) === 'wuzapi') {
+    id = await goSend(number, to => wuzapi.sendPoll(instance.instance_token, to, { question, options }), true);
   } else {
     const data = await evolution.sendPoll(instance.instance_name, number, { question, options, maxAnswer });
     id = data?.key?.id || null;
@@ -259,7 +337,14 @@ async function sendPoll(instance, number, { question, options, maxAnswer }) {
 // options = textos exatos das opcoes da enquete enviada.
 async function resolvePollVote(instance, pollVote, options) {
   // Evolution v2 ja entrega os nomes das opcoes marcadas
-  if (Array.isArray(pollVote.names)) return pollVote.names.filter(n => options.includes(n));
+  if (Array.isArray(pollVote.names) && pollVote.names.length) return pollVote.names.filter(n => options.includes(n));
+
+  // WuzAPI: se ela nao lembrou os nomes (reiniciou), manda os hashes SHA-256 em base64
+  if (Array.isArray(pollVote.hashesB64)) {
+    const byHash = new Map(options.map(o => [crypto.createHash('sha256').update(o).digest('base64'), o]));
+    return pollVote.hashesB64.map(h => byHash.get(h)).filter(Boolean);
+  }
+  if (Array.isArray(pollVote.names)) return [];
 
   if (normalizeProvider(instance.provider) !== 'evogo') return null;
 
@@ -289,6 +374,10 @@ async function sendInteractive(instance, number, kind, payload, fallbackText) {
       id = await goSend(number, to => kind === 'buttons'
         ? evogo.sendButtons(instance.instance_token, to, payload)
         : evogo.sendList(instance.instance_token, to, payload));
+    } else if (provider === 'wuzapi') {
+      id = await goSend(number, to => kind === 'buttons'
+        ? wuzapi.sendButtons(instance.instance_token, to, payload)
+        : wuzapi.sendList(instance.instance_token, to, payload), true);
     } else {
       const data = kind === 'buttons'
         ? await evolution.sendButtons(instance.instance_name, number, payload)
@@ -307,7 +396,9 @@ async function sendInteractive(instance, number, kind, payload, fallbackText) {
 
 async function sendPresence(instance, number, delay = 1500) {
   try {
-    if (normalizeProvider(instance.provider) === 'evogo') await evogo.sendPresence(instance.instance_token, altJidFor(number) || number, delay);
+    const p = normalizeProvider(instance.provider);
+    if (p === 'evogo') await evogo.sendPresence(instance.instance_token, altJidFor(number) || number, delay);
+    else if (p === 'wuzapi') await wuzapi.sendPresence(instance.instance_token, number);
     else await evolution.sendPresence(instance.instance_name, number, 'composing', delay);
   } catch (_) { /* best-effort */ }
 }
@@ -322,6 +413,9 @@ async function downloadAudio(instance, msg) {
   }
   if (normalizeProvider(instance.provider) === 'evogo') {
     return evogo.downloadMedia(instance.instance_token, msg.rawMessage);
+  }
+  if (normalizeProvider(instance.provider) === 'wuzapi') {
+    return wuzapi.downloadAudio(instance.instance_token, msg.rawMessage?.audioMessage || {});
   }
   const media = await evolution.getBase64FromMediaMessage(instance.instance_name, msg.rawKey);
   return { base64: media?.base64 || null, mimetype: media?.mimetype || msg.audioMimetype || 'audio/ogg' };
@@ -372,6 +466,41 @@ function phoneFromJid(jid) {
 // { id, chatId, fromMe, senderPhone, pushName, timestamp (segundos), text,
 //   hasAudio, audioMimetype, audioInline, audioUrl, rawKey, rawMessage }
 function normalizeWebhook(provider, body) {
+  // WuzAPI: { type: 'Message', event: { Info, Message }, base64?, mimeType?, pollVote? }
+  if (normalizeProvider(provider) === 'wuzapi') {
+    if (body?.type !== 'Message' || !body.event) return [];
+    const info = body.event.Info || {};
+    const message = body.event.Message || {};
+    const audio = message.audioMessage;
+    const chatId = String(info.Chat || '');
+    const phone = phoneFromJid(info.Sender) || phoneFromJid(chatId) || phoneFromJid(info.SenderAlt) || phoneFromJid(info.RecipientAlt);
+    const lid = [info.Sender, info.Chat, info.SenderAlt].map(String).find(j => j.endsWith('@lid'));
+    if (phone && lid && !info.IsFromMe) rememberAltJid(phone, lid.split(':')[0].replace(/\.\d+@/, '@'));
+    const poll = body.pollVote || null;
+    return [{
+      id: info.ID,
+      chatId: phone ? `${phone}@s.whatsapp.net` : chatId, // mesma conversa mesmo se vier por LID
+      isGroup: !!info.IsGroup || chatId.endsWith('@g.us'),
+      fromMe: !!info.IsFromMe,
+      senderPhone: phone,
+      pushName: info.PushName || '',
+      timestamp: info.Timestamp ? Math.floor(new Date(info.Timestamp).getTime() / 1000) : 0,
+      text: textFromMessage(message).trim(),
+      pollVote: message.pollUpdateMessage || poll ? {
+        pollId: poll?.pollCreationMsgID || message.pollUpdateMessage?.pollCreationMessageKey?.ID || message.pollUpdateMessage?.pollCreationMessageKey?.id || null,
+        voteId: info.ID,
+        names: Array.isArray(poll?.selectedOptions) ? poll.selectedOptions : undefined,
+        hashesB64: Array.isArray(poll?.selectedHashesB64) ? poll.selectedHashesB64 : undefined
+      } : null,
+      hasAudio: !!audio,
+      audioMimetype: body.mimeType || audio?.mimetype || 'audio/ogg',
+      audioInline: audio && body.base64 ? { base64: String(body.base64).replace(/^data:[^,]*,/, ''), mimetype: body.mimeType || audio.mimetype || 'audio/ogg' } : null,
+      audioUrl: null,
+      rawKey: null,
+      rawMessage: audio ? { audioMessage: audio } : null
+    }];
+  }
+
   const event = String(body?.event || '');
 
   if (normalizeProvider(provider) === 'evogo') {

@@ -579,7 +579,9 @@ async function runInteractiveTool(name, args, ctx) {
       .filter(o => o.titulo && !seen.has(o.titulo) && seen.add(o.titulo));
     if (opcoes.length < 2) return { erro: 'A enquete precisa de pelo menos 2 opções diferentes. Para uma opção só, apenas informe em texto.' };
     const pergunta = cut(String(args.pergunta || texto), 255);
-    const multipla = !!args.multipla;
+    // WuzAPI so envia enquete de escolha unica
+    const multiAllowed = waProvider.supports(instance, 'poll_multi');
+    const multipla = !!args.multipla && multiAllowed;
 
     try {
       const pollId = await waProvider.sendPoll(instance, replyTo, {
@@ -595,6 +597,7 @@ async function runInteractiveTool(name, args, ctx) {
       }
       const result = await done('enquete');
       if (multipla) result.instrucao += ' O cliente pode marcar várias; quando o voto chegar, confirme o que ele marcou.';
+      if (args.multipla && !multiAllowed) result.instrucao += ' Neste WhatsApp a enquete é de escolha única: depois do voto, pergunte se quer adicionar outro serviço.';
       return result;
     } catch (err) {
       console.error(`[ia] enquete falhou (tenant ${tenant.id}), enviando texto:`, err.message);

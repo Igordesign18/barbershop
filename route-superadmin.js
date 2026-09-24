@@ -58,7 +58,7 @@ router.post('/tenants', (req, res) => {
   `);
 
   const result = db.transaction(() => {
-    const tenantResult = insertTenant.run(name.trim(), finalSlug, subscription_expires_at || null, plan === 'pro' ? 'pro' : 'basic', whatsapp_provider === 'evogo' ? 'evogo' : 'evolution');
+    const tenantResult = insertTenant.run(name.trim(), finalSlug, subscription_expires_at || null, plan === 'pro' ? 'pro' : 'basic', ['evogo', 'wuzapi'].includes(whatsapp_provider) ? whatsapp_provider : 'evolution');
     const tenantId = tenantResult.lastInsertRowid;
     const hash = bcrypt.hashSync(manager_password, 10);
     insertManager.run(tenantId, manager_email.trim(), hash);
@@ -80,7 +80,7 @@ router.put('/tenants/:id', (req, res) => {
   const finalSlug = slug ? slugify(slug) : tenant.slug;
   const finalStatus = ['active', 'suspended'].includes(status) ? status : tenant.status;
   const finalPlan = ['basic', 'pro'].includes(plan) ? plan : (tenant.plan || 'basic');
-  const finalProvider = ['evolution', 'evogo'].includes(whatsapp_provider) ? whatsapp_provider : (tenant.whatsapp_provider || 'evolution');
+  const finalProvider = ['evolution', 'evogo', 'wuzapi'].includes(whatsapp_provider) ? whatsapp_provider : (tenant.whatsapp_provider || 'evolution');
 
   if (finalSlug !== tenant.slug) {
     const slugExists = db.prepare('SELECT 1 FROM tenants WHERE slug = ? AND id != ?').get(finalSlug, tenant.id);

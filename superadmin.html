@@ -193,6 +193,7 @@
                     <select id="tenantProvider">
                         <option value="evolution">Evolution API v2</option>
                         <option value="evogo">Evolution GO</option>
+                        <option value="wuzapi">WuzAPI</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -280,6 +281,7 @@
                 <select id="editTenantProvider">
                     <option value="evolution">Evolution API v2</option>
                     <option value="evogo">Evolution GO</option>
+                        <option value="wuzapi">WuzAPI</option>
                 </select>
             </div>
             <div class="form-group">
@@ -497,7 +499,7 @@
                                 <span class="pill ${t.status === 'active' ? 'active' : 'suspended'}">${t.status === 'active' ? 'Ativo' : 'Suspenso'}</span>
                                 <span class="pill ${t.plan === 'pro' ? 'plan-pro' : 'plan-basic'}">${t.plan === 'pro' ? 'PRO' : 'Básico'}</span>
                                 <span class="pill ${waStatus}">${waLabel}</span>
-                                <span class="pill plan-basic">${t.whatsapp_provider === 'evogo' ? 'Evolution GO' : 'Evolution v2'}</span>
+                                <span class="pill plan-basic">${t.whatsapp_provider === 'evogo' ? 'Evolution GO' : t.whatsapp_provider === 'wuzapi' ? 'WuzAPI' : 'Evolution v2'}</span>
                                 <span>${expires}</span>
                                 <span>gestor: ${t.manager ? t.manager.email : '—'}</span>
                             </div>
@@ -569,7 +571,7 @@
         document.getElementById('editTenantStatus').value = tenant.status;
         document.getElementById('editSubscriptionExpires').value = tenant.subscription_expires_at || '';
         document.getElementById('editTenantPlan').value = tenant.plan === 'pro' ? 'pro' : 'basic';
-        document.getElementById('editTenantProvider').value = tenant.whatsapp_provider === 'evogo' ? 'evogo' : 'evolution';
+        document.getElementById('editTenantProvider').value = ['evogo', 'wuzapi'].includes(tenant.whatsapp_provider) ? tenant.whatsapp_provider : 'evolution';
         document.getElementById('editManagerEmail').value = tenant.manager ? tenant.manager.email : '';
         document.getElementById('editManagerPassword').value = '';
 

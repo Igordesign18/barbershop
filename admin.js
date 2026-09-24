@@ -2514,7 +2514,7 @@
                 document.getElementById('aiExtraInstructions').value = data.config.extra_instructions || '';
                 document.getElementById('aiButtonsEnabled').checked = !!data.config.buttons_enabled;
                 document.getElementById('aiBackupText').checked = data.config.backup_text !== false;
-                const isGo = data.provider === 'evogo';
+                const isGo = data.provider === 'evogo' || data.provider === 'wuzapi';
                 document.getElementById('aiChoiceFormat').value = data.config.choice_format || 'text';
                 document.getElementById('aiCarouselNote').textContent = isGo
                     ? 'Botões e lista dependem do WhatsApp do cliente mostrar; enquete sempre aparece.'

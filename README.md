@@ -206,3 +206,14 @@ avise que eu ajusto `evolution.js`.
 - "Falar com atendente": pausa a IA naquele chat por 1h, avisa o painel em tempo real
   (faixa verde no topo) e o gestor marca "Atendido" para a IA voltar.
 - Sem botões/lista ativos, o menu sai em texto numerado e o cliente responde com o número.
+
+## WuzAPI (terceiro motor de WhatsApp)
+
+- `.env` do BarberSync: `WUZAPI_URL` e `WUZAPI_ADMIN_TOKEN` (o mesmo `WUZAPI_ADMIN_TOKEN` da WuzAPI).
+- No `/superadmin`, escolha **Motor do WhatsApp: WuzAPI** na barbearia e o gestor clica em "Conectar WhatsApp".
+- O BarberSync cria um usuário na WuzAPI por barbearia (nome = slug), guarda o token dele,
+  configura o webhook (evento Message) e conecta. O QR aparece no painel como nos outros motores.
+- Webhook: aceita `WEBHOOK_FORMAT=json` e o padrão `form` (campo `jsonData`).
+- Áudio: usa o base64 que a WuzAPI já manda no webhook (sem `-skipmedia`); se faltar, baixa por `/chat/downloadaudio`.
+- Enquete: na WuzAPI é sempre de escolha única (a IA pergunta se quer mais serviços depois).
+- Botões e lista: mesmo formato interativo do Evolution GO (nó `biz`); teste no seu número.
