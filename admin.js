@@ -275,6 +275,12 @@
             eventSource.onmessage = (e) => {
                 const payload = JSON.parse(e.data);
                 console.log('Mudança detectada:', payload);
+                if (payload.eventType === 'HANDOFF') {
+                    const who = payload.handoff?.name || payload.handoff?.phone || 'Um cliente';
+                    showNotification(`💬 ${who} pediu para falar com um atendente no WhatsApp`, 'warning');
+                    loadHandoffs();
+                    return;
+                }
                 if (payload.eventType === 'INSERT' && payload.booking.status === 'confirmed') {
                      showNotification('Novo agendamento confirmado automaticamente!', 'success');
                 }
@@ -335,6 +341,7 @@
             document.getElementById('tabNav').classList.remove('hidden');
             switchTab('dashboard');
             setupRealtimeListener();
+            loadHandoffs();
             loadDashboard();
 
             // Reforço: recarrega a lista de agendamentos a cada 20s mesmo sem depender
@@ -2443,6 +2450,47 @@
             } catch (error) {
                 showNotification('Erro ao salvar mensagem: ' + error.message, 'error');
             }
+        }
+
+        // ==================== Pedidos de atendente humano (menu do WhatsApp) ====================
+        async function loadHandoffs() {
+            const bar = document.getElementById('handoffBar');
+            if (!bar) return;
+            try {
+                const rows = await apiFetch('/whatsapp/handoffs');
+                if (!rows.length) { bar.classList.add('hidden'); return; }
+                document.getElementById('handoffTitle').textContent = rows.length === 1
+                    ? '1 cliente pedindo atendente'
+                    : `${rows.length} clientes pedindo atendente`;
+                document.getElementById('handoffList').innerHTML = rows.map(h => {
+                    const phone = String(h.phone || '').replace(/\D/g, '');
+                    const when = new Date(h.created_at.replace(' ', 'T') + 'Z').toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                    const name = escapeHtmlSafe(h.name || 'Cliente');
+                    return `
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 0; border-top:1px solid rgba(255,255,255,0.06); flex-wrap:wrap;">
+                            <div><strong>${name}</strong> <small style="color:var(--text-muted);">${phone ? '+' + phone : ''} · ${when}</small></div>
+                            <div style="display:flex; gap:6px;">
+                                ${phone ? `<a class="btn btn-small" style="background:#25d366; color:#fff; text-decoration:none; padding:6px 10px;" href="https://wa.me/${phone}" target="_blank" rel="noopener"><i class="fab fa-whatsapp" aria-hidden="true"></i> Abrir</a>` : ''}
+                                <button class="btn btn-small" style="padding:6px 10px;" onclick="resolveHandoff(${h.id})"><i class="fas fa-check" aria-hidden="true"></i> Atendido</button>
+                            </div>
+                        </div>`;
+                }).join('');
+                bar.classList.remove('hidden');
+            } catch (_) { /* sem permissao ou sem IA: ignora */ }
+        }
+
+        async function resolveHandoff(id) {
+            try {
+                await apiFetch(`/whatsapp/handoffs/${id}/resolve`, { method: 'POST' });
+                showNotification('Marcado como atendido. A IA voltou a responder esse cliente.', 'success');
+                loadHandoffs();
+            } catch (error) {
+                showNotification('Erro: ' + error.message, 'error');
+            }
+        }
+
+        function escapeHtmlSafe(text) {
+            return String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
 
         // ==================== Atendente IA no WhatsApp (plano PRO) ====================

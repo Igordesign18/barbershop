@@ -209,6 +209,19 @@ db.exec(`
   );
 `);
 
+// Pedidos de "Falar com atendente" feitos pelo menu do WhatsApp (aparecem no painel do gestor)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS ai_handoffs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    chat_id TEXT NOT NULL,
+    phone TEXT,
+    name TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    resolved_at TEXT
+  );
+`);
+
 // Configuracoes globais do sistema, editadas pelo super admin (ex: chave da OpenAI)
 db.exec(`
   CREATE TABLE IF NOT EXISTS system_settings (

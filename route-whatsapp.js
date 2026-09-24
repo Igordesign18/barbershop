@@ -115,6 +115,25 @@ router.put('/template', (req, res) => {
   res.json({ ok: true });
 });
 
+// ==================== Pedidos de "Falar com atendente" ====================
+
+router.get('/handoffs', (req, res) => {
+  const rows = db.prepare(`
+    SELECT id, phone, name, created_at FROM ai_handoffs
+    WHERE tenant_id = ? AND resolved_at IS NULL ORDER BY created_at DESC LIMIT 50
+  `).all(req.tenantId);
+  res.json(rows);
+});
+
+// Gestor marcou como atendido: a IA volta a responder esse cliente
+router.post('/handoffs/:id/resolve', (req, res) => {
+  const row = db.prepare('SELECT * FROM ai_handoffs WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
+  if (!row) return res.status(404).json({ error: 'Pedido não encontrado' });
+  db.prepare("UPDATE ai_handoffs SET resolved_at = datetime('now') WHERE id = ?").run(row.id);
+  db.prepare('UPDATE ai_conversations SET paused_until = NULL WHERE tenant_id = ? AND chat_id = ?').run(req.tenantId, row.chat_id);
+  res.json({ ok: true });
+});
+
 // ==================== Atendente IA (somente plano PRO) ====================
 
 router.get('/ai', (req, res) => {

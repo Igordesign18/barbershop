@@ -22,4 +22,14 @@ function broadcastBookingChange(tenantId, eventType, booking) {
   }
 }
 
-module.exports = { addClient, removeClient, broadcastBookingChange };
+// Evento generico para o painel (ex: cliente pediu atendente humano)
+function broadcastEvent(tenantId, payload) {
+  const set = clientsByTenant.get(tenantId);
+  if (!set || set.size === 0) return;
+  const data = JSON.stringify(payload);
+  for (const res of set) {
+    res.write(`data: ${data}\n\n`);
+  }
+}
+
+module.exports = { addClient, removeClient, broadcastBookingChange, broadcastEvent };

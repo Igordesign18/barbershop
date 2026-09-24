@@ -13,7 +13,7 @@ const { tryApplyReward } = require('./loyalty');
 
 const TZ = 'America/Sao_Paulo';
 const DEBOUNCE_MS = 3000;                 // espera o cliente terminar de mandar mensagens seguidas
-const SESSION_TTL_HOURS = 4;              // depois disso a conversa recomeca do zero
+const SESSION_TTL_MINUTES = 30;           // 30 min sem conversa: recomeca do zero e o cliente recebe o menu
 const HUMAN_TAKEOVER_MINUTES = 60;        // gestor respondeu manualmente -> IA fica quieta nesse chat
 const MAX_HISTORY = 40;
 const MAX_TOOL_ROUNDS = 6;
@@ -220,7 +220,7 @@ function loadConversation(tenantId, chatId) {
 
   // Conversa parada ha muito tempo: recomeca (o cliente continua reconhecido pelo telefone)
   const updatedAt = new Date(row.updated_at.replace(' ', 'T') + 'Z').getTime();
-  if (Date.now() - updatedAt > SESSION_TTL_HOURS * 60 * 60 * 1000) messages = [];
+  if (Date.now() - updatedAt > SESSION_TTL_MINUTES * 60 * 1000) messages = [];
 
   return { ...row, messages };
 }
@@ -864,14 +864,14 @@ function stepInstructions(ctx) {
       ' Faça isso com enviar_botoes (opções "Agendar por aqui" id "agendar_aqui" e "Receber o link" id "receber_link").',
       ' Faça isso com enviar_enquete (opções "Agendar por aqui" id "agendar_aqui" e "Receber o link" id "receber_link"), junto com o link na pergunta ou em texto antes.'),
     confirm: quick(
-      ' Peça a confirmação OBRIGATORIAMENTE com enviar_botoes (Sim id "confirmar_sim" / Não id "confirmar_nao").',
+      ' Mostre o resumo OBRIGATORIAMENTE com enviar_botoes ("✅ Confirmar" id "resumo_confirmar" / "✏️ Alterar" id "resumo_alterar" / "❌ Cancelar" id "resumo_cancelar"). Com "resumo_confirmar" chame criar_agendamento. Com "resumo_alterar" pergunte com enviar_lista o que mudar (ids "alterar_profissional", "alterar_servicos", "alterar_data") e volte só àquela etapa. Com "resumo_cancelar" diga que não agendou nada e ofereça o menu (o cliente pode digitar "menu").',
       ' Peça a confirmação OBRIGATORIAMENTE com enviar_enquete (multipla=false: "Sim, confirmar" id "confirmar_sim" / "Não, quero mudar" id "confirmar_nao").'),
     barber: ' Mostre numerado (1, 2, 3...).',
     service: ' Mostre numerado com preço e duração.',
     time: ''
   };
   const moreServices = f.buttons
-    ? ' Depois de cada escolha, pergunte com enviar_botoes se quer mais algum serviço ("Mais um serviço" id "mais_servico" / "Só isso" id "so_isso").'
+    ? ' Depois de cada escolha, mostre o que já foi escolhido e pergunte com enviar_botoes ("➕ Adicionar outro" id "servico_mais" / "➡️ Continuar" id "servico_continuar").'
     : ' Depois de cada escolha, pergunte se quer mais algum serviço.';
 
   if (f.poll) {
@@ -928,6 +928,7 @@ ${profile.address ? `Endereço: ${profile.address}\n` : ''}${profile.phone ? `Te
 ${customerBlock}
 ${bookingsBlock}
 COMO ATENDER (novo agendamento):
+0. Se a mensagem for "[cliente escolheu no menu] 📅 Agendar horário", comece direto no passo 2 (não ofereça link nem cumprimente de novo).
 1. No primeiro contato (se o cliente NÃO tiver agendamento futuro), cumprimente e ofereça as duas opções: ${link ? `agendar sozinho pelo link ${link}` : 'agendar pelo link da barbearia'} OU agendar aqui mesmo pelo WhatsApp, escrevendo ou mandando áudio.${steps.first}
 2. Se quiser agendar por aqui: primeiro identifique o cliente (regra acima) — sempre antes de tudo.
 3. Profissional: chame listar_profissionais. Se só houver um, apenas informe.${steps.barber}
@@ -946,6 +947,7 @@ GERENCIAR AGENDAMENTO EXISTENTE (opções que chegam dos botões):
 
 ${interactivePromptBlock(ctx)}
 REGRAS:
+${interactiveFlags(ctx).list || interactiveFlags(ctx).buttons ? '- PROIBIDO listar opções em texto (1., 2., 3.): toda escolha vai por enviar_lista (mais de 3 opções) ou enviar_botoes (até 3). Texto só para perguntas abertas (nome, telefone).\n' : ''}- Se o cliente digitar "menu", o sistema mostra o menu principal (você não precisa fazer nada).
 - Não pergunte "quer que eu mostre...?": quando for a etapa, já mostre (profissionais, serviços, horários). Com um único profissional, informe e siga direto para os serviços.
 - Nunca invente serviços, preços, profissionais ou horários: use sempre as ferramentas.
 - Não mostre IDs nem nomes de ferramentas para o cliente. Aceite que ele responda pelo número da lista ou pelo nome.
@@ -1014,6 +1016,205 @@ function enqueue(key, task) {
   chains.set(key, next);
 }
 
+// ==================== Menu principal (enviado pelo sistema, sempre igual) ====================
+
+const MENU_OPTIONS = [
+  { id: 'menu_agendar', titulo: '📅 Agendar horário', descricao: 'Escolha profissional, serviço e horário' },
+  { id: 'menu_meus', titulo: '🗓️ Meus agendamentos', descricao: 'Confirmar, reagendar ou cancelar' },
+  { id: 'menu_servicos', titulo: '✂️ Serviços e preços', descricao: 'Veja nossa tabela' },
+  { id: 'menu_link', titulo: '🔗 Agendar pelo site', descricao: 'Receba o link' },
+  { id: 'menu_endereco', titulo: '📍 Endereço e horários', descricao: 'Onde estamos e quando abrimos' },
+  { id: 'menu_atendente', titulo: '💬 Falar com atendente', descricao: 'Uma pessoa da equipe responde' }
+];
+const MENU_IDS = [...MENU_OPTIONS.map(o => o.id), 'menu_abrir'];
+const BTN_AGENDAR = { id: 'menu_agendar', titulo: '📅 Agendar horário' };
+const BTN_MENU = { id: 'menu_abrir', titulo: '📋 Ver menu' };
+
+// Ultimas opcoes mostradas em texto numerado (quando lista/botao nao e possivel), para entender "1", "2"...
+const numberedChoices = new Map(); // `${tenantId}:${chatId}` -> { options, at }
+
+function greetingWord() {
+  const hour = Math.floor(nowBR().minutes / 60);
+  return hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+}
+
+function isGreeting(text) {
+  const t = String(text || '').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!t) return true;
+  if (t.split(' ').length > 6) return false;
+  return /^(oi+|ola|bom dia|boa tarde|boa noite|boa|e ai|eai|opa|ei|hey|hello|hi|salve|tudo bem|tudo bom|td bem|blz|beleza|alo|menu|inicio|comecar|iniciar)\b/.test(t);
+}
+
+function menuStyle(ctx) {
+  const config = getAiConfig(ctx.tenant.id);
+  return {
+    list: config.buttons_enabled || config.choice_format === 'list',
+    buttons: config.buttons_enabled
+  };
+}
+
+function rememberNumbered(ctx, options) {
+  numberedChoices.set(`${ctx.tenant.id}:${ctx.conv.chat_id}`, { options, at: Date.now() });
+}
+
+// Resposta "1", "2"... para a ultima lista mostrada em texto
+function numberedChoiceId(ctx, text) {
+  const m = String(text || '').trim().match(/^(\d{1,2})$/);
+  if (!m) return null;
+  const entry = numberedChoices.get(`${ctx.tenant.id}:${ctx.conv.chat_id}`);
+  if (!entry || Date.now() - entry.at > SESSION_TTL_MINUTES * 60 * 1000) return null;
+  return entry.options[Number(m[1]) - 1]?.id || null;
+}
+
+async function sendMenuList(ctx, texto) {
+  const style = menuStyle(ctx);
+  const fallback = numberedFallback(texto, MENU_OPTIONS);
+  if (style.list) {
+    const format = await waProvider.sendInteractive(ctx.instance, ctx.replyTo, 'list', {
+      title: cut(ctx.tenant.name, 60),
+      text: texto,
+      footer: cut(ctx.tenant.name, 60),
+      buttonText: '📋 Ver opções',
+      sections: [{ title: 'Atendimento', rows: MENU_OPTIONS.map(o => ({ id: o.id, title: o.titulo, description: o.descricao })) }]
+    }, fallback);
+    if (format === 'texto') rememberNumbered(ctx, MENU_OPTIONS);
+  } else {
+    await waProvider.sendText(ctx.instance, ctx.replyTo, fallback);
+    rememberNumbered(ctx, MENU_OPTIONS);
+  }
+}
+
+async function sendButtonsMsg(ctx, texto, opcoes) {
+  const style = menuStyle(ctx);
+  const fallback = numberedFallback(texto, opcoes);
+  if (style.buttons) {
+    const format = await waProvider.sendInteractive(ctx.instance, ctx.replyTo, 'buttons',
+      { title: ' ', text: texto, footer: cut(ctx.tenant.name, 60), buttons: opcoes.map(o => ({ id: o.id, text: o.titulo })) },
+      fallback);
+    if (format === 'texto') rememberNumbered(ctx, opcoes);
+  } else {
+    await waProvider.sendText(ctx.instance, ctx.replyTo, fallback);
+    rememberNumbered(ctx, opcoes);
+  }
+}
+
+function customerFirstName(ctx) {
+  if (!ctx.conv.customer_user_id) return '';
+  const user = db.prepare('SELECT full_name FROM users WHERE id = ?').get(ctx.conv.customer_user_id);
+  return user?.full_name ? user.full_name.split(' ')[0] : '';
+}
+
+// Boas-vindas: com horario marcado mostra o card (Confirmar/Reagendar/Cancelar) + menu; sem, so o menu
+async function sendWelcome(ctx) {
+  const name = customerFirstName(ctx);
+  const hello = `${greetingWord()}${name ? `, ${name}` : ''}! 👋`;
+  const upcoming = upcomingBookings(ctx.tenant.id, ctx.conv.customer_user_id);
+
+  if (upcoming.length === 1) {
+    const b = upcoming[0];
+    await sendButtonsMsg(ctx, `${hello} Você tem um horário marcado:\n\n${bookingSummary(b)}`, [
+      { id: `ag_confirmar_${b.id}`, titulo: '✅ Confirmar presença' },
+      { id: `ag_reagendar_${b.id}`, titulo: '🔄 Reagendar' },
+      { id: `ag_cancelar_${b.id}`, titulo: '❌ Cancelar' }
+    ]);
+    await sendMenuList(ctx, 'Precisa de mais alguma coisa?');
+    return 'Enviei a saudação, o card do agendamento com Confirmar/Reagendar/Cancelar e o menu principal.';
+  }
+  if (upcoming.length > 1) {
+    await waProvider.sendText(ctx.instance, ctx.replyTo, `${hello} Você tem *${upcoming.length} horários marcados*.`);
+    await runTool('mostrar_agendamento', {}, ctx);
+    await sendMenuList(ctx, 'Precisa de mais alguma coisa?');
+    return 'Enviei a saudação, a lista dos agendamentos do cliente e o menu principal.';
+  }
+  await sendMenuList(ctx, `${hello}\nBem-vindo à *${ctx.tenant.name}* 💈\nComo posso te ajudar?`);
+  return 'Enviei a saudação e o menu principal.';
+}
+
+function openingHoursText(tenantId) {
+  const { schedule } = getScheduleConfig(tenantId);
+  const groups = [];
+  for (const day of [1, 2, 3, 4, 5, 6, 0]) {
+    const cfg = schedule[day];
+    const hours = cfg && cfg.active && (cfg.periods || []).length
+      ? cfg.periods.map(p => `${p.start}–${p.end}`).join(' e ')
+      : 'Fechado';
+    const last = groups[groups.length - 1];
+    if (last && last.hours === hours) last.days.push(day);
+    else groups.push({ days: [day], hours });
+  }
+  return groups.map(g => {
+    const label = g.days.length > 1 ? `${WEEKDAYS_SHORT[g.days[0]]} a ${WEEKDAYS_SHORT[g.days[g.days.length - 1]]}` : WEEKDAYS_SHORT[g.days[0]];
+    return `• *${label}:* ${g.hours}`;
+  }).join('\n');
+}
+
+// Opcoes do menu que o sistema resolve sozinho. Retorna o resumo para o historico, ou null se a IA deve seguir.
+async function handleMenuChoice(ctx, menuId) {
+  const { tenant } = ctx;
+  let profile = {};
+  try { profile = JSON.parse(getSetting(tenant.id, 'shop_profile') || '{}'); } catch { profile = {}; }
+
+  switch (menuId) {
+    case 'menu_abrir':
+      await sendMenuList(ctx, 'Como posso te ajudar? 👇');
+      return 'Enviei o menu principal.';
+
+    case 'menu_meus': {
+      if (!upcomingBookings(tenant.id, ctx.conv.customer_user_id).length) {
+        await sendButtonsMsg(ctx, '🗓️ Você não tem horários marcados no momento.', [BTN_AGENDAR, BTN_MENU]);
+        return 'Informei que o cliente não tem agendamentos.';
+      }
+      await runTool('mostrar_agendamento', {}, ctx);
+      return 'Mostrei os agendamentos do cliente com Confirmar/Reagendar/Cancelar.';
+    }
+
+    case 'menu_servicos': {
+      const services = db.prepare('SELECT name, price, duration FROM services WHERE tenant_id = ? ORDER BY id').all(tenant.id);
+      const lines = services.map(sv => `• *${sv.name}* — R$ ${formatCurrencyBRL(sv.price)} · ${sv.duration} min`).join('\n');
+      await sendButtonsMsg(ctx, `✂️ *Serviços e preços*\n\n${lines || 'Nenhum serviço cadastrado.'}`, [BTN_AGENDAR, BTN_MENU]);
+      return 'Mostrei a tabela de serviços e preços.';
+    }
+
+    case 'menu_link': {
+      const baseUrl = (process.env.PUBLIC_BASE_URL || getSetting(tenant.id, 'public_base_url') || '').replace(/\/$/, '');
+      const link = baseUrl ? `${baseUrl}/${tenant.slug}` : null;
+      await waProvider.sendText(ctx.instance, ctx.replyTo, link
+        ? `🔗 *Agende pelo site:*\n${link}\n\nEscolha o serviço, o profissional e o horário direto por lá. 😉`
+        : 'O link de agendamento ainda não está disponível. Posso agendar por aqui mesmo!');
+      await sendButtonsMsg(ctx, 'Prefere que eu agende por aqui?', [BTN_AGENDAR, BTN_MENU]);
+      return 'Enviei o link de agendamento pelo site.';
+    }
+
+    case 'menu_endereco': {
+      const parts = [`📍 *${tenant.name}*`];
+      if (profile.address) parts.push(profile.address);
+      if (profile.phone) parts.push(`📞 ${profile.phone}`);
+      parts.push('', '🕐 *Horário de funcionamento*', openingHoursText(tenant.id));
+      await sendButtonsMsg(ctx, parts.join('\n'), [BTN_AGENDAR, BTN_MENU]);
+      return 'Enviei endereço e horário de funcionamento.';
+    }
+
+    case 'menu_atendente': {
+      pauseConversation(tenant.id, ctx.conv.chat_id);
+      const user = ctx.conv.customer_user_id ? db.prepare('SELECT full_name, phone FROM users WHERE id = ?').get(ctx.conv.customer_user_id) : null;
+      const phone = user?.phone || ctx.senderPhone || null;
+      const name = user?.full_name || ctx.pushName || null;
+      const already = db.prepare('SELECT id FROM ai_handoffs WHERE tenant_id = ? AND chat_id = ? AND resolved_at IS NULL').get(tenant.id, ctx.conv.chat_id);
+      if (!already) {
+        const r = db.prepare('INSERT INTO ai_handoffs (tenant_id, chat_id, phone, name) VALUES (?, ?, ?, ?)').run(tenant.id, ctx.conv.chat_id, phone, name);
+        try { require('./events').broadcastEvent(tenant.id, { eventType: 'HANDOFF', handoff: { id: r.lastInsertRowid, name, phone } }); } catch (_) {}
+      }
+      await waProvider.sendText(ctx.instance, ctx.replyTo, '💬 Certo! Já avisei a equipe, em instantes alguém te responde por aqui. 🙂');
+      return 'Cliente pediu atendente humano: avisei a equipe e pausei a IA.';
+    }
+
+    default:
+      return null;
+  }
+}
+
 async function processBatch({ tenantId, chatId, replyTo, senderPhone, pushName, texts }) {
   const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId);
   if (!tenant || !checkTenantActive(tenant).ok || !isProTenant(tenant) || !getAiConfig(tenantId).enabled) return;
@@ -1037,7 +1238,36 @@ async function processBatch({ tenantId, chatId, replyTo, senderPhone, pushName, 
 
   const isNewSession = conv.messages.length === 0;
   const ctx = { tenant, conv, senderPhone, pushName, instance, replyTo, interactiveSent: false, isNewSession, bookingShown: false };
-  const reply = await runAgent(ctx, texts.join('\n'));
+  let userText = texts.join('\n');
+
+  // Opcao do menu tocada (ou numero digitado quando o menu foi em texto)
+  const tapped = (userText.match(/\(id: (menu_[a-z_]+)\)/) || [])[1] || null;
+  const typedNumber = numberedChoiceId(ctx, userText);
+  const choiceId = tapped || typedNumber;
+  if (typedNumber && !typedNumber.startsWith('menu_')) {
+    // Numero digitado para outras opcoes (ex: botoes do agendamento em texto): passa o id para a IA
+    userText = `${userText} (id: ${typedNumber})`;
+  }
+  const wantsMenu = /^\s*(menu|#menu|voltar ao menu|inicio|início)\s*$/i.test(userText);
+
+  const recordSystemTurn = (summary) => {
+    const current = loadConversation(tenantId, chatId);
+    current.messages.push({ role: 'user', content: userText }, { role: 'assistant', content: `(${summary})` });
+    saveConversation(tenantId, chatId, { messages: current.messages });
+  };
+
+  if (choiceId && MENU_IDS.includes(choiceId) && choiceId !== 'menu_agendar') {
+    const summary = await handleMenuChoice(ctx, choiceId);
+    if (summary) return recordSystemTurn(summary);
+  }
+  if (wantsMenu || (isNewSession && !choiceId && isGreeting(userText))) {
+    return recordSystemTurn(await sendWelcome(ctx));
+  }
+  if (choiceId === 'menu_agendar') {
+    userText = '[cliente escolheu no menu] 📅 Agendar horário (id: menu_agendar)';
+  }
+
+  const reply = await runAgent(ctx, userText);
   if (reply) await waProvider.sendText(instance, replyTo, reply);
 
   // Cliente voltou e tem horario marcado: se a IA nao mostrou, o sistema mostra (com Confirmar/Reagendar/Cancelar)

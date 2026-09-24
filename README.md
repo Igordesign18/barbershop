@@ -194,3 +194,15 @@ avise que eu ajusto `evolution.js`.
   - Reagendar: mesmo profissional e serviços; o próprio horário conta como livre.
   - Cancelar: pede confirmação; grava `cancelled_by = cliente_whatsapp`.
 - A IA só mexe em agendamentos do próprio cliente, futuros e confirmados.
+
+## Menu principal do WhatsApp (PRO)
+
+- Enviado pelo sistema (sempre igual) quando o cliente manda saudação depois de 30 min sem
+  conversa, ou digita "menu" a qualquer momento. Mensagens que já são um pedido
+  ("quero cortar amanhã") vão direto para a IA.
+- Opções: 📅 Agendar horário · 🗓️ Meus agendamentos · ✂️ Serviços e preços ·
+  🔗 Agendar pelo site · 📍 Endereço e horários · 💬 Falar com atendente.
+- Cliente com horário marcado recebe antes o card com Confirmar / Reagendar / Cancelar.
+- "Falar com atendente": pausa a IA naquele chat por 1h, avisa o painel em tempo real
+  (faixa verde no topo) e o gestor marca "Atendido" para a IA voltar.
+- Sem botões/lista ativos, o menu sai em texto numerado e o cliente responde com o número.

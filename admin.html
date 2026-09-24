@@ -59,6 +59,15 @@
         </button>
     </nav>
 
+    <div id="handoffBar" class="hidden" style="margin: 10px 16px 0; padding: 12px 14px; border-radius: 12px; background: rgba(37,211,102,0.12); border: 1px solid rgba(37,211,102,0.45);">
+        <div style="display:flex; align-items:center; gap:8px; font-weight:600; color:#25d366;">
+            <i class="fas fa-headset" aria-hidden="true"></i>
+            <span id="handoffTitle">Clientes pedindo atendente</span>
+        </div>
+        <small style="display:block; color: var(--text-muted); margin:4px 0 8px;">A IA fica pausada nessas conversas. Responda pelo WhatsApp da barbearia e marque como atendido para a IA voltar.</small>
+        <div id="handoffList"></div>
+    </div>
+
     <div class="login-screen" id="loginScreen">
         <div class="login-card">
             <h2><i class="fas fa-lock" aria-hidden="true"></i> Acesso Admin</h2>
