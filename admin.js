@@ -2461,15 +2461,13 @@
                 document.getElementById('aiEnabled').checked = !!data.config.enabled;
                 document.getElementById('aiAssistantName').value = data.config.assistant_name || '';
                 document.getElementById('aiExtraInstructions').value = data.config.extra_instructions || '';
-                document.getElementById('aiPollEnabled').checked = !!data.config.poll_enabled;
-                document.getElementById('aiInteractiveEnabled').checked = !!data.config.interactive_enabled;
-                const carousel = document.getElementById('aiCarouselEnabled');
+                document.getElementById('aiButtonsEnabled').checked = !!data.config.buttons_enabled;
+                document.getElementById('aiBackupText').checked = data.config.backup_text !== false;
                 const isGo = data.provider === 'evogo';
-                carousel.checked = isGo && !!data.config.carousel_enabled;
-                carousel.disabled = !isGo;
+                document.getElementById('aiChoiceFormat').value = data.config.choice_format || 'text';
                 document.getElementById('aiCarouselNote').textContent = isGo
-                    ? 'Os cards usam as fotos cadastradas dos profissionais e dos serviços (sem foto, usa a logo da barbearia).'
-                    : 'Carrossel disponível só no motor Evolution GO. Fale com o suporte para trocar.';
+                    ? 'Botões e lista dependem do WhatsApp do cliente mostrar; enquete sempre aparece.'
+                    : 'Na Evolution v2 botões e lista podem não aparecer; enquete sempre aparece.';
 
                 const warnings = [];
                 if (!data.openai_configured) warnings.push('A IA ainda não foi configurada no servidor (chave da OpenAI). Fale com o suporte.');
@@ -2486,9 +2484,9 @@
                 enabled: document.getElementById('aiEnabled').checked,
                 assistant_name: document.getElementById('aiAssistantName').value.trim(),
                 extra_instructions: document.getElementById('aiExtraInstructions').value.trim(),
-                poll_enabled: document.getElementById('aiPollEnabled').checked,
-                interactive_enabled: document.getElementById('aiInteractiveEnabled').checked,
-                carousel_enabled: document.getElementById('aiCarouselEnabled').checked
+                buttons_enabled: document.getElementById('aiButtonsEnabled').checked,
+                choice_format: document.getElementById('aiChoiceFormat').value,
+                backup_text: document.getElementById('aiBackupText').checked
             };
             try {
                 const data = await apiFetch('/whatsapp/ai', { method: 'PUT', body: JSON.stringify(body) });

@@ -236,10 +236,8 @@ async function sendText(instance, number, text) {
   return data?.key?.id || null;
 }
 
-// Recursos interativos de cada motor. Carrossel so existe na Evolution GO.
+// Recursos interativos de cada motor.
 function supports(instance, kind) {
-  const provider = normalizeProvider(instance?.provider);
-  if (kind === 'carousel') return provider === 'evogo';
   if (kind === 'poll') return !!instance;
   return kind === 'buttons' || kind === 'list';
 }
@@ -280,7 +278,7 @@ async function resolvePollVote(instance, pollVote, options) {
   return null;
 }
 
-// Envia botoes/lista/carrossel. Se o motor recusar (erro), manda o texto numerado no lugar,
+// Envia botoes/lista. Se o motor recusar (erro), manda o texto numerado no lugar,
 // entao o cliente nunca fica sem as opcoes. Retorna 'interativo' ou 'texto'.
 async function sendInteractive(instance, number, kind, payload, fallbackText) {
   const provider = normalizeProvider(instance.provider);
@@ -288,9 +286,9 @@ async function sendInteractive(instance, number, kind, payload, fallbackText) {
     if (!supports(instance, kind)) throw new Error(`${kind} não suportado neste motor`);
     let id = null;
     if (provider === 'evogo') {
-      id = await goSend(number, to => kind === 'buttons' ? evogo.sendButtons(instance.instance_token, to, payload)
-        : kind === 'list' ? evogo.sendList(instance.instance_token, to, payload)
-        : evogo.sendCarousel(instance.instance_token, to, payload));
+      id = await goSend(number, to => kind === 'buttons'
+        ? evogo.sendButtons(instance.instance_token, to, payload)
+        : evogo.sendList(instance.instance_token, to, payload));
     } else {
       const data = kind === 'buttons'
         ? await evolution.sendButtons(instance.instance_name, number, payload)
@@ -330,7 +328,7 @@ async function downloadAudio(instance, msg) {
 
 // ==================== Webhook: converte os dois formatos em um so ====================
 
-// Clique em botao / item de lista / card do carrossel vira texto para a IA, com o id da opcao
+// Clique em botao / item de lista vira texto para a IA, com o id da opcao
 function choiceFromMessage(message) {
   if (!message) return null;
   const pick = (title, id) => (title || id) ? `[cliente tocou na opção] ${title || ''}${id ? ` (id: ${id})` : ''}`.trim() : null;

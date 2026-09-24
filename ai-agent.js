@@ -23,9 +23,9 @@ const DEFAULT_AI_CONFIG = {
   enabled: false,
   assistant_name: 'Assistente Virtual',
   extra_instructions: '',
-  poll_enabled: false,        // enquetes (PRO) - aparecem em qualquer celular
-  interactive_enabled: false, // botoes e listas (PRO)
-  carousel_enabled: false     // carrossel com fotos de profissionais/servicos (PRO, so Evolution GO)
+  buttons_enabled: false,     // botoes para escolhas rapidas: agendar aqui/link, confirmar (PRO)
+  choice_format: 'text',      // profissional/servicos/horarios: 'text' | 'poll' | 'list' (PRO)
+  backup_text: true           // depois da lista, manda as opcoes tambem em texto numerado
 };
 
 // ==================== Config / plano ====================
@@ -34,10 +34,24 @@ function isProTenant(tenant) {
   return !!tenant && String(tenant.plan || '').toLowerCase() === 'pro';
 }
 
+const CHOICE_FORMATS = ['text', 'poll', 'list'];
+
+// Converte configuracoes antigas (caixinhas poll/interactive) para o formato novo.
+// O carrossel foi removido: quem usava carrossel passa para texto numerado.
+function normalizeAiConfig(raw) {
+  const c = { ...DEFAULT_AI_CONFIG, ...raw };
+  if (!CHOICE_FORMATS.includes(raw.choice_format)) {
+    c.choice_format = raw.poll_enabled ? 'poll' : raw.interactive_enabled && !raw.carousel_enabled ? 'list' : 'text';
+  }
+  if (typeof raw.buttons_enabled !== 'boolean') c.buttons_enabled = !!raw.interactive_enabled;
+  if (typeof raw.backup_text !== 'boolean') c.backup_text = true;
+  return c;
+}
+
 function getAiConfig(tenantId) {
   const row = db.prepare("SELECT value FROM settings WHERE tenant_id = ? AND key = 'ai_config'").get(tenantId);
-  if (!row) return { ...DEFAULT_AI_CONFIG };
-  try { return { ...DEFAULT_AI_CONFIG, ...JSON.parse(row.value) }; } catch { return { ...DEFAULT_AI_CONFIG }; }
+  if (!row) return normalizeAiConfig({});
+  try { return normalizeAiConfig(JSON.parse(row.value)); } catch { return normalizeAiConfig({}); }
 }
 
 function saveAiConfig(tenantId, config) {
@@ -370,32 +384,18 @@ const INTERACTIVE_TOOLS = {
         required: ['pergunta', 'opcoes']
       }
     }
-  },
-  enviar_carrossel: {
-    type: 'function',
-    function: {
-      name: 'enviar_carrossel',
-      description: 'Envia um carrossel com fotos dos profissionais ou dos serviços, cada card com um botão para escolher.',
-      parameters: {
-        type: 'object',
-        properties: {
-          tipo: { type: 'string', enum: ['profissionais', 'servicos'] },
-          texto: { type: 'string', description: 'Mensagem que acompanha o carrossel' }
-        },
-        required: ['tipo', 'texto']
-      }
-    }
   }
 };
 
 function interactiveFlags(ctx) {
   const config = getAiConfig(ctx.tenant.id);
   const allowed = isProTenant(ctx.tenant) && ctx.instance; // somente plano PRO
+  const format = config.choice_format;
   return {
-    poll: !!(allowed && config.poll_enabled && waProvider.supports(ctx.instance, 'poll')),
-    buttons: !!(allowed && config.interactive_enabled && waProvider.supports(ctx.instance, 'buttons')),
-    list: !!(allowed && config.interactive_enabled && waProvider.supports(ctx.instance, 'list')),
-    carousel: !!(allowed && config.carousel_enabled && waProvider.supports(ctx.instance, 'carousel'))
+    poll: !!(allowed && format === 'poll' && waProvider.supports(ctx.instance, 'poll')),
+    buttons: !!(allowed && config.buttons_enabled && waProvider.supports(ctx.instance, 'buttons')),
+    list: !!(allowed && format === 'list' && waProvider.supports(ctx.instance, 'list')),
+    backup: config.backup_text !== false
   };
 }
 
@@ -405,20 +405,12 @@ function toolsFor(ctx) {
   if (flags.poll) tools.push(INTERACTIVE_TOOLS.enviar_enquete);
   if (flags.buttons) tools.push(INTERACTIVE_TOOLS.enviar_botoes);
   if (flags.list) tools.push(INTERACTIVE_TOOLS.enviar_lista);
-  if (flags.carousel) tools.push(INTERACTIVE_TOOLS.enviar_carrossel);
   return tools;
 }
 
 function cut(text, max) {
   const t = String(text || '').trim();
   return t.length > max ? t.slice(0, max - 1) + '…' : t;
-}
-
-function absoluteUrl(tenantId, url) {
-  if (!url) return null;
-  if (/^https?:\/\//i.test(url)) return url;
-  const base = (process.env.PUBLIC_BASE_URL || getSetting(tenantId, 'public_base_url') || '').replace(/\/$/, '');
-  return base ? `${base}${url.startsWith('/') ? '' : '/'}${url}` : null;
 }
 
 function numberedFallback(texto, opcoes) {
@@ -430,11 +422,12 @@ async function runInteractiveTool(name, args, ctx) {
   const flags = interactiveFlags(ctx);
   const footer = cut(tenant.name, 60);
   const texto = String(args.texto || '').trim() || 'Escolha uma opção:';
-  // O WhatsApp as vezes aceita botoes/lista/carrossel e simplesmente nao mostra ao cliente
+  // O WhatsApp as vezes aceita botoes/lista e simplesmente nao mostra ao cliente
   // (numeros comuns, conexao nao oficial). Para a conversa nunca travar, depois do envio
   // interativo sai tambem uma versao curta em texto com as mesmas opcoes.
   const done = async (format, opcoes) => {
-    if (format === 'interativo' && Array.isArray(opcoes) && opcoes.length) {
+    // Botoes ja foram confirmados aparecendo no Evolution GO atualizado: sem texto de reserva para eles
+    if (format === 'interativo' && flags.backup && name !== 'enviar_botoes' && Array.isArray(opcoes) && opcoes.length) {
       const backup = `Se as opções não aparecerem aí, é só responder com o número:\n${opcoes.map((o, i) => `*${i + 1}.* ${o.titulo}`).join('\n')}`;
       await waProvider.sendText(instance, replyTo, backup).catch(() => {});
     }
@@ -499,31 +492,6 @@ async function runInteractiveTool(name, args, ctx) {
     return done(format, opcoes);
   }
 
-  if (name === 'enviar_carrossel') {
-    if (!flags.carousel) return { erro: 'Carrossel desativado. Use lista ou texto numerado.' };
-    const logo = absoluteUrl(tenant.id, getSetting(tenant.id, 'logo_url'));
-    let items;
-    if (args.tipo === 'servicos') {
-      items = db.prepare('SELECT id, name, price, duration, photo_url FROM services WHERE tenant_id = ? ORDER BY id LIMIT 10').all(tenant.id)
-        .map(sv => ({ id: `servico_${sv.id}`, titulo: sv.name, descricao: `R$ ${formatCurrencyBRL(sv.price)} • ${sv.duration} min`, image: absoluteUrl(tenant.id, sv.photo_url) || logo, botao: sv.name }));
-    } else {
-      items = db.prepare('SELECT id, name, specialty, photo_url FROM barbers WHERE tenant_id = ? ORDER BY id LIMIT 10').all(tenant.id)
-        .map(b => ({ id: `profissional_${b.id}`, titulo: b.name, descricao: b.specialty || 'Profissional', image: absoluteUrl(tenant.id, b.photo_url) || logo, botao: b.name.split(' ')[0] }));
-    }
-    if (!items.length) return { erro: 'Nada cadastrado para mostrar.' };
-    // Card de carrossel precisa de imagem: sem foto (e sem logo), cai para lista
-    if (items.some(i => !i.image)) return { erro: 'Faltam fotos para o carrossel. Use enviar_lista ou texto numerado.' };
-
-    const format = await waProvider.sendInteractive(instance, replyTo, 'carousel',
-      {
-        text: texto,
-        footer,
-        cards: items.map(i => ({ title: cut(i.titulo, 60), imageUrl: i.image, body: `*${i.titulo}*\n${i.descricao}`, buttons: [{ id: i.id, text: cut(`Escolher ${i.botao}`, 20) }] }))
-      },
-      numberedFallback(texto, items));
-    return done(format, items);
-  }
-
   return { erro: `Ferramenta desconhecida: ${name}` };
 }
 
@@ -561,7 +529,7 @@ async function runTool(name, args, ctx) {
     case 'listar_profissionais': {
       const barbers = db.prepare('SELECT id, name, specialty FROM barbers WHERE tenant_id = ? ORDER BY id').all(tenantId);
       const flagsB = interactiveFlags(ctx);
-      const hintB = barbers.length > 1 ? (flagsB.poll ? 'Agora mostre com enviar_enquete (multipla=false).' : flagsB.carousel ? 'Agora mostre com enviar_carrossel tipo "profissionais".' : flagsB.list ? 'Agora mostre com enviar_lista.' : null) : null;
+      const hintB = barbers.length > 1 ? (flagsB.poll ? 'Agora mostre com enviar_enquete (multipla=false).' : flagsB.list ? 'Agora mostre com enviar_lista (ids "profissional_<id>").' : flagsB.list ? 'Agora mostre com enviar_lista.' : null) : null;
       const single = barbers.length === 1 ? `Só existe ${barbers[0].name}: informe em uma frase e, NA MESMA RESPOSTA, chame listar_servicos e mostre os serviços (não pergunte se pode mostrar).` : null;
       return { profissionais: barbers.map(b => ({ id: b.id, nome: b.name, especialidade: b.specialty || null })), ...((hintB || single) ? { proximo_passo: hintB || single } : {}) };
     }
@@ -569,7 +537,7 @@ async function runTool(name, args, ctx) {
     case 'listar_servicos': {
       const services = db.prepare('SELECT id, name, price, duration FROM services WHERE tenant_id = ? ORDER BY id').all(tenantId);
       const flagsS = interactiveFlags(ctx);
-      const hintS = flagsS.poll ? 'Agora mostre com enviar_enquete (multipla=true, ids "servico_<id>").' : flagsS.carousel ? 'Agora mostre com enviar_carrossel tipo "servicos".' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>").' : null;
+      const hintS = flagsS.poll ? 'Agora mostre com enviar_enquete (multipla=true, ids "servico_<id>").' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>", descrição com preço e duração).' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>").' : null;
       return { servicos: services.map(s => ({ id: s.id, nome: s.name, preco: `R$ ${formatCurrencyBRL(s.price)}`, duracao_min: s.duration })), ...(hintS ? { proximo_passo: hintS } : {}) };
     }
 
@@ -668,7 +636,6 @@ async function runTool(name, args, ctx) {
     case 'enviar_enquete':
     case 'enviar_botoes':
     case 'enviar_lista':
-    case 'enviar_carrossel':
       return runInteractiveTool(name, args, ctx);
 
     default:
@@ -680,10 +647,9 @@ async function runTool(name, args, ctx) {
 
 function interactivePromptBlock(ctx) {
   const flags = interactiveFlags(ctx);
-  if (!flags.poll && !flags.buttons && !flags.list && !flags.carousel) return '';
+  if (!flags.poll && !flags.buttons && !flags.list) return '';
   const lines = ['OPÇÕES INTERATIVAS (use sempre que fizer sentido, em vez de lista em texto):'];
   if (flags.poll) lines.push('- enviar_enquete: enquete do WhatsApp (formato preferido). O voto chega como "[cliente votou na enquete ...] opções (ids: ...)".');
-  if (flags.carousel) lines.push('- enviar_carrossel: para mostrar profissionais ou serviços com foto (ids "profissional_<id>" / "servico_<id>").');
   if (flags.list) lines.push('- enviar_lista: para horários livres (até 10 por vez), serviços ou profissionais. Use ids como "hora_14:30", "servico_3", "profissional_2".');
   if (flags.buttons) lines.push('- enviar_botoes: para escolhas curtas de até 3 opções, como confirmar o resumo (ids "confirmar_sim" / "confirmar_nao") ou "Agendar por aqui" / "Receber o link".');
   lines.push('- Quando o cliente tocar numa opção, chega uma mensagem "[cliente tocou na opção] Título (id: ...)". Use o id para saber o que foi escolhido.');
@@ -691,33 +657,37 @@ function interactivePromptBlock(ctx) {
   return lines.join('\n') + '\n';
 }
 
-// Como mostrar cada etapa: com os recursos interativos ligados, a IA e OBRIGADA a usa-los
+// Como mostrar cada etapa: com os recursos interativos ligados, a IA e OBRIGADA a usa-los.
+// Botoes = escolhas rapidas (ate 3). Formato de escolha (enquete/lista) = profissional, servicos, horarios.
 function stepInstructions(ctx) {
   const f = interactiveFlags(ctx);
-  // Enquete tem prioridade: e o unico formato de escolha que aparece em qualquer celular
-  if (f.poll) {
-    return {
-      first: ' Faça isso com enviar_enquete (opções "Agendar por aqui" id "agendar_aqui" e "Receber o link" id "receber_link"), junto com o link na pergunta ou em texto antes.',
-      barber: ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_enquete (multipla=false, ids "profissional_<id>").',
-      service: ' Mostre OBRIGATORIAMENTE com enviar_enquete (multipla=true, ids "servico_<id>", título com nome e preço), para o cliente marcar todos que quiser de uma vez.',
-      time: ' Mostre OBRIGATORIAMENTE com enviar_enquete (multipla=false, até 12 horários, ids "hora_HH:MM").',
-      confirm: ' Peça a confirmação OBRIGATORIAMENTE com enviar_enquete (multipla=false: "Sim, confirmar" id "confirmar_sim" / "Não, quero mudar" id "confirmar_nao").'
-    };
-  }
-  const choose = (carousel, list, text) => carousel && f.carousel ? carousel : list && f.list ? list : text;
-  return {
-    first: f.buttons ? ' Faça isso com enviar_botoes (opções "Agendar por aqui" id "agendar_aqui" e "Receber o link" id "receber_link").' : '',
-    barber: choose(
-      ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_carrossel tipo "profissionais".',
-      ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_lista.',
-      ' Mostre numerado (1, 2, 3...).'),
-    service: choose(
-      ' Mostre OBRIGATORIAMENTE com enviar_carrossel tipo "servicos". Depois de cada escolha, pergunte se quer mais algum serviço.',
-      ' Mostre OBRIGATORIAMENTE com enviar_lista (id "servico_<id>"). Depois de cada escolha, pergunte se quer mais algum serviço.',
-      ' Mostre numerado com preço e duração.'),
-    time: f.list ? ' Mostre os horários OBRIGATORIAMENTE com enviar_lista (até 10, ids "hora_HH:MM").' : '',
-    confirm: f.buttons ? ' Peça a confirmação OBRIGATORIAMENTE com enviar_botoes (Sim id "confirmar_sim" / Não id "confirmar_nao").' : ''
+  const quick = (buttonsText, pollText) => f.buttons ? buttonsText : f.poll ? pollText : '';
+
+  const steps = {
+    first: quick(
+      ' Faça isso com enviar_botoes (opções "Agendar por aqui" id "agendar_aqui" e "Receber o link" id "receber_link").',
+      ' Faça isso com enviar_enquete (opções "Agendar por aqui" id "agendar_aqui" e "Receber o link" id "receber_link"), junto com o link na pergunta ou em texto antes.'),
+    confirm: quick(
+      ' Peça a confirmação OBRIGATORIAMENTE com enviar_botoes (Sim id "confirmar_sim" / Não id "confirmar_nao").',
+      ' Peça a confirmação OBRIGATORIAMENTE com enviar_enquete (multipla=false: "Sim, confirmar" id "confirmar_sim" / "Não, quero mudar" id "confirmar_nao").'),
+    barber: ' Mostre numerado (1, 2, 3...).',
+    service: ' Mostre numerado com preço e duração.',
+    time: ''
   };
+  const moreServices = f.buttons
+    ? ' Depois de cada escolha, pergunte com enviar_botoes se quer mais algum serviço ("Mais um serviço" id "mais_servico" / "Só isso" id "so_isso").'
+    : ' Depois de cada escolha, pergunte se quer mais algum serviço.';
+
+  if (f.poll) {
+    steps.barber = ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_enquete (multipla=false, ids "profissional_<id>").';
+    steps.service = ' Mostre OBRIGATORIAMENTE com enviar_enquete (multipla=true, ids "servico_<id>", título com nome e preço), para o cliente marcar todos que quiser de uma vez.';
+    steps.time = ' Mostre OBRIGATORIAMENTE com enviar_enquete (multipla=false, até 12 horários, ids "hora_HH:MM").';
+  } else if (f.list) {
+    steps.barber = ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_lista (ids "profissional_<id>", descrição = especialidade).';
+    steps.service = ' Mostre OBRIGATORIAMENTE com enviar_lista (ids "servico_<id>", título = nome, descrição = preço e duração).' + moreServices;
+    steps.time = ' Mostre OBRIGATORIAMENTE com enviar_lista (até 10 horários, ids "hora_HH:MM", botão "Ver horários").';
+  }
+  return steps;
 }
 
 function buildSystemPrompt(ctx) {
@@ -795,7 +765,7 @@ async function runAgent(ctx, userText) {
       break;
     }
 
-    // Texto que a IA escreveu junto com o envio de botoes/lista/carrossel sai antes das opcoes
+    // Texto que a IA escreveu junto com o envio de botoes/lista/enquete sai antes das opcoes
     const sendsInteractive = message.tool_calls.some(c => String(c.function?.name).startsWith('enviar_'));
     if (sendsInteractive && message.content && message.content.trim() && message.content.trim() !== '-') {
       await waProvider.sendText(ctx.instance, ctx.replyTo, message.content.trim());

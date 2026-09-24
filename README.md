@@ -165,17 +165,12 @@ avise que eu ajusto `evolution.js`.
 - **Trocar o motor de uma barbearia:** mude no super admin e peça pro gestor clicar em
   "Conectar WhatsApp" de novo. A instância antiga é desligada e o QR do novo motor aparece.
 
-## Botões, listas e carrossel (plano PRO)
+## Botões e listas (plano PRO)
 
-- No card **Atendente IA no WhatsApp** o gestor liga "Usar botões e listas" e/ou "Usar carrossel".
-- Só funciona para barbearias PRO (checado no servidor, não só na tela).
-- **Botões** (até 3): confirmar agendamento, "Agendar por aqui" / "Receber o link".
-- **Lista** (até 10): horários livres, serviços, profissionais.
-- **Carrossel** (só Evolution GO): cards com as fotos dos profissionais ou serviços e botão "Escolher".
-  Sem foto cadastrada, o card usa a logo da barbearia. As imagens precisam estar acessíveis pela
-  URL pública (`PUBLIC_BASE_URL`), porque o servidor GO baixa a foto para montar o card.
-- Se o motor devolver erro ao enviar (ex.: Evolution 2.3.7), a IA manda as mesmas opções em texto
-  numerado automaticamente. O clique do cliente chega para a IA com o id da opção escolhida.
+- Card do atendente IA: "Usar botões" (escolhas rápidas) e o seletor de formato
+  (Texto numerado, Enquete ou Lista) para profissional, serviços e horários.
+- Botões funcionam no Evolution GO atualizado (0.7.x). Na Evolution 2.3.7 dão erro e viram texto.
+- Se o envio der erro, a IA manda as mesmas opções em texto numerado automaticamente.
 
 ## Enquetes (plano PRO) — recomendado
 
@@ -185,4 +180,4 @@ avise que eu ajusto `evolution.js`.
 - Enquete é recurso normal do WhatsApp: aparece em qualquer celular (diferente de botões/listas).
 - Voto: Evolution v2 já entrega o nome da opção; Evolution GO grava o voto decifrado e o
   BarberSync consulta `/polls/:id/results` (precisa do Postgres do GO configurado).
-- Com enquete ligada, ela tem prioridade sobre botões, listas e carrossel.
+- Com enquete escolhida, os botões (se ligados) continuam nas escolhas rápidas.

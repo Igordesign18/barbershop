@@ -156,28 +156,6 @@ async function sendList(token, number, { title, text, footer, buttonText, sectio
   return data?.Info?.ID || null;
 }
 
-// Carrossel: cards com foto, texto e botao de resposta. As imagens precisam ser URLs publicas
-// (o servidor GO baixa a imagem para montar o card).
-async function sendCarousel(token, number, { text, footer, cards }) {
-  const data = await goFetch('/send/carousel', {
-    method: 'POST',
-    token,
-    body: {
-      number,
-      body: text || '',
-      footer: footer || '',
-      cards: cards.map(c => ({
-        header: { title: c.title || '', imageUrl: c.imageUrl },
-        body: { text: c.body || c.title || ' ' },
-        footer: c.footer || '',
-        buttons: (c.buttons || []).map(b => ({ type: 'REPLY', displayText: b.text, id: b.id }))
-      }))
-    }
-  });
-  return data?.Info?.ID || null;
-}
-
-// Enquete. maxAnswer = quantas opcoes o cliente pode marcar (1 = escolha unica)
 async function sendPoll(token, number, { question, options, maxAnswer }) {
   const data = await goFetch('/send/poll', {
     method: 'POST',
@@ -225,7 +203,6 @@ module.exports = {
   sendText,
   sendButtons,
   sendList,
-  sendCarousel,
   sendPoll,
   getPollResults,
   sendPresence,
