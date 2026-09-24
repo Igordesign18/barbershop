@@ -1334,6 +1334,9 @@
                                     <p><i class="fas fa-dollar-sign" aria-hidden="true"></i> R$ ${booking.services?.price?.toFixed(2) || '0.00'} • <i class="fas fa-hourglass-half" aria-hidden="true"></i> ${booking.services?.duration || 0}min</p>
                                     ${booking.reward_label ? `<p style="color:var(--lime);"><i class="fas fa-gift" aria-hidden="true"></i> ${booking.reward_label} (-R$ ${booking.discount_applied.toFixed(2)})</p>` : ''}
                                     ${booking.source === 'whatsapp_ia' ? `<p style="color:#25d366;"><i class="fas fa-robot" aria-hidden="true"></i> Agendado pela IA no WhatsApp</p>` : ''}
+                                    ${booking.client_confirmed_at && booking.status === 'confirmed' ? `<p style="color:#25d366;"><i class="fas fa-check-double" aria-hidden="true"></i> Cliente confirmou presença</p>` : ''}
+                                    ${booking.rescheduled_at && booking.status === 'confirmed' ? `<p style="color:var(--text-muted);"><i class="fas fa-rotate" aria-hidden="true"></i> Reagendado pelo cliente no WhatsApp</p>` : ''}
+                                    ${booking.cancelled_by === 'cliente_whatsapp' && booking.status === 'cancelled' ? `<p style="color:#e57373;"><i class="fas fa-ban" aria-hidden="true"></i> Cancelado pelo cliente no WhatsApp</p>` : ''}
                                 </div>
                                 <span class="booking-status status-${booking.status}">
                                     ${booking.status === 'confirmed' ? 'Confirmado' : 

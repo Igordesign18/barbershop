@@ -149,7 +149,7 @@ function getBlockedPeriods(tenantId, date) {
 
 // Mesma regra da pagina publica (client.js): horarios de "interval" em "interval" dentro de cada turno,
 // que caibam a duracao inteira, sem turno bloqueado, sem horario passado e sem conflito com o barbeiro.
-function computeFreeSlots(tenantId, barberId, date, duration) {
+function computeFreeSlots(tenantId, barberId, date, duration, ignoreBookingId = null) {
   const { schedule, interval } = getScheduleConfig(tenantId);
   const dayConfig = schedule[weekdayOf(date)];
   if (!dayConfig || !dayConfig.active) return [];
@@ -163,8 +163,8 @@ function computeFreeSlots(tenantId, barberId, date, duration) {
   const busy = db.prepare(`
     SELECT b.booking_time, COALESCE(b.item_duration, s.duration, 30) AS duration
     FROM bookings b LEFT JOIN services s ON s.id = b.service_id
-    WHERE b.tenant_id = ? AND b.booking_date = ? AND b.barber_id = ? AND b.status = 'confirmed'
-  `).all(tenantId, date, barberId).map(b => {
+    WHERE b.tenant_id = ? AND b.booking_date = ? AND b.barber_id = ? AND b.status = 'confirmed' AND b.id != ?
+  `).all(tenantId, date, barberId, ignoreBookingId || 0).map(b => {
     const start = toMinutes(b.booking_time);
     return { start, end: start + Number(b.duration || 30) };
   });
@@ -294,9 +294,26 @@ const TOOLS = [
         properties: {
           profissional_id: { type: 'integer' },
           data: { type: 'string', description: 'Data no formato AAAA-MM-DD' },
-          servicos_ids: { type: 'array', items: { type: 'integer' } }
+          servicos_ids: { type: 'array', items: { type: 'integer' } },
+          ignorar_agendamento_id: { type: 'integer', description: 'Ao reagendar: id do agendamento atual (o horário dele conta como livre)' }
         },
         required: ['profissional_id', 'data', 'servicos_ids']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'dias_disponiveis',
+      description: 'Lista os próximos dias (até 10) em que o profissional tem horário livre para a duração dos serviços, com a quantidade de horários de cada dia.',
+      parameters: {
+        type: 'object',
+        properties: {
+          profissional_id: { type: 'integer' },
+          servicos_ids: { type: 'array', items: { type: 'integer' } },
+          ignorar_agendamento_id: { type: 'integer', description: 'Ao reagendar: id do agendamento atual' }
+        },
+        required: ['profissional_id', 'servicos_ids']
       }
     }
   },
@@ -321,11 +338,95 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'meus_agendamentos',
-      description: 'Lista os próximos agendamentos confirmados do cliente já identificado.',
+      description: 'Lista os próximos agendamentos confirmados do cliente já identificado (com id).',
       parameters: { type: 'object', properties: {} }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'mostrar_agendamento',
+      description: 'Mostra ao cliente o resumo organizado de um agendamento dele com as opções Confirmar presença / Reagendar / Cancelar. Sem id: mostra o próximo (ou a lista, se houver vários).',
+      parameters: { type: 'object', properties: { agendamento_id: { type: 'integer' } } }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'confirmar_presenca',
+      description: 'Registra que o cliente confirmou que vai comparecer ao agendamento.',
+      parameters: { type: 'object', properties: { agendamento_id: { type: 'integer' } }, required: ['agendamento_id'] }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'cancelar_agendamento',
+      description: 'Cancela o agendamento. Só chame depois que o cliente confirmou explicitamente que quer cancelar (botão "Sim, cancelar").',
+      parameters: { type: 'object', properties: { agendamento_id: { type: 'integer' } }, required: ['agendamento_id'] }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'reagendar_agendamento',
+      description: 'Muda a data/hora de um agendamento do cliente (mesmo profissional e serviços). Só chame depois que o cliente confirmou o novo horário.',
+      parameters: {
+        type: 'object',
+        properties: {
+          agendamento_id: { type: 'integer' },
+          data: { type: 'string', description: 'AAAA-MM-DD' },
+          hora: { type: 'string', description: 'HH:MM' }
+        },
+        required: ['agendamento_id', 'data', 'hora']
+      }
     }
   }
 ];
+
+// ==================== Agendamentos do cliente ====================
+
+const WEEKDAYS_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+function shortDate(date) {
+  return `${WEEKDAYS_SHORT[weekdayOf(date)]}, ${formatDateBR(date).slice(0, 5)}`;
+}
+
+function upcomingBookings(tenantId, userId) {
+  if (!userId) return [];
+  const now = nowBR();
+  return db.prepare(`
+    SELECT b.*, COALESCE(b.item_name, s.name) AS servico, br.name AS profissional,
+      COALESCE(b.item_duration, s.duration, 30) AS duracao,
+      COALESCE(b.item_price, s.price, 0) - COALESCE(b.discount_applied, 0) AS valor
+    FROM bookings b LEFT JOIN services s ON s.id = b.service_id LEFT JOIN barbers br ON br.id = b.barber_id
+    WHERE b.tenant_id = ? AND b.user_id = ? AND b.status = 'confirmed'
+      AND (b.booking_date > ? OR (b.booking_date = ? AND b.booking_time >= ?))
+    ORDER BY b.booking_date, b.booking_time LIMIT 10
+  `).all(tenantId, userId, now.date, now.date, now.time);
+}
+
+// Agendamento do proprio cliente, ainda por acontecer (seguranca: nunca mexe no de outra pessoa)
+function ownBooking(ctx, bookingId) {
+  return upcomingBookings(ctx.tenant.id, ctx.conv.customer_user_id).find(b => b.id === Number(bookingId)) || null;
+}
+
+function bookingSummary(b) {
+  return [
+    `✂️ *Serviço:* ${b.servico}`,
+    `💈 *Profissional:* ${b.profissional || '-'}`,
+    `🗓️ *Data:* ${shortDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)}`,
+    `💰 *Valor:* R$ ${formatCurrencyBRL(b.valor)}`,
+    b.client_confirmed_at ? '✅ Presença já confirmada' : null
+  ].filter(Boolean).join('\n');
+}
+
+function notifyPanel(tenantId, bookingId) {
+  try {
+    const row = db.prepare('SELECT id, status FROM bookings WHERE id = ?').get(bookingId);
+    require('./events').broadcastBookingChange(tenantId, 'UPDATE', row);
+  } catch (_) {}
+}
 
 // Ferramentas de mensagem interativa (so entram se o gestor ligou e o motor suporta)
 const INTERACTIVE_TOOLS = {
@@ -359,7 +460,7 @@ const INTERACTIVE_TOOLS = {
           botao: { type: 'string', description: 'Texto do botão que abre a lista, ex: "Ver horários"' },
           opcoes: {
             type: 'array', maxItems: 10,
-            items: { type: 'object', properties: { id: { type: 'string' }, titulo: { type: 'string', description: 'Até 24 caracteres' }, descricao: { type: 'string' } }, required: ['id', 'titulo'] }
+            items: { type: 'object', properties: { id: { type: 'string' }, titulo: { type: 'string', description: 'Até 24 caracteres' }, descricao: { type: 'string' }, secao: { type: 'string', description: 'Grupo opcional, ex: "🌅 Manhã", "☀️ Tarde"' } }, required: ['id', 'titulo'] }
           }
         },
         required: ['texto', 'opcoes']
@@ -484,10 +585,18 @@ async function runInteractiveTool(name, args, ctx) {
 
   if (name === 'enviar_lista') {
     if (!flags.list) return { erro: 'Listas desativadas. Envie as opções em texto numerado.' };
-    const opcoes = (args.opcoes || []).slice(0, 10).map(o => ({ id: cut(o.id, 60), titulo: cut(o.titulo, 24), descricao: cut(o.descricao, 72) })).filter(o => o.titulo);
+    const opcoes = (args.opcoes || []).slice(0, 10).map(o => ({ id: cut(o.id, 60), titulo: cut(o.titulo, 24), descricao: cut(o.descricao, 72), secao: cut(o.secao, 24) })).filter(o => o.titulo);
     if (!opcoes.length) return { erro: 'Informe ao menos uma opção.' };
+    // Agrupa em secoes (ex: Manha / Tarde / Noite) mantendo a ordem em que vieram
+    const sections = [];
+    for (const o of opcoes) {
+      const title = o.secao || 'Opções';
+      let sec = sections.find(x => x.title === title);
+      if (!sec) { sec = { title, rows: [] }; sections.push(sec); }
+      sec.rows.push({ id: o.id, title: o.titulo, description: o.descricao });
+    }
     const format = await waProvider.sendInteractive(instance, replyTo, 'list',
-      { title: cut(tenant.name, 60), text: texto, footer, buttonText: cut(args.botao || 'Ver opções', 20), sections: [{ title: 'Opções', rows: opcoes.map(o => ({ id: o.id, title: o.titulo, description: o.descricao })) }] },
+      { title: cut(tenant.name, 60), text: texto, footer, buttonText: cut(args.botao || 'Ver opções', 20), sections },
       numberedFallback(texto, opcoes));
     return done(format, opcoes);
   }
@@ -549,16 +658,17 @@ async function runTool(name, args, ctx) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(args.data))) return { erro: 'Data inválida, use AAAA-MM-DD.' };
 
       const duration = loaded.services.reduce((sum, s) => sum + s.duration, 0);
-      const slots = computeFreeSlots(tenantId, barber.id, args.data, duration);
+      const ignoreId = args.ignorar_agendamento_id && ownBooking(ctx, args.ignorar_agendamento_id) ? Number(args.ignorar_agendamento_id) : null;
+      const slots = computeFreeSlots(tenantId, barber.id, args.data, duration, ignoreId);
       const result = { profissional: barber.name, data: args.data, duracao_total_min: duration, horarios_livres: slots };
       if (slots.length && interactiveFlags(ctx).poll) result.proximo_passo = 'Mostre até 12 horários com enviar_enquete (multipla=false, ids "hora_HH:MM"), priorizando os mais próximos do que o cliente pediu.';
-      else if (slots.length && interactiveFlags(ctx).list) result.proximo_passo = 'Mostre até 10 horários com enviar_lista (ids "hora_HH:MM"), priorizando os mais próximos do que o cliente pediu.';
+      else if (slots.length && interactiveFlags(ctx).list) result.proximo_passo = 'Mostre até 10 horários com enviar_lista (ids "hora_HH:MM", secao "🌅 Manhã" / "☀️ Tarde" / "🌙 Noite", botao "Ver horários"), priorizando os mais próximos do que o cliente pediu.';
 
       if (!slots.length) {
         const alternatives = [];
         for (let i = 1; i <= 14 && alternatives.length < 3; i++) {
           const date = addDays(args.data < nowBR().date ? nowBR().date : args.data, i);
-          const s = computeFreeSlots(tenantId, barber.id, date, duration);
+          const s = computeFreeSlots(tenantId, barber.id, date, duration, ignoreId);
           if (s.length) alternatives.push({ data: date, primeiros_horarios: s.slice(0, 4) });
         }
         result.proximas_datas_com_vaga = alternatives;
@@ -621,16 +731,102 @@ async function runTool(name, args, ctx) {
       };
     }
 
+    case 'dias_disponiveis': {
+      const barber = db.prepare('SELECT id, name FROM barbers WHERE id = ? AND tenant_id = ?').get(args.profissional_id, tenantId);
+      if (!barber) return { erro: 'Profissional inválido. Chame listar_profissionais.' };
+      const loaded = loadServices(tenantId, args.servicos_ids);
+      if (loaded.error) return { erro: loaded.error };
+      const duration = loaded.services.reduce((sum, s) => sum + s.duration, 0);
+      const ignoreId = args.ignorar_agendamento_id && ownBooking(ctx, args.ignorar_agendamento_id) ? Number(args.ignorar_agendamento_id) : null;
+      const today = nowBR().date;
+      const dias = [];
+      for (let i = 0; i < 30 && dias.length < 10; i++) {
+        const date = addDays(today, i);
+        const slots = computeFreeSlots(tenantId, barber.id, date, duration, ignoreId);
+        if (slots.length) {
+          dias.push({ data: date, titulo: `${i === 0 ? 'Hoje' : i === 1 ? 'Amanhã' : WEEKDAYS_SHORT[weekdayOf(date)]}, ${formatDateBR(date).slice(0, 5)}`, horarios_livres: slots.length, primeiro: slots[0] });
+        }
+      }
+      const result = { profissional: barber.name, duracao_total_min: duration, dias };
+      const f = interactiveFlags(ctx);
+      if (dias.length && f.list) result.proximo_passo = 'Mostre com enviar_lista: id "dia_AAAA-MM-DD", titulo = campo titulo, descricao = "N horários livres", botao "Ver datas".';
+      else if (dias.length && f.poll) result.proximo_passo = 'Mostre com enviar_enquete (multipla=false): opções "titulo (N horários)", id "dia_AAAA-MM-DD".';
+      return result;
+    }
+
+    case 'mostrar_agendamento': {
+      const list = upcomingBookings(tenantId, conv.customer_user_id);
+      if (!list.length) return { erro: 'O cliente não tem agendamentos futuros.' };
+      const f = interactiveFlags(ctx);
+
+      // Varios agendamentos e nenhum escolhido: primeiro o cliente escolhe qual
+      if (!args.agendamento_id && list.length > 1) {
+        const opcoes = list.map(b => ({ id: `ag_ver_${b.id}`, titulo: cut(`${shortDate(b.booking_date)} ${String(b.booking_time).slice(0, 5)}`, 24), descricao: cut(`${b.servico} • ${b.profissional || ''}`, 72) }));
+        const texto = `📅 Você tem *${list.length} horários marcados*. Qual deles você quer ver?`;
+        if (f.list) {
+          await waProvider.sendInteractive(ctx.instance, ctx.replyTo, 'list',
+            { title: cut(ctx.tenant.name, 60), text: texto, footer: cut(ctx.tenant.name, 60), buttonText: 'Ver horários', sections: [{ title: 'Seus agendamentos', rows: opcoes.map(o => ({ id: o.id, title: o.titulo, description: o.descricao })) }] },
+            numberedFallback(texto, opcoes));
+        } else {
+          await waProvider.sendText(ctx.instance, ctx.replyTo, numberedFallback(texto, opcoes));
+        }
+        ctx.interactiveSent = true;
+        ctx.bookingShown = true;
+        return { ok: true, instrucao: 'Lista de agendamentos enviada. Quando o cliente escolher (id "ag_ver_<id>"), chame mostrar_agendamento com esse id. Responda somente "-".' };
+      }
+
+      const b = args.agendamento_id ? list.find(x => x.id === Number(args.agendamento_id)) : list[0];
+      if (!b) return { erro: 'Agendamento não encontrado ou já passou.' };
+      const texto = `📅 *Seu horário na ${ctx.tenant.name}*\n\n${bookingSummary(b)}\n\nO que você deseja fazer?`;
+      const opcoes = [
+        { id: `ag_confirmar_${b.id}`, titulo: '✅ Confirmar presença' },
+        { id: `ag_reagendar_${b.id}`, titulo: '🔄 Reagendar' },
+        { id: `ag_cancelar_${b.id}`, titulo: '❌ Cancelar' }
+      ];
+      if (f.buttons) {
+        await waProvider.sendInteractive(ctx.instance, ctx.replyTo, 'buttons',
+          { title: ' ', text: texto, footer: cut(ctx.tenant.name, 60), buttons: opcoes.map(o => ({ id: o.id, text: o.titulo })) },
+          numberedFallback(texto, opcoes));
+      } else {
+        await waProvider.sendText(ctx.instance, ctx.replyTo, numberedFallback(texto, opcoes));
+      }
+      ctx.interactiveSent = true;
+      ctx.bookingShown = true;
+      return { ok: true, agendamento_id: b.id, instrucao: 'Resumo com as opções já enviado. Não repita. Responda somente "-" e aguarde a escolha.' };
+    }
+
+    case 'confirmar_presenca': {
+      const b = ownBooking(ctx, args.agendamento_id);
+      if (!b) return { erro: 'Agendamento não encontrado ou já passou.' };
+      db.prepare("UPDATE bookings SET client_confirmed_at = datetime('now') WHERE id = ?").run(b.id);
+      notifyPanel(tenantId, b.id);
+      return { ok: true, mensagem_sugerida: `✅ Presença confirmada! Te esperamos ${shortDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)}. 💈` };
+    }
+
+    case 'cancelar_agendamento': {
+      const b = ownBooking(ctx, args.agendamento_id);
+      if (!b) return { erro: 'Agendamento não encontrado ou já passou.' };
+      db.prepare("UPDATE bookings SET status = 'cancelled', cancelled_by = 'cliente_whatsapp' WHERE id = ?").run(b.id);
+      notifyPanel(tenantId, b.id);
+      return { ok: true, mensagem_sugerida: `❌ Agendamento de ${shortDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)} cancelado. Quando quiser marcar de novo, é só chamar!` };
+    }
+
+    case 'reagendar_agendamento': {
+      const b = ownBooking(ctx, args.agendamento_id);
+      if (!b) return { erro: 'Agendamento não encontrado ou já passou.' };
+      const date = String(args.data);
+      const time = String(args.hora).slice(0, 5);
+      const free = computeFreeSlots(tenantId, b.barber_id, date, Number(b.duracao), b.id);
+      if (!free.includes(time)) return { erro: 'Esse horário não está disponível.', horarios_livres_nessa_data: free.slice(0, 10) };
+      db.prepare("UPDATE bookings SET booking_date = ?, booking_time = ?, rescheduled_at = datetime('now'), client_confirmed_at = NULL, reminder_sent = 0 WHERE id = ?").run(date, time, b.id);
+      notifyPanel(tenantId, b.id);
+      return { ok: true, mensagem_sugerida: `🔄 Reagendado! Seu novo horário:\n🗓️ ${shortDate(date)} às ${time}\n💈 ${b.profissional || ''}\n✂️ ${b.servico}` };
+    }
+
     case 'meus_agendamentos': {
       if (!conv.customer_user_id) return { erro: 'Cliente ainda não identificado.' };
-      const today = nowBR().date;
-      const rows = db.prepare(`
-        SELECT b.booking_date, b.booking_time, COALESCE(b.item_name, s.name) AS servico, br.name AS profissional
-        FROM bookings b LEFT JOIN services s ON s.id = b.service_id LEFT JOIN barbers br ON br.id = b.barber_id
-        WHERE b.tenant_id = ? AND b.user_id = ? AND b.status = 'confirmed' AND b.booking_date >= ?
-        ORDER BY b.booking_date, b.booking_time LIMIT 10
-      `).all(tenantId, conv.customer_user_id, today);
-      return { agendamentos: rows.map(r => ({ data: formatDateBR(r.booking_date), hora: r.booking_time.slice(0, 5), servico: r.servico, profissional: r.profissional })) };
+      const rows = upcomingBookings(tenantId, conv.customer_user_id);
+      return { agendamentos: rows.map(r => ({ id: r.id, data: formatDateBR(r.booking_date), hora: r.booking_time.slice(0, 5), servico: r.servico, profissional: r.profissional, presenca_confirmada: !!r.client_confirmed_at })) };
     }
 
     case 'enviar_enquete':
@@ -685,7 +881,7 @@ function stepInstructions(ctx) {
   } else if (f.list) {
     steps.barber = ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_lista (ids "profissional_<id>", descrição = especialidade).';
     steps.service = ' Mostre OBRIGATORIAMENTE com enviar_lista (ids "servico_<id>", título = nome, descrição = preço e duração).' + moreServices;
-    steps.time = ' Mostre OBRIGATORIAMENTE com enviar_lista (até 10 horários, ids "hora_HH:MM", botão "Ver horários").';
+    steps.time = ' Mostre OBRIGATORIAMENTE com enviar_lista (até 10 horários, ids "hora_HH:MM", secao "🌅 Manhã" / "☀️ Tarde" / "🌙 Noite", botão "Ver horários").';
   }
   return steps;
 }
@@ -703,19 +899,25 @@ function buildSystemPrompt(ctx) {
 
   const customer = conv.customer_user_id ? db.prepare('SELECT full_name, phone FROM users WHERE id = ?').get(conv.customer_user_id) : null;
 
+  // Agendamentos futuros do cliente: a IA sempre fala deles no inicio da conversa
+  const upcoming = upcomingBookings(tenant.id, conv.customer_user_id);
+  const bookingsBlock = upcoming.length
+    ? `\nAGENDAMENTOS FUTUROS DESTE CLIENTE:\n${upcoming.map(b => `- id ${b.id}: ${shortDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)} • ${b.servico} • ${b.profissional || '-'}${b.client_confirmed_at ? ' • presença confirmada' : ''}`).join('\n')}\n${ctx.isNewSession ? 'ESTA É A PRIMEIRA MENSAGEM DA CONVERSA: cumprimente em uma frase e chame mostrar_agendamento (sem id) para mostrar o horário com as opções. Se o cliente pediu outra coisa (ex: novo horário), atenda também.\n' : ''}`
+    : '';
+
   let customerBlock;
   if (customer) {
     customerBlock = `CLIENTE JÁ CADASTRADO: ${customer.full_name}, telefone ${formatPhoneBR(customer.phone)}.
 Cumprimente pelo primeiro nome. NÃO pergunte o nome nem o telefone de novo.`;
   } else if (senderPhone) {
     customerBlock = `CLIENTE NOVO (sem cadastro). Número do WhatsApp dele: ${formatPhoneBR(senderPhone)}${pushName ? ` (nome no perfil: "${pushName}", pode não ser o nome real)` : ''}.
-Antes de qualquer outra etapa do agendamento: peça o NOME COMPLETO e confirme se o agendamento fica nesse número ${formatPhoneBR(senderPhone)} (ou se prefere outro). Com as duas coisas confirmadas, chame registrar_cliente.`;
+Antes de qualquer outra etapa do agendamento: peça o NOME COMPLETO e confirme se o agendamento fica nesse número ${formatPhoneBR(senderPhone)}${interactiveFlags(ctx).buttons ? ' (use enviar_botoes: "✅ Sim, este número" id "numero_ok" / "📱 Outro número" id "numero_outro")' : ' (ou se prefere outro)'}. Com as duas coisas confirmadas, chame registrar_cliente.`;
   } else {
     customerBlock = `CLIENTE NOVO e o número dele não foi identificado. Antes de tudo peça o NOME COMPLETO e o TELEFONE com DDD, confirme e chame registrar_cliente.`;
   }
 
   return `Você é ${config.assistant_name}, atendente virtual da barbearia *${tenant.name}* no WhatsApp.
-Fale sempre em português do Brasil, de forma simpática, curta e objetiva (mensagens de WhatsApp, não textos longos). Use *negrito* do WhatsApp e poucos emojis. O cliente pode escrever ou mandar áudio (os áudios chegam transcritos para você como texto).
+Fale sempre em português do Brasil, de forma simpática, curta e organizada (mensagens de WhatsApp: no máximo 2 ou 3 linhas por mensagem, *negrito* para o que importa, emojis só como marcadores, ex: ✂️ 💈 🗓️ ⏰ 💰). O cliente pode escrever ou mandar áudio (os áudios chegam transcritos para você como texto).
 
 Agora: ${WEEKDAYS[weekdayOf(now.date)]}, ${formatDateBR(now.date)}, ${now.time} (horário de Brasília).
 
@@ -724,15 +926,23 @@ ${describeNextDays(tenant.id)}
 
 ${profile.address ? `Endereço: ${profile.address}\n` : ''}${profile.phone ? `Telefone da barbearia: ${profile.phone}\n` : ''}${Array.isArray(profile.payment_methods) && profile.payment_methods.length ? `Formas de pagamento: ${profile.payment_methods.join(', ')}\n` : ''}
 ${customerBlock}
-
-COMO ATENDER:
-1. No primeiro contato, cumprimente e ofereça as duas opções: ${link ? `agendar sozinho pelo link ${link}` : 'agendar pelo link da barbearia'} OU agendar aqui mesmo pelo WhatsApp, escrevendo ou mandando áudio.${steps.first}
+${bookingsBlock}
+COMO ATENDER (novo agendamento):
+1. No primeiro contato (se o cliente NÃO tiver agendamento futuro), cumprimente e ofereça as duas opções: ${link ? `agendar sozinho pelo link ${link}` : 'agendar pelo link da barbearia'} OU agendar aqui mesmo pelo WhatsApp, escrevendo ou mandando áudio.${steps.first}
 2. Se quiser agendar por aqui: primeiro identifique o cliente (regra acima) — sempre antes de tudo.
 3. Profissional: chame listar_profissionais. Se só houver um, apenas informe.${steps.barber}
 4. Serviços: chame listar_servicos. O cliente pode escolher VÁRIOS serviços.${steps.service}
-5. Data e horário: pergunte o dia de preferência, chame horarios_disponiveis e ofereça algumas opções (não despeje a lista inteira). Entenda "amanhã", "sexta", "depois das 15h" etc. usando a data de hoje acima.${steps.time}
+5. Data: chame dias_disponiveis e deixe o cliente escolher o dia${interactiveFlags(ctx).list || interactiveFlags(ctx).poll ? ' (mostre com a mesma ferramenta de escolha usada nos serviços)' : ' (mostre numerado)'}. Se o cliente já disse o dia ("amanhã", "sexta"), use a data de hoje acima e pule direto para os horários.
+   Horário: chame horarios_disponiveis e ofereça até 10 horários, priorizando o que o cliente pediu ("depois das 15h").${steps.time}
 6. Antes de gravar, mostre o RESUMO (nome, telefone, profissional, serviços, data, hora, valor total e duração) e pergunte se pode confirmar. Só chame criar_agendamento depois de um "sim" claro.${steps.confirm}
 7. Se o horário não estiver mais livre, ofereça outras opções.
+
+GERENCIAR AGENDAMENTO EXISTENTE (opções que chegam dos botões):
+- "ag_ver_<id>": chame mostrar_agendamento com esse id.
+- "ag_confirmar_<id>": chame confirmar_presenca e responda com a mensagem_sugerida.
+- "ag_cancelar_<id>": pergunte se tem certeza${interactiveFlags(ctx).buttons ? ' com enviar_botoes ("Sim, cancelar" id "cancelar_sim_<id>" / "Não, manter" id "cancelar_nao_<id>")' : ''}. Com "cancelar_sim_<id>" chame cancelar_agendamento; com "cancelar_nao_<id>" diga que o horário continua mantido.
+- "ag_reagendar_<id>": mantenha o mesmo profissional e serviços. Chame dias_disponiveis com ignorar_agendamento_id, deixe escolher o dia, depois horarios_disponiveis com ignorar_agendamento_id e o horário. Mostre o novo horário${interactiveFlags(ctx).buttons ? ' com enviar_botoes ("✅ Confirmar" id "reagendar_sim_<id>" / "❌ Voltar" id "reagendar_nao_<id>")' : ''} e, com a confirmação, chame reagendar_agendamento. Responda com a mensagem_sugerida.
+- Se o cliente escrever em vez de tocar ("quero cancelar", "dá pra mudar pra sexta?"), faça o mesmo fluxo.
 
 ${interactivePromptBlock(ctx)}
 REGRAS:
@@ -741,7 +951,7 @@ REGRAS:
 - Não mostre IDs nem nomes de ferramentas para o cliente. Aceite que ele responda pelo número da lista ou pelo nome.
 - Não marque em dia FECHADO nem em horário passado.
 - Se perguntarem algo que você não sabe, diga que vai repassar para a equipe da barbearia.
-- Não faça cancelamentos nem remarcações: nesses casos, diga que a equipe vai retornar.
+- Cancelar e reagendar: só para agendamentos do próprio cliente (listados acima), sempre com confirmação antes.
 ${config.extra_instructions ? `\nINSTRUÇÕES DA BARBEARIA:\n${String(config.extra_instructions).slice(0, 2000)}\n` : ''}`;
 }
 
@@ -825,9 +1035,22 @@ async function processBatch({ tenantId, chatId, replyTo, senderPhone, pushName, 
 
   waProvider.sendPresence(instance, replyTo, 2000);
 
-  const ctx = { tenant, conv, senderPhone, pushName, instance, replyTo, interactiveSent: false };
+  const isNewSession = conv.messages.length === 0;
+  const ctx = { tenant, conv, senderPhone, pushName, instance, replyTo, interactiveSent: false, isNewSession, bookingShown: false };
   const reply = await runAgent(ctx, texts.join('\n'));
   if (reply) await waProvider.sendText(instance, replyTo, reply);
+
+  // Cliente voltou e tem horario marcado: se a IA nao mostrou, o sistema mostra (com Confirmar/Reagendar/Cancelar)
+  if (isNewSession && !ctx.bookingShown && ctx.conv.customer_user_id && upcomingBookings(tenantId, ctx.conv.customer_user_id).length) {
+    try {
+      await runTool('mostrar_agendamento', {}, ctx);
+      const current = loadConversation(tenantId, chatId);
+      current.messages.push({ role: 'assistant', content: '(Mostrei ao cliente o próximo agendamento dele com as opções Confirmar presença / Reagendar / Cancelar.)' });
+      saveConversation(tenantId, chatId, { messages: current.messages });
+    } catch (err) {
+      console.error(`[ia] falha ao mostrar agendamento (tenant ${tenantId}):`, err.message);
+    }
+  }
 }
 
 function queueMessage(payload) {

@@ -191,6 +191,10 @@ ensureColumn('bookings', 'reminder_sent', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('tenants', 'plan', "TEXT NOT NULL DEFAULT 'basic'");
 // Origem do agendamento: 'link' (pagina publica), 'whatsapp_ia' (atendente IA), etc.
 ensureColumn('bookings', 'source', 'TEXT');
+// Atendente IA: cliente confirmou presenca pelo WhatsApp / quem cancelou / reagendamentos
+ensureColumn('bookings', 'client_confirmed_at', 'TEXT');
+ensureColumn('bookings', 'cancelled_by', 'TEXT');
+ensureColumn('bookings', 'rescheduled_at', 'TEXT');
 
 // Enquetes enviadas pelo atendente IA: guarda as opcoes para traduzir o voto do cliente
 db.exec(`

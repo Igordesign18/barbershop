@@ -181,3 +181,16 @@ avise que eu ajusto `evolution.js`.
 - Voto: Evolution v2 já entrega o nome da opção; Evolution GO grava o voto decifrado e o
   BarberSync consulta `/polls/:id/results` (precisa do Postgres do GO configurado).
 - Com enquete escolhida, os botões (se ligados) continuam nas escolhas rápidas.
+
+## Atendimento organizado e gestão do agendamento pelo WhatsApp (PRO)
+
+- Configuração recomendada: "Usar botões" ligado + formato "Lista".
+- Fluxo: botões (agendar aqui / link) → nome e número (botões) → profissional (lista) →
+  serviços (lista + botões "Mais um serviço"/"Só isso") → data (lista com dias livres) →
+  horário (lista separada em Manhã/Tarde/Noite) → resumo + botões Sim/Não.
+- Cliente que volta e tem horário marcado recebe o resumo com os botões
+  ✅ Confirmar presença · 🔄 Reagendar · ❌ Cancelar (se a IA não mostrar, o sistema mostra).
+  - Confirmar: grava `client_confirmed_at` (selo "Cliente confirmou presença" no painel).
+  - Reagendar: mesmo profissional e serviços; o próprio horário conta como livre.
+  - Cancelar: pede confirmação; grava `cancelled_by = cliente_whatsapp`.
+- A IA só mexe em agendamentos do próprio cliente, futuros e confirmados.
