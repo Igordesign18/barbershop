@@ -591,15 +591,54 @@ function isTimeOption(id) {
   return /^hora_/.test(String(id || ''));
 }
 
+// Etapa do agendamento a partir dos ids das opcoes (profissional_, servico_, dia_, hora_)
+function bookingStepOf(name, args) {
+  if (name === 'enviar_cards') return args.tipo === 'servicos' ? 'servico' : 'profissional';
+  const ids = (args.opcoes || []).map(o => String(o.id || ''));
+  if (ids.some(i => i.startsWith('profissional_'))) return 'profissional';
+  if (ids.some(i => /^servico_\d/.test(i))) return 'servico';
+  if (ids.some(i => i.startsWith('dia_'))) return 'dia';
+  if (ids.some(i => /^hora_\d/.test(i))) return 'hora';
+  return null;
+}
+
+// Cabecalho padrao de cada etapa: deixa claro em que passo o cliente esta
+function stepHeader(tenantId, step) {
+  const multiBarber = db.prepare('SELECT COUNT(*) AS n FROM barbers WHERE tenant_id = ?').get(tenantId).n > 1;
+  const order = multiBarber ? ['profissional', 'servico', 'dia', 'hora'] : ['servico', 'dia', 'hora'];
+  const labels = {
+    profissional: '💈 Profissional',
+    servico: '✂️ Serviços',
+    dia: '📅 Data',
+    hora: '⏰ Horário'
+  };
+  const index = order.indexOf(step);
+  if (index === -1) return null;
+  return `*Passo ${index + 1} de ${order.length} · ${labels[step]}*`;
+}
+
 async function runInteractiveTool(name, args, ctx) {
   const { tenant, instance, replyTo } = ctx;
   const flags = interactiveFlags(ctx);
   const footer = cut(tenant.name, 60);
-  const texto = String(args.texto || '').trim() || 'Escolha uma opção:';
+  let texto = String(args.texto || '').trim() || 'Escolha uma opção:';
+
+  // Uma etapa por vez: se ja saiu uma escolha nesta resposta, nao manda outra junto
+  // (evita profissional e servicos misturados na mesma leva de mensagens)
+  if (ctx.choiceSent) {
+    return { erro: 'Já foi enviada uma escolha nesta resposta. Aguarde o cliente escolher antes da próxima etapa. Responda somente "-".' };
+  }
+  const step = bookingStepOf(name, args);
+  if (step) {
+    const header = stepHeader(tenant.id, step);
+    // Remove um cabecalho que a IA ja tenha escrito e poe o padrao
+    if (header) texto = `${header}\n${texto.replace(/^\*?passo\s+\d.*\n?/i, '').trim()}`;
+  }
   // Depois de enviar lista/botoes nao sai texto repetido. So se o motor der ERRO no envio,
   // o sendInteractive manda as opcoes em texto numerado no lugar (a conversa nunca trava).
   const done = async (format) => {
     ctx.interactiveSent = true;
+    ctx.choiceSent = true;
     console.log(`[ia] ${name} enviado como ${format} (tenant ${tenant.id})`);
     return {
       ok: true,
@@ -1080,6 +1119,7 @@ GERENCIAR AGENDAMENTO EXISTENTE (opções que chegam dos botões):
 ${interactivePromptBlock(ctx)}
 REGRAS:
 ${interactiveFlags(ctx).list || interactiveFlags(ctx).buttons ? '- PROIBIDO listar opções em texto (1., 2., 3.): toda escolha vai por enviar_lista (mais de 3 opções) ou enviar_botoes (até 3). Texto só para perguntas abertas (nome, telefone).\n' : ''}- Se o cliente digitar "menu", o sistema mostra o menu principal (você não precisa fazer nada).
+- UMA ETAPA POR VEZ, sempre nesta ordem: profissional → serviços → data → horário → resumo. Nunca mostre duas etapas na mesma resposta (ex: profissionais e serviços juntos); mostre uma e espere a escolha do cliente.
 - Não pergunte "quer que eu mostre...?": quando for a etapa, já mostre (profissionais, serviços, horários). Com um único profissional, informe e siga direto para os serviços.
 - Nunca invente serviços, preços, profissionais ou horários: use sempre as ferramentas.
 - Não mostre IDs nem nomes de ferramentas para o cliente. Aceite que ele responda pelo número da lista ou pelo nome.
