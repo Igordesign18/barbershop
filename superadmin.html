@@ -97,6 +97,8 @@
     .pill.suspended { background: rgba(193,92,92,0.14); color: var(--red); }
     .pill.wa-connected { background: rgba(37,211,102,0.14); color: var(--wa); }
     .pill.wa-disconnected { background: rgba(198,161,91,0.12); color: var(--brass-light); }
+    .pill.plan-pro { background: linear-gradient(135deg, #c6a15b, #e7cf93); color: #1a140c; }
+    .pill.plan-basic { background: rgba(255,255,255,0.06); color: var(--brass-light); }
 
     .empty-state { text-align: center; padding: 40px; color: var(--ivory-muted); font-size: 14px; }
 
@@ -180,6 +182,20 @@
                     <input type="text" id="managerPassword" placeholder="mínimo 6 caracteres" required>
                 </div>
                 <div class="form-group">
+                    <label for="tenantPlan">Plano</label>
+                    <select id="tenantPlan">
+                        <option value="basic">Básico</option>
+                        <option value="pro">PRO (com atendente IA no WhatsApp)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="tenantProvider">Motor do WhatsApp</label>
+                    <select id="tenantProvider">
+                        <option value="evolution">Evolution API v2</option>
+                        <option value="evogo">Evolution GO</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="subscriptionExpires">Assinatura válida até (opcional)</label>
                     <input type="date" id="subscriptionExpires">
                 </div>
@@ -216,6 +232,20 @@
                 <select id="editTenantStatus">
                     <option value="active">Ativo</option>
                     <option value="suspended">Suspenso</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editTenantPlan">Plano</label>
+                <select id="editTenantPlan">
+                    <option value="basic">Básico</option>
+                    <option value="pro">PRO (com atendente IA no WhatsApp)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="editTenantProvider">Motor do WhatsApp</label>
+                <select id="editTenantProvider">
+                    <option value="evolution">Evolution API v2</option>
+                    <option value="evogo">Evolution GO</option>
                 </select>
             </div>
             <div class="form-group">
@@ -364,7 +394,9 @@
                             <div class="name">${t.name}</div>
                             <div class="meta">
                                 <span class="pill ${t.status === 'active' ? 'active' : 'suspended'}">${t.status === 'active' ? 'Ativo' : 'Suspenso'}</span>
+                                <span class="pill ${t.plan === 'pro' ? 'plan-pro' : 'plan-basic'}">${t.plan === 'pro' ? 'PRO' : 'Básico'}</span>
                                 <span class="pill ${waStatus}">${waLabel}</span>
+                                <span class="pill plan-basic">${t.whatsapp_provider === 'evogo' ? 'Evolution GO' : 'Evolution v2'}</span>
                                 <span>${expires}</span>
                                 <span>gestor: ${t.manager ? t.manager.email : '—'}</span>
                             </div>
@@ -411,7 +443,9 @@
                     slug: document.getElementById('tenantSlug').value,
                     manager_email: document.getElementById('managerEmail').value,
                     manager_password: document.getElementById('managerPassword').value,
-                    subscription_expires_at: document.getElementById('subscriptionExpires').value || null
+                    subscription_expires_at: document.getElementById('subscriptionExpires').value || null,
+                    plan: document.getElementById('tenantPlan').value,
+                    whatsapp_provider: document.getElementById('tenantProvider').value
                 })
             });
             showNotification('Barbearia criada com sucesso!', 'success');
@@ -433,6 +467,8 @@
         document.getElementById('editTenantSlug').value = tenant.slug;
         document.getElementById('editTenantStatus').value = tenant.status;
         document.getElementById('editSubscriptionExpires').value = tenant.subscription_expires_at || '';
+        document.getElementById('editTenantPlan').value = tenant.plan === 'pro' ? 'pro' : 'basic';
+        document.getElementById('editTenantProvider').value = tenant.whatsapp_provider === 'evogo' ? 'evogo' : 'evolution';
         document.getElementById('editManagerEmail').value = tenant.manager ? tenant.manager.email : '';
         document.getElementById('editManagerPassword').value = '';
 
@@ -455,7 +491,9 @@
                     name: document.getElementById('editTenantName').value,
                     slug: document.getElementById('editTenantSlug').value,
                     status: document.getElementById('editTenantStatus').value,
-                    subscription_expires_at: document.getElementById('editSubscriptionExpires').value || null
+                    subscription_expires_at: document.getElementById('editSubscriptionExpires').value || null,
+                    plan: document.getElementById('editTenantPlan').value,
+                    whatsapp_provider: document.getElementById('editTenantProvider').value
                 })
             });
 

@@ -42,6 +42,12 @@ SUPERADMIN_EMAIL=voce@seudominio.com
 SUPERADMIN_PASSWORD=troque-esta-senha
 EVOLUTION_API_URL=https://sua-evolution-api.seudominio.com
 EVOLUTION_API_KEY=sua-chave-global-da-evolution-api
+EVOGO_API_URL=https://sua-evolution-go.seudominio.com
+EVOGO_API_KEY=global-api-key-da-evolution-go
+PUBLIC_BASE_URL=https://seu-dominio-do-barbersync.com
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4.1-mini
+OPENAI_TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
 ```
 
 - `SUPERADMIN_EMAIL`/`SUPERADMIN_PASSWORD`: só são usados para criar o
@@ -129,3 +135,44 @@ API v2 self-hosted (`/instance/create`, `/instance/connect/:nome`,
 com o header `apikey` = `EVOLUTION_API_KEY`. Se seu servidor Evolution
 usa autenticação por instância em vez de uma chave global única, me
 avise que eu ajusto `evolution.js`.
+
+## Atendente IA no WhatsApp (plano PRO)
+
+- O super admin define o plano de cada barbearia (**Básico** ou **PRO**) em `/superadmin`.
+- No painel do gestor (aba Marketing), o card **Atendente IA no WhatsApp** só libera para PRO.
+- Fluxo: cliente manda mensagem ou áudio -> áudio é transcrito pela OpenAI -> a IA oferece o
+  link de agendamento ou agenda ali mesmo: confirma nome completo e telefone (cliente já
+  cadastrado é reconhecido pelo número e não precisa informar de novo), lista profissionais,
+  serviços (pode escolher vários), horários livres, mostra o resumo e só grava após o "sim".
+- O agendamento entra no painel do gestor em tempo real, com a marca "Agendado pela IA no
+  WhatsApp", e o cliente recebe a mesma mensagem de confirmação configurada na aba WhatsApp.
+- Vários serviços viram um agendamento só (nome "Corte + Barba", valor e duração somados),
+  igual aos pacotes.
+- Se o gestor responder o cliente manualmente pelo celular, a IA pausa naquele chat por 1 hora.
+- O webhook é configurado sozinho na Evolution ao conectar o WhatsApp e ao salvar o card da IA:
+  `POST /api/webhook/evolution/<instancia>/<segredo>` (segredo derivado do `JWT_SECRET`).
+- `PUBLIC_BASE_URL` é a URL pública do sistema (usada no webhook e no link enviado ao cliente).
+  Sem ela, o sistema usa o endereço que o gestor estiver acessando.
+
+## Dois motores de WhatsApp: Evolution API v2 e Evolution GO
+
+- Em `/superadmin`, cada barbearia tem o campo **Motor do WhatsApp**: Evolution API v2 (padrão)
+  ou Evolution GO. Dá pra usar os dois ao mesmo tempo, uma barbearia em cada.
+- Tudo passa por `wa-provider.js`: confirmação, lembrete, atendente IA, QR code e status.
+- **Evolution GO:** preencha `EVOGO_API_URL` e `EVOGO_API_KEY` (a `GLOBAL_API_KEY` do servidor GO).
+  O sistema cria a instância, guarda o token dela no banco e registra o webhook no próprio
+  `/instance/connect`. O servidor GO precisa estar com a licença ativada (senão responde 503).
+- **Trocar o motor de uma barbearia:** mude no super admin e peça pro gestor clicar em
+  "Conectar WhatsApp" de novo. A instância antiga é desligada e o QR do novo motor aparece.
+
+## Botões, listas e carrossel (plano PRO)
+
+- No card **Atendente IA no WhatsApp** o gestor liga "Usar botões e listas" e/ou "Usar carrossel".
+- Só funciona para barbearias PRO (checado no servidor, não só na tela).
+- **Botões** (até 3): confirmar agendamento, "Agendar por aqui" / "Receber o link".
+- **Lista** (até 10): horários livres, serviços, profissionais.
+- **Carrossel** (só Evolution GO): cards com as fotos dos profissionais ou serviços e botão "Escolher".
+  Sem foto cadastrada, o card usa a logo da barbearia. As imagens precisam estar acessíveis pela
+  URL pública (`PUBLIC_BASE_URL`), porque o servidor GO baixa a foto para montar o card.
+- Se o motor devolver erro ao enviar (ex.: Evolution 2.3.7), a IA manda as mesmas opções em texto
+  numerado automaticamente. O clique do cliente chega para a IA com o id da opção escolhida.

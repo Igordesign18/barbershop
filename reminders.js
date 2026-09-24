@@ -1,5 +1,5 @@
 const { db, DEFAULT_REMINDER_CONFIG } = require('./db');
-const evolution = require('./evolution');
+const waProvider = require('./wa-provider');
 const { fillTemplate, formatDateBR, formatCurrencyBRL } = require('./whatsapp');
 
 function getReminderConfig(tenantId) {
@@ -41,7 +41,7 @@ async function checkAndSendReminders() {
       if (now < sendAt || now >= bookingDateTime.getTime()) continue;
 
       const instance = db.prepare('SELECT * FROM whatsapp_instances WHERE tenant_id = ?').get(row.tenant_id);
-      if (!instance || instance.status !== 'connected' || !evolution.isConfigured()) continue;
+      if (!instance || instance.status !== 'connected' || !waProvider.isConfigured(instance.provider)) continue;
 
       const message = fillTemplate(config.template || DEFAULT_REMINDER_CONFIG.template, {
         cliente: row.customer_full_name,
@@ -53,7 +53,7 @@ async function checkAndSendReminders() {
         valor: formatCurrencyBRL(Math.max(0, (row.item_price || 0) - (row.discount_applied || 0)))
       });
 
-      await evolution.sendText(instance.instance_name, row.customer_phone, message);
+      await waProvider.sendText(instance, row.customer_phone, message);
       db.prepare('UPDATE bookings SET reminder_sent = 1 WHERE id = ?').run(row.id);
     } catch (err) {
       console.error(`[reminders] Falha ao enviar lembrete (agendamento ${row.id}):`, err.message);

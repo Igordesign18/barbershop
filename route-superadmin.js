@@ -33,7 +33,7 @@ router.get('/tenants', (req, res) => {
 
 // Criar uma nova barbearia + login do gestor, em um passo só
 router.post('/tenants', (req, res) => {
-  const { name, slug, manager_email, manager_password, subscription_expires_at } = req.body || {};
+  const { name, slug, manager_email, manager_password, subscription_expires_at, plan, whatsapp_provider } = req.body || {};
 
   if (!name || name.trim().length < 3) return res.status(400).json({ error: 'Nome da barbearia inválido' });
   if (!manager_email || !manager_email.includes('@')) return res.status(400).json({ error: 'Email do gestor inválido' });
@@ -49,14 +49,14 @@ router.post('/tenants', (req, res) => {
   if (emailExists) return res.status(409).json({ error: 'Já existe um gestor com esse email' });
 
   const insertTenant = db.prepare(`
-    INSERT INTO tenants (name, slug, status, subscription_expires_at) VALUES (?, ?, 'active', ?)
+    INSERT INTO tenants (name, slug, status, subscription_expires_at, plan, whatsapp_provider) VALUES (?, ?, 'active', ?, ?, ?)
   `);
   const insertManager = db.prepare(`
     INSERT INTO managers (tenant_id, email, password_hash) VALUES (?, ?, ?)
   `);
 
   const result = db.transaction(() => {
-    const tenantResult = insertTenant.run(name.trim(), finalSlug, subscription_expires_at || null);
+    const tenantResult = insertTenant.run(name.trim(), finalSlug, subscription_expires_at || null, plan === 'pro' ? 'pro' : 'basic', whatsapp_provider === 'evogo' ? 'evogo' : 'evolution');
     const tenantId = tenantResult.lastInsertRowid;
     const hash = bcrypt.hashSync(manager_password, 10);
     insertManager.run(tenantId, manager_email.trim(), hash);
@@ -70,13 +70,15 @@ router.post('/tenants', (req, res) => {
 
 // Editar dados da barbearia (nome, link, status, vencimento)
 router.put('/tenants/:id', (req, res) => {
-  const { name, slug, status, subscription_expires_at } = req.body || {};
+  const { name, slug, status, subscription_expires_at, plan, whatsapp_provider } = req.body || {};
   const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(req.params.id);
   if (!tenant) return res.status(404).json({ error: 'Barbearia não encontrada' });
 
   const finalName = name && name.trim().length >= 3 ? name.trim() : tenant.name;
   const finalSlug = slug ? slugify(slug) : tenant.slug;
   const finalStatus = ['active', 'suspended'].includes(status) ? status : tenant.status;
+  const finalPlan = ['basic', 'pro'].includes(plan) ? plan : (tenant.plan || 'basic');
+  const finalProvider = ['evolution', 'evogo'].includes(whatsapp_provider) ? whatsapp_provider : (tenant.whatsapp_provider || 'evolution');
 
   if (finalSlug !== tenant.slug) {
     const slugExists = db.prepare('SELECT 1 FROM tenants WHERE slug = ? AND id != ?').get(finalSlug, tenant.id);
@@ -84,8 +86,8 @@ router.put('/tenants/:id', (req, res) => {
   }
 
   db.prepare(`
-    UPDATE tenants SET name = ?, slug = ?, status = ?, subscription_expires_at = ? WHERE id = ?
-  `).run(finalName, finalSlug, finalStatus, subscription_expires_at !== undefined ? subscription_expires_at : tenant.subscription_expires_at, tenant.id);
+    UPDATE tenants SET name = ?, slug = ?, status = ?, subscription_expires_at = ?, plan = ?, whatsapp_provider = ? WHERE id = ?
+  `).run(finalName, finalSlug, finalStatus, subscription_expires_at !== undefined ? subscription_expires_at : tenant.subscription_expires_at, finalPlan, finalProvider, tenant.id);
 
   res.json(tenantWithManager(db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenant.id)));
 });

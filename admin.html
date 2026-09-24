@@ -494,6 +494,60 @@
                 </button>
             </div>
 
+            <div class="card full-width tab-panel" id="aiCard" data-tab="marketing">
+                <h2><i class="fas fa-robot" aria-hidden="true"></i> Atendente IA no WhatsApp <span id="aiPlanBadge" style="font-size:11px; padding:3px 10px; border-radius:100px; margin-left:6px; background: linear-gradient(135deg, #c6a15b, #e7cf93); color:#1a140c; font-weight:700;">PRO</span></h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">
+                    Quando o cliente chamar no WhatsApp da barbearia, a IA oferece o link de agendamento ou agenda ali mesmo, por mensagem de texto ou áudio: confirma nome e telefone, mostra os profissionais, os serviços (pode escolher vários) e os horários livres. O agendamento cai direto no seu painel.
+                </p>
+
+                <div id="aiLockedBox" class="hidden" style="padding:14px; border-radius:10px; border:1px dashed rgba(198,161,91,0.5); color: var(--text-muted);">
+                    <i class="fas fa-lock" aria-hidden="true"></i> Recurso exclusivo do <strong>plano PRO</strong>. Fale com o suporte para fazer o upgrade.
+                </div>
+
+                <div id="aiConfigBox" class="hidden">
+                    <div id="aiWarning" class="hidden" style="padding:10px 12px; border-radius:8px; margin-bottom:12px; background: rgba(193,92,92,0.12); color: var(--text); font-size:13px;"></div>
+
+                    <div class="form-group">
+                        <label for="aiEnabled" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                            <input type="checkbox" id="aiEnabled" style="width:auto;">
+                            Ativar atendente IA
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="aiAssistantName">Nome do atendente</label>
+                        <input type="text" id="aiAssistantName" maxlength="40" placeholder="Ex: Assistente Virtual">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="aiExtraInstructions">Informações extras para a IA (opcional)</label>
+                        <textarea id="aiExtraInstructions" rows="5" maxlength="2000" placeholder="Ex: Aceitamos Pix. Crianças até 10 anos só com o barbeiro João. Estacionamento na rua de trás." style="width:100%; font-family: inherit; padding:10px; border-radius:8px; background: var(--dark-bg); color: var(--text); border: 1px solid rgba(135,206,235,0.3);"></textarea>
+                        <small style="color: var(--text-muted); display:block; margin-top:6px;">
+                            Se você responder um cliente manualmente pelo celular, a IA fica pausada naquela conversa por 1 hora.
+                        </small>
+                    </div>
+
+                    <div class="form-group" style="padding:12px; border-radius:10px; border:1px solid rgba(198,161,91,0.35);">
+                        <label for="aiInteractiveEnabled" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                            <input type="checkbox" id="aiInteractiveEnabled" style="width:auto;">
+                            Usar botões e listas (confirmar, escolher horário, serviço, profissional)
+                        </label>
+                        <label for="aiCarouselEnabled" style="display:flex; align-items:center; gap:10px; cursor:pointer; margin-top:10px;">
+                            <input type="checkbox" id="aiCarouselEnabled" style="width:auto;">
+                            Usar carrossel com fotos dos profissionais e serviços
+                        </label>
+                        <small id="aiCarouselNote" style="color: var(--text-muted); display:block; margin-top:8px;"></small>
+                        <small style="color: var(--text-muted); display:block; margin-top:6px;">
+                            O WhatsApp não garante esses recursos em números comuns: se o envio der erro, a IA manda as opções em texto numerado automaticamente. Se algum cliente disser que não recebeu as opções, desligue aqui.
+                        </small>
+                    </div>
+
+                    <button class="btn" onclick="saveAiConfig()">
+                        <i class="fas fa-save" aria-hidden="true"></i> Salvar Atendente IA
+                    </button>
+                </div>
+            </div>
+
             <div class="card full-width tab-panel" id="reminderCard" data-tab="marketing">
                 <h2><i class="fas fa-bell" aria-hidden="true"></i> Lembrete de Agendamento</h2>
                 <p style="color: var(--text-muted); margin-bottom: 15px;">

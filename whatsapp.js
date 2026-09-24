@@ -1,5 +1,5 @@
 const { db } = require('./db');
-const evolution = require('./evolution');
+const waProvider = require('./wa-provider');
 
 function formatCurrencyBRL(value) {
   return Number(value || 0).toFixed(2).replace('.', ',');
@@ -26,7 +26,7 @@ async function sendBookingConfirmation({ tenant, booking, clientName, clientPhon
     if (!instance || instance.status !== 'connected') {
       return { sent: false, reason: 'whatsapp_not_connected' };
     }
-    if (!evolution.isConfigured()) {
+    if (!waProvider.isConfigured(instance.provider)) {
       return { sent: false, reason: 'evolution_not_configured' };
     }
 
@@ -43,7 +43,7 @@ async function sendBookingConfirmation({ tenant, booking, clientName, clientPhon
       valor: formatCurrencyBRL(servicePrice)
     });
 
-    await evolution.sendText(instance.instance_name, clientPhone, message);
+    await waProvider.sendText(instance, clientPhone, message);
 
     db.prepare('UPDATE bookings SET whatsapp_sent = 1 WHERE id = ?').run(booking.id);
     return { sent: true };

@@ -366,7 +366,7 @@
                 document.getElementById('filterDate').value = today;
                 document.getElementById('filterStatus').value = 'confirmed';
                 
-                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadCoverImages(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection(), loadThemeSelector(), loadWhatsappTemplate(), loadReminderConfig(), refreshWhatsappStatus()]);
+                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadCoverImages(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection(), loadThemeSelector(), loadWhatsappTemplate(), loadReminderConfig(), refreshWhatsappStatus(), loadAiConfig()]);
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
                 showNotification('Erro ao carregar dados do dashboard', 'error');
@@ -1333,6 +1333,7 @@
                                     <p><i class="fas fa-phone" aria-hidden="true"></i> ${clientPhone}</p>
                                     <p><i class="fas fa-dollar-sign" aria-hidden="true"></i> R$ ${booking.services?.price?.toFixed(2) || '0.00'} • <i class="fas fa-hourglass-half" aria-hidden="true"></i> ${booking.services?.duration || 0}min</p>
                                     ${booking.reward_label ? `<p style="color:var(--lime);"><i class="fas fa-gift" aria-hidden="true"></i> ${booking.reward_label} (-R$ ${booking.discount_applied.toFixed(2)})</p>` : ''}
+                                    ${booking.source === 'whatsapp_ia' ? `<p style="color:#25d366;"><i class="fas fa-robot" aria-hidden="true"></i> Agendado pela IA no WhatsApp</p>` : ''}
                                 </div>
                                 <span class="booking-status status-${booking.status}">
                                     ${booking.status === 'confirmed' ? 'Confirmado' : 
@@ -2372,6 +2373,12 @@
             try {
                 const data = await apiFetch('/whatsapp/connect', { method: 'POST' });
 
+                if (data.status === 'connected' && !data.qrcode_base64) {
+                    setWhatsappStatusUI('connected');
+                    showNotification('WhatsApp já está conectado!', 'success');
+                    return;
+                }
+
                 if (!data.qrcode_base64) {
                     showNotification('Não recebemos o QR code da Evolution API. Tente novamente em instantes.', 'error');
                     return;
@@ -2423,6 +2430,65 @@
                 showNotification('Mensagem salva com sucesso!', 'success');
             } catch (error) {
                 showNotification('Erro ao salvar mensagem: ' + error.message, 'error');
+            }
+        }
+
+        // ==================== Atendente IA no WhatsApp (plano PRO) ====================
+        async function loadAiConfig() {
+            try {
+                const data = await apiFetch('/whatsapp/ai');
+                const locked = document.getElementById('aiLockedBox');
+                const box = document.getElementById('aiConfigBox');
+                const warning = document.getElementById('aiWarning');
+
+                if (!data.is_pro) {
+                    locked.classList.remove('hidden');
+                    box.classList.add('hidden');
+                    return;
+                }
+                locked.classList.add('hidden');
+                box.classList.remove('hidden');
+
+                document.getElementById('aiEnabled').checked = !!data.config.enabled;
+                document.getElementById('aiAssistantName').value = data.config.assistant_name || '';
+                document.getElementById('aiExtraInstructions').value = data.config.extra_instructions || '';
+                document.getElementById('aiInteractiveEnabled').checked = !!data.config.interactive_enabled;
+                const carousel = document.getElementById('aiCarouselEnabled');
+                const isGo = data.provider === 'evogo';
+                carousel.checked = isGo && !!data.config.carousel_enabled;
+                carousel.disabled = !isGo;
+                document.getElementById('aiCarouselNote').textContent = isGo
+                    ? 'Os cards usam as fotos cadastradas dos profissionais e dos serviços (sem foto, usa a logo da barbearia).'
+                    : 'Carrossel disponível só no motor Evolution GO. Fale com o suporte para trocar.';
+
+                const warnings = [];
+                if (!data.openai_configured) warnings.push('A IA ainda não foi configurada no servidor (chave da OpenAI). Fale com o suporte.');
+                if (data.whatsapp_status !== 'connected') warnings.push('Conecte o WhatsApp acima para a IA começar a atender.');
+                warning.innerHTML = warnings.join('<br>');
+                warning.classList.toggle('hidden', warnings.length === 0);
+            } catch (error) {
+                console.error('Erro ao carregar atendente IA:', error);
+            }
+        }
+
+        async function saveAiConfig() {
+            const body = {
+                enabled: document.getElementById('aiEnabled').checked,
+                assistant_name: document.getElementById('aiAssistantName').value.trim(),
+                extra_instructions: document.getElementById('aiExtraInstructions').value.trim(),
+                interactive_enabled: document.getElementById('aiInteractiveEnabled').checked,
+                carousel_enabled: document.getElementById('aiCarouselEnabled').checked
+            };
+            try {
+                const data = await apiFetch('/whatsapp/ai', { method: 'PUT', body: JSON.stringify(body) });
+                if (String(data.webhook).startsWith('error')) {
+                    showNotification('Salvo, mas não consegui ligar o recebimento de mensagens no WhatsApp. Reconecte o WhatsApp e salve de novo.', 'error');
+                } else {
+                    showNotification(body.enabled ? 'Atendente IA ativado!' : 'Atendente IA desativado.', 'success');
+                }
+                loadAiConfig();
+            } catch (error) {
+                showNotification('Erro ao salvar atendente IA: ' + error.message, 'error');
             }
         }
 

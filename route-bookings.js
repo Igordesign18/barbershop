@@ -12,7 +12,7 @@ const JOIN_SELECT = `
   SELECT
     b.id, b.user_id, b.customer_full_name, b.customer_phone,
     b.service_id, b.package_id, b.item_name, b.item_price, b.item_duration, b.barber_id, b.booking_date, b.booking_time,
-    b.status, b.whatsapp_sent, b.discount_applied, b.reward_label, b.created_at,
+    b.status, b.whatsapp_sent, b.discount_applied, b.reward_label, b.source, b.created_at,
     s.name AS service_name, s.price AS service_price, s.duration AS service_duration,
     br.name AS barber_name,
     u.full_name AS user_full_name, u.phone AS user_phone, u.email AS user_email
@@ -45,6 +45,7 @@ function toBookingJson(row) {
     whatsapp_sent: !!row.whatsapp_sent,
     discount_applied: row.discount_applied || 0,
     reward_label: row.reward_label || null,
+    source: row.source || null,
     created_at: row.created_at,
     services: name ? { name, price, duration } : null,
     barbers: row.barber_id ? { name: row.barber_name } : null,

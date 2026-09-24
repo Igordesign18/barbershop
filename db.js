@@ -187,6 +187,33 @@ ensureColumn('bookings', 'item_name', 'TEXT');
 ensureColumn('services', 'photo_url', 'TEXT');
 ensureColumn('bookings', 'reminder_sent', 'INTEGER NOT NULL DEFAULT 0');
 
+// Plano da barbearia: 'basic' (padrao) ou 'pro'. So o PRO libera o atendente com IA no WhatsApp.
+ensureColumn('tenants', 'plan', "TEXT NOT NULL DEFAULT 'basic'");
+// Origem do agendamento: 'link' (pagina publica), 'whatsapp_ia' (atendente IA), etc.
+ensureColumn('bookings', 'source', 'TEXT');
+
+// Motor do WhatsApp de cada barbearia: 'evolution' (Evolution API v2) ou 'evogo' (Evolution GO)
+ensureColumn('tenants', 'whatsapp_provider', "TEXT NOT NULL DEFAULT 'evolution'");
+ensureColumn('whatsapp_instances', 'provider', "TEXT NOT NULL DEFAULT 'evolution'");
+ensureColumn('whatsapp_instances', 'instance_token', 'TEXT'); // Evolution GO: token da instancia
+ensureColumn('whatsapp_instances', 'external_id', 'TEXT');    // Evolution GO: id (uuid) da instancia
+
+// Conversa do atendente IA com cada contato do WhatsApp (uma linha por barbearia + numero).
+// messages = historico no formato da OpenAI (JSON), paused_until = IA pausada porque o gestor
+// respondeu manualmente naquele chat.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS ai_conversations (
+    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    chat_id TEXT NOT NULL,
+    phone TEXT,
+    customer_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    messages TEXT NOT NULL DEFAULT '[]',
+    paused_until TEXT,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (tenant_id, chat_id)
+  );
+`);
+
 // blocked_dates ja existia (sem coluna period) em bancos criados antes do bloqueio por turno.
 // ensureColumn nao resolve aqui porque tambem precisamos trocar a constraint UNIQUE
 // (antes so tenant_id+date, agora tenant_id+date+period), entao recriamos a tabela.

@@ -2,65 +2,79 @@ const express = require('express');
 const { db } = require('./db');
 const { requireManager } = require('./auth');
 const { requireActiveTenant } = require('./tenant');
-const evolution = require('./evolution');
+const waProvider = require('./wa-provider');
+const openai = require('./openai');
+const { buildWebhookUrl } = require('./route-webhook');
+const { isProTenant, getAiConfig, saveAiConfig } = require('./ai-agent');
 
 const router = express.Router();
 router.use(requireManager, requireActiveTenant);
 
-router.get('/status', async (req, res) => {
-  const instance = db.prepare('SELECT * FROM whatsapp_instances WHERE tenant_id = ?').get(req.tenantId);
-  if (!instance) return res.json({ status: 'disconnected' });
+// URL publica do sistema (para o webhook e para o link enviado pela IA).
+// Use PUBLIC_BASE_URL no .env; sem ela, deduz pelo endereco que o gestor esta acessando.
+function getBaseUrl(req) {
+  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, '');
+  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim();
+  const host = (req.headers['x-forwarded-host'] || req.get('host') || '').split(',')[0].trim();
+  return `${proto}://${host}`;
+}
 
-  if (!evolution.isConfigured()) {
-    return res.json({ status: instance.status, warning: 'Evolution API não configurada no servidor' });
+// Guarda a URL publica (usada no link que a IA manda) e devolve a URL do webhook da instancia
+function prepareWebhookUrl(req, instanceName) {
+  const baseUrl = getBaseUrl(req);
+  db.prepare(`
+    INSERT INTO settings (tenant_id, key, value) VALUES (?, 'public_base_url', ?)
+    ON CONFLICT(tenant_id, key) DO UPDATE SET value = excluded.value
+  `).run(req.tenantId, baseUrl);
+  return buildWebhookUrl(baseUrl, instanceName);
+}
+
+router.get('/status', async (req, res) => {
+  const provider = waProvider.normalizeProvider(req.tenant.whatsapp_provider);
+  const instance = waProvider.getInstance(req.tenantId);
+  if (!instance) return res.json({ status: 'disconnected', provider });
+
+  // Super admin trocou o motor desta barbearia: precisa reconectar
+  if (waProvider.normalizeProvider(instance.provider) !== provider) {
+    return res.json({ status: 'disconnected', provider, warning: 'Motor do WhatsApp foi alterado. Conecte novamente.' });
+  }
+
+  if (!waProvider.isConfigured(provider)) {
+    return res.json({ status: instance.status, provider, warning: waProvider.notConfiguredMessage(provider) });
   }
 
   try {
-    const state = await evolution.getConnectionState(instance.instance_name);
-    const status = state === 'open' ? 'connected' : state === 'connecting' ? 'connecting' : 'disconnected';
-    db.prepare('UPDATE whatsapp_instances SET status = ?, updated_at = datetime(\'now\') WHERE tenant_id = ?').run(status, req.tenantId);
-    res.json({ status });
+    const status = await waProvider.refreshStatus(instance);
+    res.json({ status, provider });
   } catch (err) {
-    res.json({ status: instance.status, warning: err.message });
+    res.json({ status: instance.status, provider, warning: err.message });
   }
 });
 
-// Cria a instancia (se ainda nao existir) e devolve o QR code para o gestor escanear
+// Cria a instancia (se ainda nao existir) e devolve o QR code para o gestor escanear.
+// O webhook ja fica configurado desde a conexao (so e usado se a barbearia for PRO com IA ligada).
 router.post('/connect', async (req, res) => {
-  if (!evolution.isConfigured()) {
-    return res.status(400).json({ error: 'Evolution API não configurada no servidor. Peça para o suporte preencher EVOLUTION_API_URL e EVOLUTION_API_KEY.' });
+  const provider = waProvider.normalizeProvider(req.tenant.whatsapp_provider);
+  if (!waProvider.isConfigured(provider)) {
+    return res.status(400).json({ error: waProvider.notConfiguredMessage(provider) });
   }
 
-  const instanceName = req.tenant.slug;
-  let instance = db.prepare('SELECT * FROM whatsapp_instances WHERE tenant_id = ?').get(req.tenantId);
-
   try {
-    let qrData;
-    if (!instance) {
-      const created = await evolution.createInstance(instanceName);
-      db.prepare('INSERT INTO whatsapp_instances (tenant_id, instance_name, status) VALUES (?, ?, ?)')
-        .run(req.tenantId, instanceName, 'connecting');
-      qrData = created?.qrcode || created;
-    } else {
-      qrData = await evolution.getQrCode(instanceName);
-      db.prepare('UPDATE whatsapp_instances SET status = ?, updated_at = datetime(\'now\') WHERE tenant_id = ?').run('connecting', req.tenantId);
-    }
-
-    const base64 = qrData?.base64 || qrData?.qrcode?.base64 || null;
-    res.json({ qrcode_base64: base64, raw: base64 ? undefined : qrData });
+    const current = waProvider.getInstance(req.tenantId);
+    const instanceName = current && waProvider.normalizeProvider(current.provider) === provider ? current.instance_name : req.tenant.slug;
+    const result = await waProvider.connectTenant(req.tenant, prepareWebhookUrl(req, instanceName));
+    res.json({ qrcode_base64: result.qrcode_base64, status: result.status, provider });
   } catch (err) {
-    res.status(502).json({ error: 'Erro ao falar com a Evolution API: ' + err.message });
+    res.status(502).json({ error: `Erro ao falar com a ${waProvider.PROVIDERS[provider]}: ${err.message}` });
   }
 });
 
 router.delete('/disconnect', async (req, res) => {
-  const instance = db.prepare('SELECT * FROM whatsapp_instances WHERE tenant_id = ?').get(req.tenantId);
+  const instance = waProvider.getInstance(req.tenantId);
   if (!instance) return res.json({ ok: true });
 
   try {
-    if (evolution.isConfigured()) {
-      await evolution.logoutInstance(instance.instance_name).catch(() => {});
-    }
+    await waProvider.disconnect(instance).catch(() => {});
   } finally {
     db.prepare('UPDATE whatsapp_instances SET status = ?, updated_at = datetime(\'now\') WHERE tenant_id = ?').run('disconnected', req.tenantId);
   }
@@ -85,6 +99,57 @@ router.put('/template', (req, res) => {
   `).run(req.tenantId, template.trim());
 
   res.json({ ok: true });
+});
+
+// ==================== Atendente IA (somente plano PRO) ====================
+
+router.get('/ai', (req, res) => {
+  const instance = waProvider.getInstance(req.tenantId);
+  res.json({
+    plan: req.tenant.plan || 'basic',
+    is_pro: isProTenant(req.tenant),
+    openai_configured: openai.isConfigured(),
+    whatsapp_status: instance ? instance.status : 'disconnected',
+    provider: waProvider.normalizeProvider(req.tenant.whatsapp_provider),
+    config: getAiConfig(req.tenantId)
+  });
+});
+
+router.put('/ai', async (req, res) => {
+  if (!isProTenant(req.tenant)) {
+    return res.status(403).json({ error: 'O atendente com IA é exclusivo do plano PRO. Fale com o suporte para fazer o upgrade.' });
+  }
+
+  const { enabled, assistant_name, extra_instructions, interactive_enabled, carousel_enabled } = req.body || {};
+  const current = getAiConfig(req.tenantId);
+  const config = {
+    ...current,
+    enabled: !!enabled,
+    assistant_name: String(assistant_name || current.assistant_name || 'Assistente Virtual').trim().slice(0, 40) || 'Assistente Virtual',
+    extra_instructions: String(extra_instructions || '').trim().slice(0, 2000),
+    interactive_enabled: !!interactive_enabled,
+    // Carrossel so existe na Evolution GO
+    carousel_enabled: !!carousel_enabled && waProvider.normalizeProvider(req.tenant.whatsapp_provider) === 'evogo'
+  };
+
+  if (config.enabled && !openai.isConfigured()) {
+    return res.status(400).json({ error: 'IA não configurada no servidor. Peça para o suporte preencher OPENAI_API_KEY.' });
+  }
+
+  saveAiConfig(req.tenantId, config);
+
+  let webhook = 'skipped';
+  const instance = waProvider.getInstance(req.tenantId);
+  if (config.enabled && instance && waProvider.isConfigured(instance.provider)) {
+    try {
+      await waProvider.setWebhook(instance, prepareWebhookUrl(req, instance.instance_name));
+      webhook = 'ok';
+    } catch (err) {
+      webhook = 'error: ' + err.message;
+    }
+  }
+
+  res.json({ ok: true, config, webhook });
 });
 
 module.exports = router;

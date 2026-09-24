@@ -28,6 +28,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
+
+// Webhook da Evolution (atendente IA no WhatsApp) - montado ANTES do express.json global
+// porque tem limite de tamanho proprio e nao usa login
+app.use('/api/webhook', require('./route-webhook').router);
+
 app.use(express.json());
 
 // Fotos de barbeiros enviadas via upload
