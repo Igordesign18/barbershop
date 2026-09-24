@@ -28,7 +28,7 @@
 
             if (!response.ok) {
                 const err = await response.json().catch(() => ({}));
-                throw new Error(err.error || 'Erro na requisição');
+                throw new Error(err.error || `Erro na requisição (código ${response.status})`);
             }
 
             if (response.status === 204) return null;

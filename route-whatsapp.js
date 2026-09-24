@@ -65,7 +65,10 @@ router.post('/connect', async (req, res) => {
     const result = await waProvider.connectTenant(req.tenant, prepareWebhookUrl(req, instanceName));
     res.json({ qrcode_base64: result.qrcode_base64, status: result.status, provider });
   } catch (err) {
-    res.status(502).json({ error: `Erro ao falar com a ${waProvider.PROVIDERS[provider]}: ${err.message}` });
+    // 400 e nao 502: proxies como o do EasyPanel/Cloudflare trocam respostas 502 por uma pagina HTML
+    // propria, e a mensagem de erro real nunca chegava ao painel ("Erro na requisicao")
+    console.error(`[whatsapp] connect (tenant ${req.tenantId}, ${provider}):`, err.message);
+    res.status(400).json({ error: `Erro ao falar com a ${waProvider.PROVIDERS[provider]}: ${err.message}` });
   }
 });
 

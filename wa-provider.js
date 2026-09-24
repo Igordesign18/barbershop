@@ -92,18 +92,27 @@ async function connectTenant(tenant, webhookUrl) {
 
   await evogo.connect(instance.instance_token, webhookUrl);
 
-  try {
-    const qr = await evogo.getQr(instance.instance_token);
-    setStatus(tenant.id, 'connecting');
-    return { qrcode_base64: qr, status: 'connecting' };
-  } catch (err) {
-    // Sessao ja pareada: nao existe QR, ja esta conectado
-    if (/already logged in/i.test(err.message)) {
-      setStatus(tenant.id, 'connected');
-      return { qrcode_base64: null, status: 'connected' };
+  // Logo apos o connect o GO ainda pode estar gerando o QR: tenta algumas vezes antes de desistir
+  let lastError = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const qr = await evogo.getQr(instance.instance_token);
+      if (qr) {
+        setStatus(tenant.id, 'connecting');
+        return { qrcode_base64: qr, status: 'connecting' };
+      }
+    } catch (err) {
+      // Sessao ja pareada: nao existe QR, ja esta conectado
+      if (/already logged in/i.test(err.message)) {
+        setStatus(tenant.id, 'connected');
+        return { qrcode_base64: null, status: 'connected' };
+      }
+      lastError = err;
+      if (!/no QR code|wait a moment|no active session|client disconnected/i.test(err.message)) throw err;
     }
-    throw err;
+    await new Promise(r => setTimeout(r, 2000));
   }
+  throw lastError || new Error('o servidor não gerou o QR code a tempo, tente de novo em alguns segundos');
 }
 
 // Consulta o estado real no servidor do WhatsApp e atualiza o banco

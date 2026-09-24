@@ -27,7 +27,10 @@ async function goFetch(path, { method = 'GET', body, token } = {}) {
   const response = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: { 'Content-Type': 'application/json', apikey: token || GLOBAL_KEY },
-    body: body ? JSON.stringify(body) : undefined
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(30000) // nunca deixa o painel travado esperando o GO
+  }).catch(err => {
+    throw new Error(err.name === 'TimeoutError' ? 'o servidor Evolution GO demorou demais para responder' : `não consegui acessar o servidor Evolution GO (${err.message})`);
   });
 
   const text = await response.text();
