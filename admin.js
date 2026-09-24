@@ -2394,7 +2394,16 @@
                     const status = await refreshWhatsappStatus();
                     if (status === 'connected') {
                         showNotification('WhatsApp conectado com sucesso!', 'success');
+                        return;
                     }
+                    // Atualiza a imagem se o servidor gerou um QR novo (o antigo expira)
+                    try {
+                        const fresh = await apiFetch('/whatsapp/qr');
+                        if (fresh.qrcode_base64) {
+                            img.src = fresh.qrcode_base64.startsWith('data:') ? fresh.qrcode_base64 : `data:image/png;base64,${fresh.qrcode_base64}`;
+                            document.getElementById('whatsappQrBox').classList.remove('hidden');
+                        }
+                    } catch (_) { /* segue tentando */ }
                 }, 4000);
             } catch (error) {
                 showNotification('Erro ao conectar WhatsApp: ' + error.message, 'error');

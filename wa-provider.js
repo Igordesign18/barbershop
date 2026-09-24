@@ -79,40 +79,82 @@ async function connectTenant(tenant, webhookUrl) {
   }
 
   // Evolution GO
+  return connectEvoGo(tenant, instance, instanceName, webhookUrl);
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Cria (ou recria) a instancia no GO e grava token/id no banco
+async function createEvoGoInstance(tenantId, instanceName) {
+  const created = await evogo.createInstance(instanceName);
+  let externalId = created.id;
+  if (!externalId) externalId = (await evogo.findByName(instanceName))?.id || null;
+  db.prepare(`
+    INSERT INTO whatsapp_instances (tenant_id, instance_name, status, provider, instance_token, external_id)
+    VALUES (?, ?, 'connecting', 'evogo', ?, ?)
+    ON CONFLICT(tenant_id) DO UPDATE SET provider = 'evogo', instance_name = excluded.instance_name,
+      instance_token = excluded.instance_token, external_id = excluded.external_id,
+      status = 'connecting', updated_at = datetime('now')
+  `).run(tenantId, instanceName, created.token, externalId);
+  return getInstance(tenantId);
+}
+
+// Espera o GO gerar o QR (ou perceber que ja esta pareado). Le o QR pelo /instance/info,
+// que so consulta o banco do GO e nao dispara um segundo cliente.
+async function waitEvoGoQr(instance, maxMs = 15000) {
+  const started = Date.now();
+  while (Date.now() - started < maxMs) {
+    await sleep(1500);
+    try {
+      const status = await evogo.getStatus(instance.instance_token);
+      if (status === 'connected') return { qrcode_base64: null, status: 'connected' };
+    } catch (_) { /* segue tentando */ }
+    try {
+      const qr = evogo.qrFromInfo(await evogo.getInfo(instance.external_id));
+      if (qr) return { qrcode_base64: qr, status: 'connecting' };
+    } catch (_) { /* segue tentando */ }
+  }
+  return null;
+}
+
+async function connectEvoGo(tenant, instance, instanceName, webhookUrl) {
   if (!instance || !instance.instance_token) {
-    const created = await evogo.createInstance(instanceName);
-    db.prepare(`
-      INSERT INTO whatsapp_instances (tenant_id, instance_name, status, provider, instance_token, external_id)
-      VALUES (?, ?, 'connecting', 'evogo', ?, ?)
-      ON CONFLICT(tenant_id) DO UPDATE SET provider = 'evogo', instance_token = excluded.instance_token,
-        external_id = excluded.external_id, status = 'connecting', updated_at = datetime('now')
-    `).run(tenant.id, instanceName, created.token, created.id);
-    instance = getInstance(tenant.id);
+    instance = await createEvoGoInstance(tenant.id, instanceName);
+  }
+  if (!instance.external_id) {
+    const found = await evogo.findByName(instance.instance_name).catch(() => null);
+    if (found) {
+      db.prepare('UPDATE whatsapp_instances SET external_id = ? WHERE tenant_id = ?').run(found.id, tenant.id);
+      instance = getInstance(tenant.id);
+    }
   }
 
   await evogo.connect(instance.instance_token, webhookUrl);
+  let result = instance.external_id ? await waitEvoGoQr(instance) : null;
 
-  // Logo apos o connect o GO ainda pode estar gerando o QR: tenta algumas vezes antes de desistir
-  let lastError = null;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    try {
-      const qr = await evogo.getQr(instance.instance_token);
-      if (qr) {
-        setStatus(tenant.id, 'connecting');
-        return { qrcode_base64: qr, status: 'connecting' };
-      }
-    } catch (err) {
-      // Sessao ja pareada: nao existe QR, ja esta conectado
-      if (/already logged in/i.test(err.message)) {
-        setStatus(tenant.id, 'connected');
-        return { qrcode_base64: null, status: 'connected' };
-      }
-      lastError = err;
-      if (!/no QR code|wait a moment|no active session|client disconnected/i.test(err.message)) throw err;
-    }
-    await new Promise(r => setTimeout(r, 2000));
+  // Sem QR: a sessao no GO ficou travada (ex.: uma tentativa anterior falhou e o GO acha que o
+  // cliente ainda esta rodando). Apaga a instancia la no GO e cria de novo, limpa.
+  if (!result) {
+    console.warn(`[whatsapp] GO sem QR para ${instanceName}, recriando a instância`);
+    if (instance.external_id) await evogo.deleteInstance(instance.external_id).catch(err => console.error('[whatsapp] GO delete:', err.message));
+    await sleep(1500);
+    instance = await createEvoGoInstance(tenant.id, instanceName);
+    await evogo.connect(instance.instance_token, webhookUrl);
+    result = await waitEvoGoQr(instance, 20000);
   }
-  throw lastError || new Error('o servidor não gerou o QR code a tempo, tente de novo em alguns segundos');
+
+  if (!result) {
+    throw new Error('o servidor Evolution GO não gerou o QR code. Veja o log do container do GO (erro de conexão com o WhatsApp ou proxy).');
+  }
+
+  setStatus(tenant.id, result.status);
+  return result;
+}
+
+// QR atual (o GO troca o QR a cada ~20s; o painel busca de novo enquanto espera a leitura)
+async function currentQr(instance) {
+  if (normalizeProvider(instance.provider) !== 'evogo' || !instance.external_id) return null;
+  return evogo.qrFromInfo(await evogo.getInfo(instance.external_id));
 }
 
 // Consulta o estado real no servidor do WhatsApp e atualiza o banco
@@ -321,6 +363,7 @@ module.exports = {
   getInstance,
   connectTenant,
   refreshStatus,
+  currentQr,
   disconnect,
   setWebhook,
   sendText,

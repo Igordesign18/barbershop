@@ -72,6 +72,17 @@ router.post('/connect', async (req, res) => {
   }
 });
 
+// QR atualizado enquanto o gestor ainda nao escaneou (Evolution GO troca o QR periodicamente)
+router.get('/qr', async (req, res) => {
+  const instance = waProvider.getInstance(req.tenantId);
+  if (!instance) return res.json({ qrcode_base64: null });
+  try {
+    res.json({ qrcode_base64: await waProvider.currentQr(instance) });
+  } catch (err) {
+    res.json({ qrcode_base64: null, warning: err.message });
+  }
+});
+
 router.delete('/disconnect', async (req, res) => {
   const instance = waProvider.getInstance(req.tenantId);
   if (!instance) return res.json({ ok: true });

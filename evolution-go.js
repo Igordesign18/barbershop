@@ -88,6 +88,24 @@ async function getStatus(token) {
   return (data?.Connected ?? data?.connected) ? 'connecting' : 'disconnected';
 }
 
+// Le a instancia direto do banco do GO (chave global), sem efeitos colaterais.
+// Diferente de /instance/qr, que tenta iniciar um cliente novo se ainda nao houver um
+// e pode brigar com o cliente que o /instance/connect acabou de iniciar.
+async function getInfo(instanceId) {
+  return goFetch(`/instance/info/${encodeURIComponent(instanceId)}`);
+}
+
+async function findByName(name) {
+  const all = await goFetch('/instance/all');
+  return (Array.isArray(all) ? all : []).find(i => i.name === name) || null;
+}
+
+// QR salvo pelo GO vem como "data:image/png;base64,...|codigo"
+function qrFromInfo(info) {
+  const raw = String(info?.qrcode || '');
+  return raw ? raw.split('|')[0] : null;
+}
+
 async function logout(token) {
   return goFetch('/instance/logout', { method: 'DELETE', token });
 }
@@ -178,6 +196,9 @@ module.exports = {
   createInstance,
   connect,
   getQr,
+  getInfo,
+  findByName,
+  qrFromInfo,
   getStatus,
   logout,
   deleteInstance,
