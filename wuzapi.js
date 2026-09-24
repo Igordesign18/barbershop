@@ -121,7 +121,8 @@ async function sendText(token, phone, text) {
   return data?.Id || null;
 }
 
-async function sendButtons(token, phone, { text, footer, buttons }) {
+// image (opcional): data URL ("data:image/jpeg;base64,...") ou URL http(s) publica; vira a foto no topo
+async function sendButtons(token, phone, { text, footer, buttons, image }) {
   const data = await wzFetch('/chat/send/buttons', {
     method: 'POST',
     token,
@@ -129,6 +130,7 @@ async function sendButtons(token, phone, { text, footer, buttons }) {
       Phone: phone,
       Body: text,
       Footer: footer && footer.trim() ? footer : undefined,
+      Image: image || undefined,
       Buttons: buttons.map(b => ({ type: 'reply', title: b.text, id: b.id }))
     }
   });

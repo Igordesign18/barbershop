@@ -313,6 +313,8 @@ async function sendText(instance, number, text) {
 // Recursos interativos de cada motor.
 function supports(instance, kind) {
   if (kind === 'poll') return !!instance;
+  // Cards com foto (botoes com imagem no topo): so na WuzAPI
+  if (kind === 'cards') return !!instance && normalizeProvider(instance.provider) === 'wuzapi';
   // WuzAPI so faz enquete de escolha unica
   if (kind === 'poll_multi') return !!instance && normalizeProvider(instance.provider) !== 'wuzapi';
   return kind === 'buttons' || kind === 'list';

@@ -34,7 +34,7 @@ function isProTenant(tenant) {
   return !!tenant && String(tenant.plan || '').toLowerCase() === 'pro';
 }
 
-const CHOICE_FORMATS = ['text', 'poll', 'list', 'buttons'];
+const CHOICE_FORMATS = ['text', 'poll', 'list', 'buttons', 'cards'];
 
 // Converte configuracoes antigas (caixinhas poll/interactive) para o formato novo.
 // O carrossel foi removido: quem usava carrossel passa para texto numerado.
@@ -430,6 +430,21 @@ function notifyPanel(tenantId, bookingId) {
 
 // Ferramentas de mensagem interativa (so entram se o gestor ligou e o motor suporta)
 const INTERACTIVE_TOOLS = {
+  enviar_cards: {
+    type: 'function',
+    function: {
+      name: 'enviar_cards',
+      description: 'Mostra profissionais ou serviços em cards com foto, cada um com o botão "Escolher". O sistema monta os cards com as fotos cadastradas.',
+      parameters: {
+        type: 'object',
+        properties: {
+          tipo: { type: 'string', enum: ['profissionais', 'servicos'] },
+          texto: { type: 'string', description: 'Frase curta antes dos cards, ex: "✂️ Escolha o serviço:"' }
+        },
+        required: ['tipo', 'texto']
+      }
+    }
+  },
   enviar_botoes: {
     type: 'function',
     function: {
@@ -495,7 +510,9 @@ function interactiveFlags(ctx) {
   return {
     poll: !!(allowed && format === 'poll' && waProvider.supports(ctx.instance, 'poll')),
     buttons: !!(allowed && config.buttons_enabled && waProvider.supports(ctx.instance, 'buttons')),
-    list: !!(allowed && (format === 'list' || format === 'buttons') && waProvider.supports(ctx.instance, 'list')),
+    // No modo cards, dias e horarios continuam em lista (profissionais e servicos viram cards com foto)
+    list: !!(allowed && ['list', 'buttons', 'cards'].includes(format) && waProvider.supports(ctx.instance, 'list')),
+    cards: !!(allowed && format === 'cards' && waProvider.supports(ctx.instance, 'cards')),
     listAsButtons: format === 'buttons',
     backup: config.backup_text !== false
   };
@@ -505,6 +522,7 @@ function toolsFor(ctx) {
   const flags = interactiveFlags(ctx);
   const tools = [...TOOLS];
   if (flags.poll) tools.push(INTERACTIVE_TOOLS.enviar_enquete);
+  if (flags.cards) tools.push(INTERACTIVE_TOOLS.enviar_cards);
   if (flags.buttons) tools.push(INTERACTIVE_TOOLS.enviar_botoes);
   if (flags.list) tools.push(INTERACTIVE_TOOLS.enviar_lista);
   return tools;
@@ -542,6 +560,28 @@ async function sendButtonBlocks(ctx, texto, opcoes, footerText) {
   return { format, items };
 }
 
+// Foto do card: arquivos enviados pelo painel (/uploads/...) vao como data URL lidos do disco,
+// assim nao dependem de a WuzAPI conseguir acessar o endereco publico do BarberSync.
+async function cardImage(tenantId, url) {
+  if (!url) return null;
+  if (/^https?:\/\//i.test(url)) return url;
+  if (String(url).startsWith('/uploads/')) {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const file = path.join(__dirname, url.split('?')[0]);
+      if (!file.startsWith(path.join(__dirname, 'uploads'))) return null;
+      const buffer = await fs.promises.readFile(file);
+      const ext = path.extname(file).toLowerCase();
+      const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+      return `data:${mime};base64,${buffer.toString('base64')}`;
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
+
 // Opcao extra que acompanha toda oferta de horarios
 const OTHER_TIME = { id: 'hora_outro', titulo: '🕐 Outro horário', descricao: 'Ver outros horários ou outro dia' };
 function isTimeOption(id) {
@@ -570,6 +610,44 @@ async function runInteractiveTool(name, args, ctx) {
       instrucao: 'As opções JÁ foram enviadas ao cliente. Não repita as opções. Se não tiver mais nada a dizer agora, responda somente com "-" e aguarde a escolha.'
     };
   };
+
+  if (name === 'enviar_cards') {
+    if (!flags.cards) return { erro: 'Cards desativados. Use enviar_lista.' };
+    const logo = getSetting(tenant.id, 'logo_url');
+    let items;
+    if (args.tipo === 'servicos') {
+      items = db.prepare('SELECT id, name, price, duration, photo_url FROM services WHERE tenant_id = ? ORDER BY id').all(tenant.id)
+        .map(sv => ({ id: `servico_${sv.id}`, titulo: sv.name, descricao: `💰 R$ ${formatCurrencyBRL(sv.price)} · ⏱️ ${sv.duration} min`, foto: sv.photo_url || logo }));
+    } else {
+      items = db.prepare('SELECT id, name, specialty, photo_url FROM barbers WHERE tenant_id = ? ORDER BY id').all(tenant.id)
+        .map(b => ({ id: `profissional_${b.id}`, titulo: b.name, descricao: b.specialty ? `💈 ${b.specialty}` : '💈 Profissional', foto: b.photo_url || logo }));
+    }
+    if (!items.length) return { erro: 'Nada cadastrado para mostrar.' };
+
+    const MAX_CARDS = 5; // mais que isso vira uma sequencia grande de mensagens
+    const cards = items.slice(0, MAX_CARDS);
+    const rest = items.slice(MAX_CARDS);
+
+    await waProvider.sendText(instance, replyTo, texto);
+    for (const item of cards) {
+      const image = await cardImage(tenant.id, item.foto);
+      await waProvider.sendInteractive(instance, replyTo, 'buttons', {
+        title: ' ',
+        text: `*${item.titulo}*\n${item.descricao}`,
+        footer: cut(tenant.name, 60),
+        image,
+        buttons: [{ id: item.id, text: `✅ Escolher ${item.titulo}`.length <= 20 ? `✅ Escolher ${item.titulo}` : '✅ Escolher' }]
+      }, `*${item.titulo}* — ${item.descricao}\nPara escolher, responda: ${item.titulo}`);
+    }
+    if (rest.length) {
+      await waProvider.sendInteractive(instance, replyTo, 'list', {
+        title: cut(tenant.name, 60), text: 'Mais opções 👇', footer, buttonText: 'Ver mais',
+        sections: [{ title: args.tipo === 'servicos' ? 'Serviços' : 'Profissionais', rows: rest.slice(0, 10).map(i => ({ id: i.id, title: cut(i.titulo, 24), description: cut(i.descricao, 72) })) }]
+      }, numberedFallback('Mais opções:', rest));
+    }
+    console.log(`[ia] ${cards.length} card(s) com foto enviados (tenant ${tenant.id})`);
+    return done('cards');
+  }
 
   if (name === 'enviar_enquete') {
     if (!flags.poll) return { erro: 'Enquetes desativadas. Envie as opções em texto numerado.' };
@@ -687,7 +765,7 @@ async function runTool(name, args, ctx) {
     case 'listar_profissionais': {
       const barbers = db.prepare('SELECT id, name, specialty FROM barbers WHERE tenant_id = ? ORDER BY id').all(tenantId);
       const flagsB = interactiveFlags(ctx);
-      const hintB = barbers.length > 1 ? (flagsB.poll ? 'Agora mostre com enviar_enquete (multipla=false).' : flagsB.list ? 'Agora mostre com enviar_lista (ids "profissional_<id>").' : flagsB.list ? 'Agora mostre com enviar_lista.' : null) : null;
+      const hintB = barbers.length > 1 ? (flagsB.cards ? 'Agora mostre com enviar_cards tipo "profissionais".' : flagsB.poll ? 'Agora mostre com enviar_enquete (multipla=false).' : flagsB.list ? 'Agora mostre com enviar_lista (ids "profissional_<id>").' : flagsB.list ? 'Agora mostre com enviar_lista.' : null) : null;
       const single = barbers.length === 1 ? `Só existe ${barbers[0].name}: informe em uma frase e, NA MESMA RESPOSTA, chame listar_servicos e mostre os serviços (não pergunte se pode mostrar).` : null;
       return { profissionais: barbers.map(b => ({ id: b.id, nome: b.name, especialidade: b.specialty || null })), ...((hintB || single) ? { proximo_passo: hintB || single } : {}) };
     }
@@ -695,7 +773,7 @@ async function runTool(name, args, ctx) {
     case 'listar_servicos': {
       const services = db.prepare('SELECT id, name, price, duration FROM services WHERE tenant_id = ? ORDER BY id').all(tenantId);
       const flagsS = interactiveFlags(ctx);
-      const hintS = flagsS.poll ? 'Agora mostre com enviar_enquete (multipla=true, ids "servico_<id>").' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>", descrição com preço e duração).' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>").' : null;
+      const hintS = flagsS.cards ? 'Agora mostre com enviar_cards tipo "servicos".' : flagsS.poll ? 'Agora mostre com enviar_enquete (multipla=true, ids "servico_<id>").' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>", descrição com preço e duração).' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>").' : null;
       return { servicos: services.map(s => ({ id: s.id, nome: s.name, preco: `R$ ${formatCurrencyBRL(s.price)}`, duracao_min: s.duration })), ...(hintS ? { proximo_passo: hintS } : {}) };
     }
 
@@ -878,6 +956,7 @@ async function runTool(name, args, ctx) {
       return { agendamentos: rows.map(r => ({ id: r.id, data: formatDateBR(r.booking_date), hora: r.booking_time.slice(0, 5), servico: r.servico, profissional: r.profissional, presenca_confirmada: !!r.client_confirmed_at })) };
     }
 
+    case 'enviar_cards':
     case 'enviar_enquete':
     case 'enviar_botoes':
     case 'enviar_lista':
@@ -892,8 +971,9 @@ async function runTool(name, args, ctx) {
 
 function interactivePromptBlock(ctx) {
   const flags = interactiveFlags(ctx);
-  if (!flags.poll && !flags.buttons && !flags.list) return '';
+  if (!flags.poll && !flags.buttons && !flags.list && !flags.cards) return '';
   const lines = ['OPÇÕES INTERATIVAS (use sempre que fizer sentido, em vez de lista em texto):'];
+  if (flags.cards) lines.push('- enviar_cards: profissionais ou serviços em cards com foto e botão "Escolher" (ids "profissional_<id>" / "servico_<id>").');
   if (flags.poll) lines.push('- enviar_enquete: enquete do WhatsApp (formato preferido). O voto chega como "[cliente votou na enquete ...] opções (ids: ...)".');
   if (flags.list) lines.push('- enviar_lista: para horários livres (até 10 por vez), serviços ou profissionais. Use ids como "hora_14:30", "servico_3", "profissional_2".');
   if (flags.buttons) lines.push('- enviar_botoes: para escolhas curtas de até 3 opções, como confirmar o resumo (ids "confirmar_sim" / "confirmar_nao") ou "Agendar por aqui" / "Receber o link".');
@@ -923,7 +1003,11 @@ function stepInstructions(ctx) {
     ? ' Depois de cada escolha, mostre o que já foi escolhido e pergunte com enviar_botoes ("➕ Adicionar outro" id "servico_mais" / "➡️ Continuar" id "servico_continuar").'
     : ' Depois de cada escolha, pergunte se quer mais algum serviço.';
 
-  if (f.poll) {
+  if (f.cards) {
+    steps.barber = ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_cards tipo "profissionais".';
+    steps.service = ' Mostre OBRIGATORIAMENTE com enviar_cards tipo "servicos".' + moreServices;
+    steps.time = ' Mostre OBRIGATORIAMENTE com enviar_lista (até 10 horários, ids "hora_HH:MM", secao "🌅 Manhã" / "☀️ Tarde" / "🌙 Noite", botão "Ver horários").';
+  } else if (f.poll) {
     steps.barber = ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_enquete (multipla=false, ids "profissional_<id>").';
     steps.service = ' Mostre OBRIGATORIAMENTE com enviar_enquete (multipla=true, ids "servico_<id>", título com nome e preço), para o cliente marcar todos que quiser de uma vez.';
     steps.time = ' Mostre OBRIGATORIAMENTE com enviar_enquete (multipla=false, até 12 horários, ids "hora_HH:MM").';
