@@ -24,8 +24,7 @@ const DEFAULT_AI_CONFIG = {
   assistant_name: 'Assistente Virtual',
   extra_instructions: '',
   buttons_enabled: false,     // botoes para escolhas rapidas: agendar aqui/link, confirmar (PRO)
-  choice_format: 'text',      // profissional/servicos/horarios: 'text' | 'poll' | 'list' | 'buttons' (blocos de 3 botoes) (PRO)
-  backup_text: true           // depois da lista, manda as opcoes tambem em texto numerado
+  choice_format: 'text'       // profissional/servicos/horarios: 'text' | 'poll' | 'list' | 'buttons' | 'cards' (PRO)
 };
 
 // ==================== Config / plano ====================
@@ -44,7 +43,6 @@ function normalizeAiConfig(raw) {
     c.choice_format = raw.poll_enabled ? 'poll' : raw.interactive_enabled && !raw.carousel_enabled ? 'list' : 'text';
   }
   if (typeof raw.buttons_enabled !== 'boolean') c.buttons_enabled = !!raw.interactive_enabled;
-  if (typeof raw.backup_text !== 'boolean') c.backup_text = true;
   return c;
 }
 
@@ -514,7 +512,7 @@ function interactiveFlags(ctx) {
     list: !!(allowed && ['list', 'buttons', 'cards'].includes(format) && waProvider.supports(ctx.instance, 'list')),
     cards: !!(allowed && format === 'cards' && waProvider.supports(ctx.instance, 'cards')),
     listAsButtons: format === 'buttons',
-    backup: config.backup_text !== false
+    backup: false // texto de reserva removido: so listas e botoes (em caso de ERRO no envio ainda vai texto)
   };
 }
 
@@ -593,15 +591,9 @@ async function runInteractiveTool(name, args, ctx) {
   const flags = interactiveFlags(ctx);
   const footer = cut(tenant.name, 60);
   const texto = String(args.texto || '').trim() || 'Escolha uma opção:';
-  // O WhatsApp as vezes aceita botoes/lista e simplesmente nao mostra ao cliente
-  // (numeros comuns, conexao nao oficial). Para a conversa nunca travar, depois do envio
-  // interativo sai tambem uma versao curta em texto com as mesmas opcoes.
-  const done = async (format, opcoes) => {
-    // Botoes ja foram confirmados aparecendo no Evolution GO atualizado: sem texto de reserva para eles
-    if (format === 'interativo' && flags.backup && name !== 'enviar_botoes' && Array.isArray(opcoes) && opcoes.length) {
-      const backup = `Se as opções não aparecerem aí, é só responder com o número:\n${opcoes.map((o, i) => `*${i + 1}.* ${o.titulo}`).join('\n')}`;
-      await waProvider.sendText(instance, replyTo, backup).catch(() => {});
-    }
+  // Depois de enviar lista/botoes nao sai texto repetido. So se o motor der ERRO no envio,
+  // o sendInteractive manda as opcoes em texto numerado no lugar (a conversa nunca trava).
+  const done = async (format) => {
     ctx.interactiveSent = true;
     console.log(`[ia] ${name} enviado como ${format} (tenant ${tenant.id})`);
     return {

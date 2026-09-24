@@ -2513,7 +2513,6 @@
                 document.getElementById('aiAssistantName').value = data.config.assistant_name || '';
                 document.getElementById('aiExtraInstructions').value = data.config.extra_instructions || '';
                 document.getElementById('aiButtonsEnabled').checked = !!data.config.buttons_enabled;
-                document.getElementById('aiBackupText').checked = data.config.backup_text !== false;
                 const isGo = data.provider === 'evogo' || data.provider === 'wuzapi';
                 const formatSelect = document.getElementById('aiChoiceFormat');
                 const cardsOption = formatSelect.querySelector('option[value="cards"]');
@@ -2539,8 +2538,7 @@
                 assistant_name: document.getElementById('aiAssistantName').value.trim(),
                 extra_instructions: document.getElementById('aiExtraInstructions').value.trim(),
                 buttons_enabled: document.getElementById('aiButtonsEnabled').checked,
-                choice_format: document.getElementById('aiChoiceFormat').value,
-                backup_text: document.getElementById('aiBackupText').checked
+                choice_format: document.getElementById('aiChoiceFormat').value
             };
             try {
                 const data = await apiFetch('/whatsapp/ai', { method: 'PUT', body: JSON.stringify(body) });
