@@ -206,6 +206,40 @@
         </div>
 
         <div class="card">
+            <h2><i class="fas fa-robot" aria-hidden="true"></i> Integração OpenAI</h2>
+            <p style="color: var(--ivory-muted, #a89f91); font-size: 13px; margin-bottom: 14px;">
+                Chave global usada pelo atendente IA de todas as barbearias PRO (respostas e transcrição dos áudios). O custo de uso fica na sua conta da OpenAI.
+            </p>
+            <div id="openaiStatus" style="margin-bottom: 14px; font-size: 13px;">Carregando...</div>
+            <div class="form-group">
+                <label for="openaiKey">Chave da API (sk-...)</label>
+                <input type="password" id="openaiKey" placeholder="Cole aqui a nova chave para salvar ou trocar" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="openaiModel">Modelo das respostas</label>
+                <select id="openaiModel">
+                    <option value="gpt-4.1-mini">gpt-4.1-mini (recomendado, barato e bom)</option>
+                    <option value="gpt-4.1">gpt-4.1 (mais caro, mais inteligente)</option>
+                    <option value="gpt-4o-mini">gpt-4o-mini (mais barato)</option>
+                    <option value="gpt-4o">gpt-4o</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="openaiTranscribeModel">Modelo da transcrição de áudio</label>
+                <select id="openaiTranscribeModel">
+                    <option value="gpt-4o-mini-transcribe">gpt-4o-mini-transcribe (recomendado)</option>
+                    <option value="gpt-4o-transcribe">gpt-4o-transcribe (mais preciso)</option>
+                    <option value="whisper-1">whisper-1</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button type="button" class="btn" onclick="saveOpenai()"><i class="fas fa-save" aria-hidden="true"></i> Salvar</button>
+                <button type="button" class="btn btn-secondary" onclick="testOpenai()"><i class="fas fa-vial" aria-hidden="true"></i> Testar chave</button>
+                <button type="button" class="btn btn-secondary" id="openaiRemoveBtn" onclick="removeOpenai()"><i class="fas fa-trash" aria-hidden="true"></i> Remover chave</button>
+            </div>
+        </div>
+
+        <div class="card">
             <h2><i class="fas fa-store-alt" aria-hidden="true"></i> Barbearias Cadastradas</h2>
             <div class="tenant-grid" id="tenantsList">
                 <div class="empty-state">Carregando...</div>
@@ -345,6 +379,73 @@
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainContent').style.display = 'block';
         loadTenants();
+        loadOpenai();
+    }
+
+    // ==================== Integração OpenAI ====================
+    async function loadOpenai() {
+        const box = document.getElementById('openaiStatus');
+        try {
+            const data = await apiFetch('/settings/openai');
+            if (data.configured) {
+                const origem = data.source === 'painel' ? 'salva neste painel' : 'vinda do .env do servidor';
+                box.innerHTML = `<span class="pill active">Configurada</span> <span style="margin-left:8px;">${data.masked_key} (${origem})</span>`;
+            } else {
+                box.innerHTML = '<span class="pill suspended">Não configurada</span> <span style="margin-left:8px;">o atendente IA fica desligado até salvar uma chave</span>';
+            }
+            document.getElementById('openaiRemoveBtn').style.display = data.source === 'painel' ? '' : 'none';
+            setSelectValue('openaiModel', data.model);
+            setSelectValue('openaiTranscribeModel', data.transcribe_model);
+        } catch (error) {
+            box.textContent = 'Erro ao carregar: ' + error.message;
+        }
+    }
+
+    // Garante que um modelo salvo fora da lista tambem apareca no select
+    function setSelectValue(id, value) {
+        const select = document.getElementById(id);
+        if (value && ![...select.options].some(o => o.value === value)) {
+            select.add(new Option(value, value));
+        }
+        if (value) select.value = value;
+    }
+
+    async function saveOpenai() {
+        const body = {
+            model: document.getElementById('openaiModel').value,
+            transcribe_model: document.getElementById('openaiTranscribeModel').value
+        };
+        const key = document.getElementById('openaiKey').value.trim();
+        if (key) body.api_key = key;
+        try {
+            await apiFetch('/settings/openai', { method: 'PUT', body: JSON.stringify(body) });
+            document.getElementById('openaiKey').value = '';
+            showNotification(key ? 'Chave testada e salva!' : 'Modelos salvos!', 'success');
+            loadOpenai();
+        } catch (error) {
+            showNotification(error.message, 'error');
+        }
+    }
+
+    async function testOpenai() {
+        const key = document.getElementById('openaiKey').value.trim();
+        try {
+            await apiFetch('/settings/openai/test', { method: 'POST', body: JSON.stringify(key ? { api_key: key } : {}) });
+            showNotification(key ? 'Chave válida! Clique em Salvar para usar.' : 'A chave salva está funcionando!', 'success');
+        } catch (error) {
+            showNotification(error.message, 'error');
+        }
+    }
+
+    async function removeOpenai() {
+        if (!(await customConfirm('Remover a chave da OpenAI? O atendente IA para de responder em todas as barbearias.'))) return;
+        try {
+            await apiFetch('/settings/openai', { method: 'DELETE' });
+            showNotification('Chave removida.', 'info');
+            loadOpenai();
+        } catch (error) {
+            showNotification(error.message, 'error');
+        }
     }
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {

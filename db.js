@@ -192,6 +192,15 @@ ensureColumn('tenants', 'plan', "TEXT NOT NULL DEFAULT 'basic'");
 // Origem do agendamento: 'link' (pagina publica), 'whatsapp_ia' (atendente IA), etc.
 ensureColumn('bookings', 'source', 'TEXT');
 
+// Configuracoes globais do sistema, editadas pelo super admin (ex: chave da OpenAI)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS system_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
 // Motor do WhatsApp de cada barbearia: 'evolution' (Evolution API v2) ou 'evogo' (Evolution GO)
 ensureColumn('tenants', 'whatsapp_provider', "TEXT NOT NULL DEFAULT 'evolution'");
 ensureColumn('whatsapp_instances', 'provider', "TEXT NOT NULL DEFAULT 'evolution'");

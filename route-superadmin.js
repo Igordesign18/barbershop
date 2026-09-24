@@ -2,6 +2,8 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { db, seedTenantDefaults } = require('./db');
 const { requireSuperAdmin } = require('./auth');
+const openai = require('./openai');
+const { getSystemSetting, setSystemSetting } = require('./system-settings');
 
 const router = express.Router();
 router.use(requireSuperAdmin);
@@ -128,6 +130,61 @@ router.delete('/tenants/:id', (req, res) => {
   const info = db.prepare('DELETE FROM tenants WHERE id = ?').run(req.params.id);
   if (info.changes === 0) return res.status(404).json({ error: 'Barbearia não encontrada' });
   res.json({ ok: true });
+});
+
+// ==================== Integração OpenAI (chave global para a IA de todas as barbearias) ====================
+
+function maskKey(key) {
+  if (!key) return null;
+  return key.length <= 10 ? '••••' : `${key.slice(0, 5)}••••••••${key.slice(-4)}`;
+}
+
+router.get('/settings/openai', (req, res) => {
+  const saved = getSystemSetting('openai_api_key');
+  const fromEnv = !saved && process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY : null;
+  res.json({
+    configured: Boolean(saved || fromEnv),
+    source: saved ? 'painel' : fromEnv ? 'env' : null,
+    masked_key: maskKey(saved || fromEnv),
+    model: openai.getChatModel(),
+    transcribe_model: openai.getTranscribeModel()
+  });
+});
+
+router.put('/settings/openai', async (req, res) => {
+  const { api_key, model, transcribe_model, test } = req.body || {};
+
+  if (api_key !== undefined && api_key !== null && String(api_key).trim() !== '') {
+    const key = String(api_key).trim();
+    if (!key.startsWith('sk-')) return res.status(400).json({ error: 'A chave da OpenAI começa com "sk-". Confira se copiou inteira.' });
+    if (test !== false) {
+      try {
+        await openai.testKey(key);
+      } catch (err) {
+        return res.status(400).json({ error: 'A OpenAI recusou essa chave: ' + err.message });
+      }
+    }
+    setSystemSetting('openai_api_key', key);
+  }
+
+  if (model !== undefined) setSystemSetting('openai_model', String(model || '').trim().slice(0, 60) || null);
+  if (transcribe_model !== undefined) setSystemSetting('openai_transcribe_model', String(transcribe_model || '').trim().slice(0, 60) || null);
+
+  res.json({ ok: true, masked_key: maskKey(openai.getApiKey()), model: openai.getChatModel() });
+});
+
+router.delete('/settings/openai', (req, res) => {
+  setSystemSetting('openai_api_key', null);
+  res.json({ ok: true, configured: openai.isConfigured() });
+});
+
+router.post('/settings/openai/test', async (req, res) => {
+  try {
+    await openai.testKey((req.body || {}).api_key);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: 'Falhou: ' + err.message });
+  }
 });
 
 module.exports = router;

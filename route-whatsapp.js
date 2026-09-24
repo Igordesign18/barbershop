@@ -136,7 +136,7 @@ router.put('/ai', async (req, res) => {
   };
 
   if (config.enabled && !openai.isConfigured()) {
-    return res.status(400).json({ error: 'IA não configurada no servidor. Peça para o suporte preencher OPENAI_API_KEY.' });
+    return res.status(400).json({ error: 'A IA ainda não foi configurada pelo suporte (chave da OpenAI).' });
   }
 
   saveAiConfig(req.tenantId, config);
