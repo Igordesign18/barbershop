@@ -153,7 +153,7 @@ router.put('/ai', async (req, res) => {
     return res.status(403).json({ error: 'O atendente com IA é exclusivo do plano PRO. Fale com o suporte para fazer o upgrade.' });
   }
 
-  const { enabled, assistant_name, extra_instructions, buttons_enabled, choice_format } = req.body || {};
+  const { enabled, assistant_name, extra_instructions, buttons_enabled, choice_format, cards_enabled } = req.body || {};
   const current = getAiConfig(req.tenantId);
   const config = {
     ...current,
@@ -162,7 +162,9 @@ router.put('/ai', async (req, res) => {
     extra_instructions: String(extra_instructions || '').trim().slice(0, 2000),
     buttons_enabled: !!buttons_enabled,
     // Formato desconhecido vira texto numerado
-    choice_format: ['text', 'poll', 'list', 'buttons', 'cards'].includes(choice_format) ? choice_format : 'text'
+    choice_format: ['text', 'poll', 'list', 'buttons'].includes(choice_format) ? choice_format : 'text',
+    // Cards com foto: so WuzAPI (botao com imagem)
+    cards_enabled: !!cards_enabled && waProvider.normalizeProvider(req.tenant.whatsapp_provider) === 'wuzapi'
   };
 
   if (config.enabled && !openai.isConfigured()) {

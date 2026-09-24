@@ -2514,10 +2514,11 @@
                 document.getElementById('aiExtraInstructions').value = data.config.extra_instructions || '';
                 document.getElementById('aiButtonsEnabled').checked = !!data.config.buttons_enabled;
                 const isGo = data.provider === 'evogo' || data.provider === 'wuzapi';
-                const formatSelect = document.getElementById('aiChoiceFormat');
-                const cardsOption = formatSelect.querySelector('option[value="cards"]');
-                if (cardsOption) cardsOption.disabled = data.provider !== 'wuzapi';
-                formatSelect.value = data.config.choice_format || 'text';
+                document.getElementById('aiChoiceFormat').value = data.config.choice_format || 'text';
+                const cardsBox = document.getElementById('aiCardsEnabled');
+                cardsBox.checked = !!data.config.cards_enabled;
+                cardsBox.disabled = data.provider !== 'wuzapi';
+                cardsBox.closest('label').style.opacity = data.provider === 'wuzapi' ? '1' : '0.5';
                 document.getElementById('aiCarouselNote').textContent = isGo
                     ? 'Botões e lista dependem do WhatsApp do cliente mostrar; enquete sempre aparece.'
                     : 'Na Evolution v2 botões e lista podem não aparecer; enquete sempre aparece.';
@@ -2538,7 +2539,8 @@
                 assistant_name: document.getElementById('aiAssistantName').value.trim(),
                 extra_instructions: document.getElementById('aiExtraInstructions').value.trim(),
                 buttons_enabled: document.getElementById('aiButtonsEnabled').checked,
-                choice_format: document.getElementById('aiChoiceFormat').value
+                choice_format: document.getElementById('aiChoiceFormat').value,
+                cards_enabled: document.getElementById('aiCardsEnabled').checked
             };
             try {
                 const data = await apiFetch('/whatsapp/ai', { method: 'PUT', body: JSON.stringify(body) });

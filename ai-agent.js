@@ -24,7 +24,8 @@ const DEFAULT_AI_CONFIG = {
   assistant_name: 'Assistente Virtual',
   extra_instructions: '',
   buttons_enabled: false,     // botoes para escolhas rapidas: agendar aqui/link, confirmar (PRO)
-  choice_format: 'text'       // profissional/servicos/horarios: 'text' | 'poll' | 'list' | 'buttons' | 'cards' (PRO)
+  choice_format: 'text',      // profissional/servicos/horarios: 'text' | 'poll' | 'list' | 'buttons' (PRO)
+  cards_enabled: false        // profissionais e servicos em cards com foto, junto com lista/botoes (PRO, WuzAPI)
 };
 
 // ==================== Config / plano ====================
@@ -33,13 +34,17 @@ function isProTenant(tenant) {
   return !!tenant && String(tenant.plan || '').toLowerCase() === 'pro';
 }
 
-const CHOICE_FORMATS = ['text', 'poll', 'list', 'buttons', 'cards'];
+const CHOICE_FORMATS = ['text', 'poll', 'list', 'buttons'];
 
 // Converte configuracoes antigas (caixinhas poll/interactive) para o formato novo.
 // O carrossel foi removido: quem usava carrossel passa para texto numerado.
 function normalizeAiConfig(raw) {
   const c = { ...DEFAULT_AI_CONFIG, ...raw };
-  if (!CHOICE_FORMATS.includes(raw.choice_format)) {
+  // Versao anterior tinha "cards" como formato: vira Lista + cards ligados
+  if (raw.choice_format === 'cards') {
+    c.choice_format = 'list';
+    c.cards_enabled = true;
+  } else if (!CHOICE_FORMATS.includes(raw.choice_format)) {
     c.choice_format = raw.poll_enabled ? 'poll' : raw.interactive_enabled && !raw.carousel_enabled ? 'list' : 'text';
   }
   if (typeof raw.buttons_enabled !== 'boolean') c.buttons_enabled = !!raw.interactive_enabled;
@@ -508,9 +513,9 @@ function interactiveFlags(ctx) {
   return {
     poll: !!(allowed && format === 'poll' && waProvider.supports(ctx.instance, 'poll')),
     buttons: !!(allowed && config.buttons_enabled && waProvider.supports(ctx.instance, 'buttons')),
-    // No modo cards, dias e horarios continuam em lista (profissionais e servicos viram cards com foto)
-    list: !!(allowed && ['list', 'buttons', 'cards'].includes(format) && waProvider.supports(ctx.instance, 'list')),
-    cards: !!(allowed && format === 'cards' && waProvider.supports(ctx.instance, 'cards')),
+    list: !!(allowed && ['list', 'buttons'].includes(format) && waProvider.supports(ctx.instance, 'list')),
+    // Cards com foto somam com lista/botoes: profissionais e servicos em cards, o resto em lista/botoes
+    cards: !!(allowed && config.cards_enabled && ['list', 'buttons'].includes(format) && waProvider.supports(ctx.instance, 'cards')),
     listAsButtons: format === 'buttons',
     backup: false // texto de reserva removido: so listas e botoes (em caso de ERRO no envio ainda vai texto)
   };
