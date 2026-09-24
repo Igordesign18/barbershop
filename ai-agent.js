@@ -562,7 +562,8 @@ async function runTool(name, args, ctx) {
       const barbers = db.prepare('SELECT id, name, specialty FROM barbers WHERE tenant_id = ? ORDER BY id').all(tenantId);
       const flagsB = interactiveFlags(ctx);
       const hintB = barbers.length > 1 ? (flagsB.poll ? 'Agora mostre com enviar_enquete (multipla=false).' : flagsB.carousel ? 'Agora mostre com enviar_carrossel tipo "profissionais".' : flagsB.list ? 'Agora mostre com enviar_lista.' : null) : null;
-      return { profissionais: barbers.map(b => ({ id: b.id, nome: b.name, especialidade: b.specialty || null })), ...(hintB ? { proximo_passo: hintB } : {}) };
+      const single = barbers.length === 1 ? `Só existe ${barbers[0].name}: informe em uma frase e, NA MESMA RESPOSTA, chame listar_servicos e mostre os serviços (não pergunte se pode mostrar).` : null;
+      return { profissionais: barbers.map(b => ({ id: b.id, nome: b.name, especialidade: b.specialty || null })), ...((hintB || single) ? { proximo_passo: hintB || single } : {}) };
     }
 
     case 'listar_servicos': {
@@ -890,15 +891,46 @@ function alreadySeen(id) {
 }
 
 // Converte o voto em texto para a IA: '[cliente votou na enquete "X"] Corte, Barba (ids: servico_1, servico_2)'
-async function pollVoteToText(tenant, instance, pollVote) {
-  if (!pollVote.pollId) return null;
-  const poll = db.prepare('SELECT * FROM ai_polls WHERE tenant_id = ? AND poll_id = ?').get(tenant.id, pollVote.pollId);
-  if (!poll) return null; // enquete que nao foi a IA que mandou
+// Retorna { text } quando entendeu, { unreadable, poll } quando o voto chegou mas nao deu para ler, ou null.
+async function pollVoteToText(tenant, instance, pollVote, chatId) {
+  let poll = pollVote.pollId
+    ? db.prepare('SELECT * FROM ai_polls WHERE tenant_id = ? AND poll_id = ?').get(tenant.id, pollVote.pollId)
+    : null;
+  // ID nao bateu (motor devolveu outro formato de ID): usa a ultima enquete enviada nessa conversa
+  if (!poll) {
+    poll = db.prepare(`
+      SELECT * FROM ai_polls WHERE tenant_id = ? AND chat_id = ? AND created_at >= datetime('now', '-6 hours')
+      ORDER BY created_at DESC LIMIT 1
+    `).get(tenant.id, chatId);
+    if (poll) console.warn(`[ia] enquete ${pollVote.pollId} não encontrada pelo ID, usando a última da conversa (${poll.poll_id})`);
+  }
+  if (!poll) {
+    console.warn(`[ia] voto em enquete desconhecida (${pollVote.pollId}) ignorado`);
+    return null;
+  }
+
   const options = JSON.parse(poll.options || '[]');
-  const names = await waProvider.resolvePollVote(instance, pollVote, options.map(o => o.titulo));
-  if (!names || !names.length) return null; // desmarcou tudo ou voto ilegivel
+  const lookup = { ...pollVote, pollId: poll.poll_id };
+  const names = await waProvider.resolvePollVote(instance, lookup, options.map(o => o.titulo));
+  if (names === null) {
+    console.warn(`[ia] voto na enquete ${poll.poll_id} chegou mas não foi possível ler as opções`);
+    return { unreadable: true, poll, options };
+  }
+  if (!names.length) return null; // desmarcou tudo
   const chosen = options.filter(o => names.includes(o.titulo));
-  return `[cliente votou na enquete "${poll.question}"] ${chosen.map(o => o.titulo).join(', ')} (ids: ${chosen.map(o => o.id).join(', ')})`;
+  console.log(`[ia] voto lido na enquete ${poll.poll_id}: ${chosen.map(o => o.id).join(', ')}`);
+  return { text: `[cliente votou na enquete "${poll.question}"] ${chosen.map(o => o.titulo).join(', ')} (ids: ${chosen.map(o => o.id).join(', ')})` };
+}
+
+// Voto que nao deu para ler: pede para o cliente responder pelo numero (a conversa nao trava)
+const unreadableWarned = new Map();
+async function askToTypeChoice(tenant, instance, replyTo, poll, options) {
+  const key = `${tenant.id}:${poll.poll_id}`;
+  if (unreadableWarned.has(key)) return; // avisa uma vez por enquete
+  unreadableWarned.set(key, Date.now());
+  if (unreadableWarned.size > 2000) unreadableWarned.delete(unreadableWarned.keys().next().value);
+  const lines = options.map((o, i) => `*${i + 1}.* ${o.titulo}`).join('\n');
+  await waProvider.sendText(instance, replyTo, `Recebi seu voto, mas não consegui ler a opção por aqui 😕 Pode responder com o número, por favor?\n\n${lines}`).catch(() => {});
 }
 
 // Recebe o webhook dos dois motores (Evolution API v2 e Evolution GO).
@@ -930,11 +962,16 @@ async function handleWebhookEvent(instanceName, body) {
 
     // Voto em enquete enviada pela IA
     if (msg.pollVote) {
-      const voteText = await pollVoteToText(tenant, instance, msg.pollVote).catch(err => {
+      console.log(`[ia] voto de enquete recebido (tenant ${tenant.id}, enquete ${msg.pollVote.pollId}, voto ${msg.pollVote.voteId})`);
+      const vote = await pollVoteToText(tenant, instance, msg.pollVote, chatId).catch(err => {
         console.error(`[ia] falha ao ler voto da enquete (tenant ${tenant.id}):`, err.message);
         return null;
       });
-      if (voteText) queueMessage({ tenantId: tenant.id, chatId, replyTo, senderPhone, pushName: msg.pushName, text: voteText, pollKey: msg.pollVote.pollId });
+      if (vote?.text) {
+        queueMessage({ tenantId: tenant.id, chatId, replyTo, senderPhone, pushName: msg.pushName, text: vote.text, pollKey: msg.pollVote.pollId || 'poll' });
+      } else if (vote?.unreadable) {
+        await askToTypeChoice(tenant, instance, replyTo, vote.poll, vote.options);
+      }
       continue;
     }
 
