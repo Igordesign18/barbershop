@@ -27,6 +27,15 @@ function tenantWithManager(tenant) {
   };
 }
 
+// WhatsApp do gestor para avisos: so digitos, com DDD (10 ou 11) ou ja com 55
+function cleanNotifyPhone(value) {
+  const n = String(value || '').replace(/\D/g, '');
+  if (!n) return null;
+  if (n.length === 10 || n.length === 11) return '55' + n;
+  if (n.startsWith('55') && (n.length === 12 || n.length === 13)) return n;
+  return null;
+}
+
 // Listar todas as barbearias
 router.get('/tenants', (req, res) => {
   const tenants = db.prepare('SELECT * FROM tenants ORDER BY created_at DESC').all();
@@ -35,7 +44,7 @@ router.get('/tenants', (req, res) => {
 
 // Criar uma nova barbearia + login do gestor, em um passo só
 router.post('/tenants', (req, res) => {
-  const { name, slug, manager_email, manager_password, subscription_expires_at, plan, whatsapp_provider } = req.body || {};
+  const { name, slug, manager_email, manager_password, subscription_expires_at, plan, whatsapp_provider, notify_phone } = req.body || {};
 
   if (!name || name.trim().length < 3) return res.status(400).json({ error: 'Nome da barbearia inválido' });
   if (!manager_email || !manager_email.includes('@')) return res.status(400).json({ error: 'Email do gestor inválido' });
@@ -51,14 +60,14 @@ router.post('/tenants', (req, res) => {
   if (emailExists) return res.status(409).json({ error: 'Já existe um gestor com esse email' });
 
   const insertTenant = db.prepare(`
-    INSERT INTO tenants (name, slug, status, subscription_expires_at, plan, whatsapp_provider) VALUES (?, ?, 'active', ?, ?, ?)
+    INSERT INTO tenants (name, slug, status, subscription_expires_at, plan, whatsapp_provider, notify_phone) VALUES (?, ?, 'active', ?, ?, ?, ?)
   `);
   const insertManager = db.prepare(`
     INSERT INTO managers (tenant_id, email, password_hash) VALUES (?, ?, ?)
   `);
 
   const result = db.transaction(() => {
-    const tenantResult = insertTenant.run(name.trim(), finalSlug, subscription_expires_at || null, plan === 'pro' ? 'pro' : 'basic', ['evogo', 'wuzapi'].includes(whatsapp_provider) ? whatsapp_provider : 'evolution');
+    const tenantResult = insertTenant.run(name.trim(), finalSlug, subscription_expires_at || null, plan === 'pro' ? 'pro' : 'basic', ['evogo', 'wuzapi'].includes(whatsapp_provider) ? whatsapp_provider : 'evolution', cleanNotifyPhone(notify_phone));
     const tenantId = tenantResult.lastInsertRowid;
     const hash = bcrypt.hashSync(manager_password, 10);
     insertManager.run(tenantId, manager_email.trim(), hash);
@@ -72,7 +81,7 @@ router.post('/tenants', (req, res) => {
 
 // Editar dados da barbearia (nome, link, status, vencimento)
 router.put('/tenants/:id', (req, res) => {
-  const { name, slug, status, subscription_expires_at, plan, whatsapp_provider } = req.body || {};
+  const { name, slug, status, subscription_expires_at, plan, whatsapp_provider, notify_phone, notify_enabled } = req.body || {};
   const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(req.params.id);
   if (!tenant) return res.status(404).json({ error: 'Barbearia não encontrada' });
 
@@ -88,8 +97,12 @@ router.put('/tenants/:id', (req, res) => {
   }
 
   db.prepare(`
-    UPDATE tenants SET name = ?, slug = ?, status = ?, subscription_expires_at = ?, plan = ?, whatsapp_provider = ? WHERE id = ?
-  `).run(finalName, finalSlug, finalStatus, subscription_expires_at !== undefined ? subscription_expires_at : tenant.subscription_expires_at, finalPlan, finalProvider, tenant.id);
+    UPDATE tenants SET name = ?, slug = ?, status = ?, subscription_expires_at = ?, plan = ?, whatsapp_provider = ?,
+      notify_phone = ?, notify_enabled = ? WHERE id = ?
+  `).run(finalName, finalSlug, finalStatus, subscription_expires_at !== undefined ? subscription_expires_at : tenant.subscription_expires_at, finalPlan, finalProvider,
+    notify_phone !== undefined ? cleanNotifyPhone(notify_phone) : tenant.notify_phone,
+    notify_enabled !== undefined ? (notify_enabled ? 1 : 0) : tenant.notify_enabled,
+    tenant.id);
 
   res.json(tenantWithManager(db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenant.id)));
 });
@@ -130,6 +143,47 @@ router.delete('/tenants/:id', (req, res) => {
   const info = db.prepare('DELETE FROM tenants WHERE id = ?').run(req.params.id);
   if (info.changes === 0) return res.status(404).json({ error: 'Barbearia não encontrada' });
   res.json({ ok: true });
+});
+
+// ==================== WhatsApp de notificações para os gestores (WuzAPI) ====================
+const gestorNotify = require('./gestor-notify');
+
+router.get('/notify-whatsapp', async (req, res) => {
+  res.json(await gestorNotify.status());
+});
+
+router.post('/notify-whatsapp/connect', async (req, res) => {
+  try { res.json(await gestorNotify.connect()); }
+  catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+router.get('/notify-whatsapp/qr', async (req, res) => {
+  res.json(await gestorNotify.currentQr());
+});
+
+router.post('/notify-whatsapp/disconnect', async (req, res) => {
+  await gestorNotify.disconnect();
+  res.json({ ok: true });
+});
+
+// Manda uma mensagem de teste para o WhatsApp do gestor de uma barbearia (ou um numero avulso)
+router.post('/notify-whatsapp/test', async (req, res) => {
+  const { tenant_id, phone } = req.body || {};
+  let target = phone;
+  let name = null;
+  if (tenant_id) {
+    const t = db.prepare('SELECT name, notify_phone FROM tenants WHERE id = ?').get(tenant_id);
+    if (!t) return res.status(404).json({ error: 'Barbearia não encontrada' });
+    target = t.notify_phone;
+    name = t.name;
+  }
+  if (!cleanNotifyPhone(target)) return res.status(400).json({ error: 'Cadastre o WhatsApp do gestor (com DDD) antes de testar' });
+  try {
+    await gestorNotify.sendTest(cleanNotifyPhone(target), name);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // ==================== Integração OpenAI (chave global para a IA de todas as barbearias) ====================

@@ -12,7 +12,7 @@ const JOIN_SELECT = `
   SELECT
     b.id, b.user_id, b.customer_full_name, b.customer_phone,
     b.service_id, b.package_id, b.item_name, b.item_price, b.item_duration, b.barber_id, b.booking_date, b.booking_time,
-    b.status, b.whatsapp_sent, b.discount_applied, b.reward_label, b.source, b.client_confirmed_at, b.cancelled_by, b.rescheduled_at, b.created_at,
+    b.status, b.whatsapp_sent, b.discount_applied, b.reward_label, b.source, b.client_confirmed_at, b.cancelled_by, b.rescheduled_at, b.cancel_requested_at, b.cancel_reason, b.created_at,
     s.name AS service_name, s.price AS service_price, s.duration AS service_duration,
     br.name AS barber_name,
     u.full_name AS user_full_name, u.phone AS user_phone, u.email AS user_email
@@ -49,6 +49,8 @@ function toBookingJson(row) {
     client_confirmed_at: row.client_confirmed_at || null,
     cancelled_by: row.cancelled_by || null,
     rescheduled_at: row.rescheduled_at || null,
+    cancel_requested_at: row.cancel_requested_at || null,
+    cancel_reason: row.cancel_reason || null,
     created_at: row.created_at,
     services: name ? { name, price, duration } : null,
     barbers: row.barber_id ? { name: row.barber_name } : null,
@@ -86,7 +88,7 @@ router.patch('/:id/status', (req, res) => {
   const allowed = ['confirmed', 'completed', 'cancelled', 'pending'];
   if (!allowed.includes(status)) return res.status(400).json({ error: 'Status invalido' });
 
-  const before = db.prepare('SELECT status, user_id, service_id, item_price, discount_applied FROM bookings WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
+  const before = db.prepare('SELECT status, user_id, service_id, item_price, discount_applied, cancel_requested_at, customer_full_name, customer_phone, booking_date, booking_time FROM bookings WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
   if (!before) return res.status(404).json({ error: 'Agendamento nao encontrado' });
 
   const info = db.prepare('UPDATE bookings SET status = ? WHERE id = ? AND tenant_id = ?').run(status, req.params.id, req.tenantId);
@@ -103,11 +105,35 @@ router.patch('/:id/status', (req, res) => {
     addProgressOnCompletion(req.tenantId, before.user_id, paidPrice);
   }
 
+  // Gestor confirmou um cancelamento que o cliente pediu pelo site: avisa o cliente
+  if (status === 'cancelled' && before.status !== 'cancelled' && before.cancel_requested_at) {
+    db.prepare("UPDATE bookings SET cancelled_by = 'cliente_site' WHERE id = ?").run(req.params.id);
+    notifyClientCancelConfirmed(req.tenantId, before);
+  }
+
   const row = db.prepare(JOIN_SELECT + ' AND b.id = ?').get(req.tenantId, req.params.id);
   const booking = toBookingJson(row);
   broadcastBookingChange(req.tenantId, 'UPDATE', booking);
   res.json(booking);
 });
+
+// Mensagem ao cliente pelo WhatsApp da barbearia (se estiver conectado). Nunca quebra a rota.
+function notifyClientCancelConfirmed(tenantId, b) {
+  setImmediate(async () => {
+    try {
+      const waProvider = require('./wa-provider');
+      const instance = waProvider.getInstance(tenantId);
+      if (!instance || instance.status !== 'connected' || !waProvider.isConfigured(instance.provider) || !b.customer_phone) return;
+      const tenant = db.prepare('SELECT name FROM tenants WHERE id = ?').get(tenantId);
+      const [y, m, d] = String(b.booking_date).split('-');
+      const first = String(b.customer_full_name || '').split(' ')[0];
+      await waProvider.sendText(instance, b.customer_phone,
+        `❌ Olá${first ? `, ${first}` : ''}! Seu cancelamento do horário de *${d}/${m}/${y} às ${String(b.booking_time).slice(0, 5)}* na *${tenant?.name || 'barbearia'}* foi confirmado.\n\nQuando quiser, é só agendar de novo. 💈`);
+    } catch (err) {
+      console.error('[cancelamento] aviso ao cliente falhou:', err.message);
+    }
+  });
+}
 
 router.delete('/:id', (req, res) => {
   const row = db.prepare(JOIN_SELECT + ' AND b.id = ?').get(req.tenantId, req.params.id);

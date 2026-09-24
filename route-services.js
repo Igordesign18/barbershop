@@ -29,7 +29,7 @@ router.post('/', (req, res) => {
   const { name, price, duration } = req.body || {};
   if (!name || name.trim().length < 3) return res.status(400).json({ error: 'Nome do servico invalido' });
   if (!price || price <= 0) return res.status(400).json({ error: 'Preco invalido' });
-  if (!duration || duration < 15) return res.status(400).json({ error: 'Duracao minima: 15 minutos' });
+  if (!duration || duration < 5) return res.status(400).json({ error: 'Duracao minima: 5 minutos' });
 
   const result = db.prepare('INSERT INTO services (tenant_id, name, price, duration) VALUES (?, ?, ?, ?)')
     .run(req.tenantId, name.trim(), price, duration);
@@ -41,7 +41,7 @@ router.put('/:id', (req, res) => {
   const { name, price, duration } = req.body || {};
   if (!name || name.trim().length < 3) return res.status(400).json({ error: 'Nome do servico invalido' });
   if (!price || price <= 0) return res.status(400).json({ error: 'Preco invalido' });
-  if (!duration || duration < 15) return res.status(400).json({ error: 'Duracao minima: 15 minutos' });
+  if (!duration || duration < 5) return res.status(400).json({ error: 'Duracao minima: 5 minutos' });
 
   const info = db.prepare('UPDATE services SET name = ?, price = ?, duration = ? WHERE id = ? AND tenant_id = ?')
     .run(name.trim(), price, duration, req.params.id, req.tenantId);

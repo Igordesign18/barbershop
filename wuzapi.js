@@ -121,6 +121,13 @@ async function sendText(token, phone, text) {
   return data?.Id || null;
 }
 
+// Confere quais numeros existem no WhatsApp e o JID certo de cada um
+// (ex: celular cadastrado com o 9 extra, mas registrado no WhatsApp sem ele)
+async function checkUsers(token, phones) {
+  const data = await wzFetch('/user/check', { method: 'POST', token, body: { Phone: phones } });
+  return Array.isArray(data?.Users) ? data.Users : [];
+}
+
 // image (opcional): data URL ("data:image/jpeg;base64,...") ou URL http(s) publica; vira a foto no topo
 async function sendButtons(token, phone, { text, footer, buttons, image }) {
   const data = await wzFetch('/chat/send/buttons', {
@@ -198,6 +205,7 @@ module.exports = {
   getQr,
   getStatus,
   logout,
+  checkUsers,
   sendText,
   sendButtons,
   sendList,

@@ -213,19 +213,18 @@
 
         <div class="content-grid">
             <div class="card full-width tab-panel" data-tab="agendamentos">
-                <h2><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agendamentos</h2>
-                <div class="filter-section">
-                    <select id="filterStatus" aria-label="Filtrar por status">
-                        <option value="confirmed">Confirmados</option>
-                        <option value="all">Todos os Status</option>
-                        <option value="completed">Concluídos</option>
-                        <option value="cancelled">Cancelados</option>
-                    </select>
-                    <input type="date" id="filterDate" aria-label="Filtrar por data">
-                    <button class="btn btn-secondary" onclick="loadBookings()">
-                        <i class="fas fa-search" aria-hidden="true"></i> Filtrar
-                    </button>
+                <h2><i class="fas fa-calendar-alt" aria-hidden="true"></i> Agenda</h2>
+                <div class="agenda-toolbar">
+                    <div class="agenda-tabs" role="tablist">
+                        <button class="agenda-tab active" data-agenda-view="calendar" onclick="agendaSetView('calendar')"><i class="fas fa-calendar-alt" aria-hidden="true"></i> Calendário</button>
+                        <button class="agenda-tab" data-agenda-view="upcoming" onclick="agendaSetView('upcoming')"><i class="fas fa-list" aria-hidden="true"></i> Próximos</button>
+                    </div>
+                    <div class="agenda-actions">
+                        <button class="agenda-tab" onclick="agendaToday()"><i class="fas fa-crosshairs" aria-hidden="true"></i> Hoje</button>
+                        <label class="agenda-check"><input type="checkbox" onchange="agendaToggleCancelled(this.checked)"> Mostrar cancelados</label>
+                    </div>
                 </div>
+                <div id="agendaCalendar" class="agenda-calendar"></div>
                 <div class="bookings-table" id="bookingsTable" role="region" aria-label="Lista de agendamentos">
                     <div class="empty-state">
                         <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
@@ -246,7 +245,7 @@
                 </div>
                 <div class="form-group">
                     <label for="serviceDuration">Duração (minutos)</label>
-                    <input type="number" id="serviceDuration" placeholder="40" min="15" step="15">
+                    <input type="number" id="serviceDuration" placeholder="40" min="5" step="5">
                 </div>
                 <div class="form-group">
                     <label>Foto do corte/serviço (opcional — aparece em círculo pro cliente)</label>
@@ -299,6 +298,11 @@
                 <div class="form-group">
                     <label for="barberSpecialty">Especialidade</label>
                     <input type="text" id="barberSpecialty" placeholder="Ex: Cortes modernos, Barbas">
+                </div>
+                <div class="form-group">
+                    <label>Serviços que este profissional faz</label>
+                    <div id="barberServicesBox" class="barber-services-box" style="display:flex; flex-direction:column; gap:6px; padding:10px 12px; border:1px solid var(--hairline); border-radius:10px;"></div>
+                    <small style="color: var(--text-muted); display:block; margin-top:6px;">Na página de agendamento e no WhatsApp, o cliente só vê este profissional nos serviços marcados.</small>
                 </div>
                 <div class="form-group">
                     <label>Foto do Barbeiro</label>
@@ -501,6 +505,30 @@
                 <button class="btn" onclick="saveWhatsappTemplate()">
                     <i class="fas fa-save" aria-hidden="true"></i> Salvar Mensagem
                 </button>
+            </div>
+
+            <div class="card full-width tab-panel" id="gestorNotifyCard" data-tab="marketing">
+                <h2><i class="fas fa-bell" aria-hidden="true"></i> Avisos de agendamento no seu WhatsApp</h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">
+                    Receba no seu WhatsApp cada novo agendamento, cancelamento, reagendamento e confirmação de presença — com nome e telefone do cliente, serviço, profissional, data, hora e valor.
+                </p>
+                <div id="gestorNotifyWarn" class="hidden" style="padding:10px 12px; border-radius:8px; margin-bottom:12px; background: rgba(193,92,92,0.12); color: var(--text); font-size:13px;">
+                    O envio dos avisos ainda não foi ativado pelo suporte. Você já pode salvar seu número.
+                </div>
+                <div class="form-group">
+                    <label for="gestorNotifyPhone">Seu WhatsApp (com DDD)</label>
+                    <input type="tel" id="gestorNotifyPhone" placeholder="Ex: (88) 99999-0000" inputmode="numeric">
+                </div>
+                <div class="form-group">
+                    <label for="gestorNotifyEnabled" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="gestorNotifyEnabled" style="width:auto;">
+                        Quero receber os avisos
+                    </label>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="btn" onclick="saveGestorNotify()"><i class="fas fa-save" aria-hidden="true"></i> Salvar</button>
+                    <button class="btn" onclick="testGestorNotify()" style="background:transparent; border:1px solid var(--primary-color, #c6a15b); color: var(--text);"><i class="fas fa-paper-plane" aria-hidden="true"></i> Enviar teste</button>
+                </div>
             </div>
 
             <div class="card full-width tab-panel" id="aiCard" data-tab="marketing">
@@ -754,7 +782,7 @@
                 <div class="interval-config">
                     <div class="form-group" style="margin-bottom: 0;">
                         <label for="intervalTime">Intervalo entre atendimentos (minutos)</label>
-                        <input type="number" id="intervalTime" value="30" min="15" step="15">
+                        <input type="number" id="intervalTime" value="30" min="5" step="5">
                     </div>
                 </div>
                 <div class="day-schedule-container" id="dayScheduleContainer" role="region" aria-label="Configuração de horários"></div>
@@ -853,6 +881,11 @@
                     <input type="text" id="editBarberSpecialty" required>
                 </div>
                 <div class="form-group">
+                    <label>Serviços que este profissional faz</label>
+                    <div id="editBarberServicesBox" class="barber-services-box" style="display:flex; flex-direction:column; gap:6px; padding:10px 12px; border:1px solid var(--hairline); border-radius:10px;"></div>
+                    <small style="color: var(--text-muted); display:block; margin-top:6px;">Na página de agendamento e no WhatsApp, o cliente só vê este profissional nos serviços marcados.</small>
+                </div>
+                <div class="form-group">
                     <label>Nova Foto (opcional)</label>
                     <div class="file-input-wrapper">
                         <input type="file" id="editBarberPhoto" accept="image/*">
@@ -895,7 +928,7 @@
                 </div>
                 <div class="form-group">
                     <label for="editServiceDuration">Duração (minutos)</label>
-                    <input type="number" id="editServiceDuration" step="5" min="15" required>
+                    <input type="number" id="editServiceDuration" step="5" min="5" required>
                 </div>
                 <div class="form-group">
                     <label>Foto do corte/serviço (aparece em círculo pro cliente)</label>

@@ -197,6 +197,10 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="tenantNotifyPhone">WhatsApp do gestor (avisos de agendamento)</label>
+                    <input type="tel" id="tenantNotifyPhone" placeholder="Ex: (88) 99999-0000" inputmode="numeric">
+                </div>
+                <div class="form-group">
                     <label for="subscriptionExpires">Assinatura válida até (opcional)</label>
                     <input type="date" id="subscriptionExpires">
                 </div>
@@ -204,6 +208,20 @@
                     <i class="fas fa-store" aria-hidden="true"></i> Criar Barbearia
                 </button>
             </form>
+        </div>
+
+        <div class="card">
+            <h2><i class="fab fa-whatsapp" aria-hidden="true"></i> WhatsApp de avisos para os gestores</h2>
+            <p style="color: var(--ivory-muted, #a89f91); font-size: 13px; margin-bottom: 14px;">
+                Número central do sistema (WuzAPI). Avisa no WhatsApp do gestor de cada barbearia quando um cliente agenda, cancela, reagenda ou confirma presença — com nome, telefone, serviço, profissional, data, hora e valor. O número do gestor é cadastrado em cada barbearia (Editar).
+            </p>
+            <div id="notifyStatus" style="margin-bottom: 14px; font-size: 13px;">Carregando...</div>
+            <div id="notifyQr" style="text-align:center;"></div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button type="button" class="btn" onclick="connectNotify()"><i class="fas fa-plug" aria-hidden="true"></i> Conectar WhatsApp</button>
+                <button type="button" class="btn btn-secondary" onclick="loadNotify()"><i class="fas fa-rotate" aria-hidden="true"></i> Atualizar</button>
+                <button type="button" class="btn btn-secondary" onclick="disconnectNotify()"><i class="fas fa-link-slash" aria-hidden="true"></i> Desconectar</button>
+            </div>
         </div>
 
         <div class="card">
@@ -283,6 +301,14 @@
                     <option value="evogo">Evolution GO</option>
                         <option value="wuzapi">WuzAPI</option>
                 </select>
+            </div>
+            <div class="form-group">
+                <label for="editTenantNotifyPhone">WhatsApp do gestor (avisos de agendamento)</label>
+                <input type="tel" id="editTenantNotifyPhone" placeholder="Ex: (88) 99999-0000" inputmode="numeric">
+                <label style="display:flex; align-items:center; gap:8px; margin-top:8px; cursor:pointer;">
+                    <input type="checkbox" id="editTenantNotifyEnabled" style="width:auto;"> Enviar avisos de agendamento para este número
+                </label>
+                <button type="button" class="btn btn-secondary" style="margin-top:8px;" onclick="testNotifyTenant()"><i class="fas fa-paper-plane" aria-hidden="true"></i> Enviar teste</button>
             </div>
             <div class="form-group">
                 <label for="editSubscriptionExpires">Assinatura válida até</label>
@@ -382,6 +408,56 @@
         document.getElementById('mainContent').style.display = 'block';
         loadTenants();
         loadOpenai();
+        loadNotify();
+    }
+
+    // ==================== WhatsApp de avisos para os gestores ====================
+    let notifyQrTimer = null;
+    function notifyBadge(status, extra) {
+        const box = document.getElementById('notifyStatus');
+        const map = { connected: ['active', 'Conectado'], connecting: ['suspended', 'Aguardando leitura do QR Code'], disconnected: ['suspended', 'Desconectado'] };
+        const [cls, label] = map[status] || ['suspended', status];
+        box.innerHTML = `<span class="pill ${cls}">${label}</span>${extra ? ` <span style="margin-left:8px;">${extra}</span>` : ''}`;
+    }
+    async function loadNotify() {
+        try {
+            const d = await apiFetch('/notify-whatsapp');
+            if (!d.wuzapi_configured) return notifyBadge('disconnected', 'WuzAPI não configurada no servidor');
+            notifyBadge(d.has_user ? d.status : 'disconnected');
+            if (d.status === 'connected') { document.getElementById('notifyQr').innerHTML = ''; if (notifyQrTimer) clearInterval(notifyQrTimer); }
+        } catch (e) { notifyBadge('erro', e.message); }
+    }
+    async function connectNotify() {
+        const area = document.getElementById('notifyQr');
+        area.innerHTML = '<p style="font-size:13px; margin-bottom:12px;">Gerando QR Code... (até 20s)</p>';
+        try {
+            const r = await apiFetch('/notify-whatsapp/connect', { method: 'POST' });
+            if (r.status === 'connected') { area.innerHTML = ''; showNotification('Já está conectado!', 'success'); return loadNotify(); }
+            area.innerHTML = `<img src="${r.qr}" style="width:220px; height:220px; border-radius:12px; background:#fff; margin-bottom:12px;"><p style="font-size:12px; margin-bottom:12px;">Escaneie com o WhatsApp que vai enviar os avisos</p>`;
+            notifyBadge('connecting');
+            if (notifyQrTimer) clearInterval(notifyQrTimer);
+            let tries = 0;
+            notifyQrTimer = setInterval(async () => {
+                if (++tries > 60) return clearInterval(notifyQrTimer);
+                const q = await apiFetch('/notify-whatsapp/qr').catch(() => null);
+                if (!q) return;
+                if (q.status === 'connected') { clearInterval(notifyQrTimer); area.innerHTML = ''; showNotification('WhatsApp de avisos conectado!', 'success'); loadNotify(); }
+                else if (q.qr) { const img = area.querySelector('img'); if (img) img.src = q.qr; }
+            }, 4000);
+        } catch (e) { area.innerHTML = ''; showNotification(e.message, 'error'); }
+    }
+    async function disconnectNotify() {
+        if (!(await customConfirm('Desconectar o WhatsApp de avisos? Os gestores param de receber os avisos de agendamento.'))) return;
+        await apiFetch('/notify-whatsapp/disconnect', { method: 'POST' }).catch(() => {});
+        showNotification('Desconectado.', 'info');
+        loadNotify();
+    }
+    async function testNotifyTenant() {
+        const phone = document.getElementById('editTenantNotifyPhone').value;
+        try {
+            await apiFetch('/notify-whatsapp/test', { method: 'POST', body: JSON.stringify({ phone }) });
+            showNotification('Mensagem de teste enviada!', 'success');
+        } catch (e) { showNotification(e.message, 'error'); }
     }
 
     // ==================== Integração OpenAI ====================
@@ -500,6 +576,7 @@
                                 <span class="pill ${t.plan === 'pro' ? 'plan-pro' : 'plan-basic'}">${t.plan === 'pro' ? 'PRO' : 'Básico'}</span>
                                 <span class="pill ${waStatus}">${waLabel}</span>
                                 <span class="pill plan-basic">${t.whatsapp_provider === 'evogo' ? 'Evolution GO' : t.whatsapp_provider === 'wuzapi' ? 'WuzAPI' : 'Evolution v2'}</span>
+                                ${t.notify_phone && t.notify_enabled !== 0 ? '<span class="pill active" title="Recebe avisos de agendamento no WhatsApp">🔔 Avisos</span>' : ''}
                                 <span>${expires}</span>
                                 <span>gestor: ${t.manager ? t.manager.email : '—'}</span>
                             </div>
@@ -548,7 +625,8 @@
                     manager_password: document.getElementById('managerPassword').value,
                     subscription_expires_at: document.getElementById('subscriptionExpires').value || null,
                     plan: document.getElementById('tenantPlan').value,
-                    whatsapp_provider: document.getElementById('tenantProvider').value
+                    whatsapp_provider: document.getElementById('tenantProvider').value,
+                    notify_phone: document.getElementById('tenantNotifyPhone').value
                 })
             });
             showNotification('Barbearia criada com sucesso!', 'success');
@@ -572,6 +650,8 @@
         document.getElementById('editSubscriptionExpires').value = tenant.subscription_expires_at || '';
         document.getElementById('editTenantPlan').value = tenant.plan === 'pro' ? 'pro' : 'basic';
         document.getElementById('editTenantProvider').value = ['evogo', 'wuzapi'].includes(tenant.whatsapp_provider) ? tenant.whatsapp_provider : 'evolution';
+        document.getElementById('editTenantNotifyPhone').value = tenant.notify_phone || '';
+        document.getElementById('editTenantNotifyEnabled').checked = tenant.notify_enabled !== 0;
         document.getElementById('editManagerEmail').value = tenant.manager ? tenant.manager.email : '';
         document.getElementById('editManagerPassword').value = '';
 
@@ -596,7 +676,9 @@
                     status: document.getElementById('editTenantStatus').value,
                     subscription_expires_at: document.getElementById('editSubscriptionExpires').value || null,
                     plan: document.getElementById('editTenantPlan').value,
-                    whatsapp_provider: document.getElementById('editTenantProvider').value
+                    whatsapp_provider: document.getElementById('editTenantProvider').value,
+                    notify_phone: document.getElementById('editTenantNotifyPhone').value,
+                    notify_enabled: document.getElementById('editTenantNotifyEnabled').checked
                 })
             });
 

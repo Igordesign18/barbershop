@@ -128,25 +128,26 @@
 
             <div class="container" style="padding-bottom:110px;">
                 <div class="step-progress" id="stepProgress">
-                    <div class="step-node active" data-step="service"><span class="step-dot">1</span><span class="step-label">Serviço</span></div>
+                    <div class="step-node active" data-step="barber"><span class="step-dot">1</span><span class="step-label">Profissional</span></div>
                     <div class="step-line"></div>
-                    <div class="step-node" data-step="barber"><span class="step-dot">2</span><span class="step-label">Profissional</span></div>
+                    <div class="step-node" data-step="service"><span class="step-dot">2</span><span class="step-label">Serviço</span></div>
                     <div class="step-line"></div>
                     <div class="step-node" data-step="date"><span class="step-dot">3</span><span class="step-label">Data</span></div>
                     <div class="step-line"></div>
                     <div class="step-node" data-step="time"><span class="step-dot">4</span><span class="step-label">Horário</span></div>
                 </div>
 
-                <div class="card" id="serviceCard">
-                    <h3><span class="step-indicator">1</span> Escolha o serviço</h3>
-                    <div id="servicesList"></div>
-                </div>
-
-                <div class="card" id="barberCard">
-                    <h3><span class="step-indicator">2</span> Escolha o profissional</h3>
-                    <div class="barber-selection" id="barberSelection" style="display: none;">
+                <div class="card active" id="barberCard">
+                    <h3><span class="step-indicator">1</span> Escolha o profissional</h3>
+                    <div class="barber-selection" id="barberSelection">
                         <div class="barbers-grid" id="barbersList"></div>
                     </div>
+                </div>
+
+                <div class="card" id="serviceCard">
+                    <h3><span class="step-indicator">2</span> Escolha o serviço</h3>
+                    <p id="serviceCardHint" style="color: var(--ivory-muted); font-size: 13px; margin: -4px 0 10px;"></p>
+                    <div id="servicesList"></div>
                 </div>
 
                 <div class="card" id="scheduleCard">
@@ -248,7 +249,7 @@
             <button class="nav-item active" data-screen="home" onclick="showScreen('home')">
                 <i class="fas fa-home"></i><span>Início</span>
             </button>
-            <button class="nav-item" data-screen="book" onclick="showScreen('book')">
+            <button class="nav-item" data-screen="book" onclick="goToBookScreen()">
                 <i class="fas fa-calendar-alt"></i><span>Agendar</span>
             </button>
             <button class="nav-item" data-screen="services" onclick="showScreen('services')">

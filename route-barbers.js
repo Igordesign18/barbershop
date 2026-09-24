@@ -5,6 +5,7 @@ const { db } = require('./db');
 const { requireManager } = require('./auth');
 const { requireActiveTenant } = require('./tenant');
 const { makeUpload } = require('./image-upload');
+const barberServices = require('./barber-services');
 
 const router = express.Router();
 
@@ -26,13 +27,13 @@ router.use(requireManager, requireActiveTenant);
 
 router.get('/', (req, res) => {
   const barbers = db.prepare('SELECT * FROM barbers WHERE tenant_id = ? ORDER BY id ASC').all(req.tenantId);
-  res.json(barbers);
+  res.json(barberServices.withServiceIds(barbers));
 });
 
 router.get('/:id', (req, res) => {
   const barber = db.prepare('SELECT * FROM barbers WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
   if (!barber) return res.status(404).json({ error: 'Barbeiro nao encontrado' });
-  res.json(barber);
+  res.json({ ...barber, service_ids: barberServices.getServiceIds(barber.id) });
 });
 
 router.post('/', upload.single('photo'), (req, res) => {
@@ -45,8 +46,10 @@ router.post('/', upload.single('photo'), (req, res) => {
 
   const result = db.prepare('INSERT INTO barbers (tenant_id, name, specialty, photo_url) VALUES (?, ?, ?, ?)')
     .run(req.tenantId, name, specialty, photoUrl);
+  // Servicos que o barbeiro faz (vazio = todos)
+  const serviceIds = barberServices.setServiceIds(req.tenantId, result.lastInsertRowid, barberServices.parseIds(req.body.service_ids));
   const barber = db.prepare('SELECT * FROM barbers WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json(barber);
+  res.status(201).json({ ...barber, service_ids: serviceIds });
 });
 
 router.put('/:id', upload.single('photo'), (req, res) => {
@@ -66,8 +69,12 @@ router.put('/:id', upload.single('photo'), (req, res) => {
   db.prepare('UPDATE barbers SET name = ?, specialty = ?, photo_url = ? WHERE id = ? AND tenant_id = ?')
     .run(name, specialty, photoUrl, req.params.id, req.tenantId);
 
+  // So mexe nos servicos se o formulario mandou o campo
+  const ids = barberServices.parseIds(req.body.service_ids);
+  if (ids !== undefined) barberServices.setServiceIds(req.tenantId, req.params.id, ids);
+
   const barber = db.prepare('SELECT * FROM barbers WHERE id = ?').get(req.params.id);
-  res.json(barber);
+  res.json({ ...barber, service_ids: barberServices.getServiceIds(barber.id) });
 });
 
 router.delete('/:id', (req, res) => {

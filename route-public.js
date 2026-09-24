@@ -53,7 +53,8 @@ router.get('/:slug/packages', (req, res) => {
 
 router.get('/:slug/barbers', (req, res) => {
   const barbers = db.prepare('SELECT * FROM barbers WHERE tenant_id = ? ORDER BY id ASC').all(req.tenantId);
-  res.json(barbers);
+  // service_ids: servicos que cada um faz (null = todos) — a pagina mostra so quem faz o servico escolhido
+  res.json(require('./barber-services').withServiceIds(barbers));
 });
 
 router.get('/:slug/settings', (req, res) => {
@@ -141,8 +142,8 @@ router.get('/:slug/bookings/lookup', (req, res) => {
 
   const normalizedPhone = normalizePhone(phone);
   const rows = db.prepare(`
-    SELECT b.id, b.booking_date, b.booking_time, b.status,
-           s.name AS service_name, s.price AS service_price,
+    SELECT b.id, b.booking_date, b.booking_time, b.status, b.cancel_requested_at,
+           COALESCE(b.item_name, s.name) AS service_name, s.price AS service_price,
            br.name AS barber_name,
            r.id AS review_id
     FROM bookings b
@@ -154,11 +155,48 @@ router.get('/:slug/bookings/lookup', (req, res) => {
     LIMIT 30
   `).all(req.tenantId, normalizedPhone);
 
+  const now = nowBrasilia();
   res.json(rows.map(row => ({
     ...row,
     can_review: row.status === 'completed' && !row.review_id,
-    has_review: !!row.review_id
+    has_review: !!row.review_id,
+    // Pode pedir cancelamento: agendamento confirmado, ainda por acontecer e sem pedido anterior
+    can_cancel: row.status === 'confirmed' && !row.cancel_requested_at && isFuture(row, now),
+    cancel_requested: row.status === 'confirmed' && !!row.cancel_requested_at
   })));
+});
+
+function nowBrasilia() {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false
+  }).formatToParts(new Date()).map(p => [p.type, p.value]));
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour === '24' ? '00' : parts.hour}:${parts.minute}` };
+}
+
+function isFuture(booking, now) {
+  return booking.booking_date > now.date || (booking.booking_date === now.date && String(booking.booking_time).slice(0, 5) > now.time);
+}
+
+// Cliente pede o cancelamento pelo site. Nao cancela na hora: o gestor recebe no WhatsApp
+// e confirma no painel (evita que alguem cancele o horario de outra pessoa so sabendo o telefone).
+router.post('/:slug/bookings/:id/cancel-request', (req, res) => {
+  const { phone, reason } = req.body || {};
+  if (!phone) return res.status(400).json({ error: 'Informe o telefone' });
+
+  const booking = db.prepare('SELECT * FROM bookings WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
+  if (!booking) return res.status(404).json({ error: 'Agendamento não encontrado' });
+  if (normalizePhone(phone) !== booking.customer_phone) return res.status(403).json({ error: 'Este agendamento não pertence a este telefone' });
+  if (booking.status !== 'confirmed') return res.status(400).json({ error: 'Este agendamento não pode mais ser cancelado' });
+  if (!isFuture(booking, nowBrasilia())) return res.status(400).json({ error: 'Este horário já passou' });
+  if (booking.cancel_requested_at) return res.json({ ok: true, already: true });
+
+  const motivo = String(reason || '').trim().slice(0, 300) || null;
+  db.prepare("UPDATE bookings SET cancel_requested_at = datetime('now'), cancel_reason = ? WHERE id = ?").run(motivo, booking.id);
+
+  try { require('./events').broadcastBookingChange(req.tenantId, 'UPDATE', { id: booking.id, status: booking.status }); } catch (_) {}
+  require('./gestor-notify').notifyBooking(req.tenantId, booking.id, 'pedido_cancelamento', { reason: motivo });
+
+  res.json({ ok: true });
 });
 
 // Cliente avalia um atendimento - so permitido se o gestor ja marcou como concluido,
@@ -233,7 +271,7 @@ router.post('/:slug/bookings', async (req, res) => {
     pkg = db.prepare('SELECT * FROM packages WHERE id = ? AND tenant_id = ? AND active = 1').get(package_id, req.tenantId);
     if (!pkg) return res.status(400).json({ error: 'Pacote inválido' });
 
-    const pkgServices = db.prepare(`
+    var pkgServices = db.prepare(`
       SELECT s.id, s.duration FROM package_services ps JOIN services s ON s.id = ps.service_id WHERE ps.package_id = ?
     `).all(pkg.id);
     if (!pkgServices.length) return res.status(400).json({ error: 'Pacote sem serviços configurados' });
@@ -253,6 +291,14 @@ router.post('/:slug/bookings', async (req, res) => {
   }
 
   const barber = barber_id ? db.prepare('SELECT * FROM barbers WHERE id = ? AND tenant_id = ?').get(barber_id, req.tenantId) : null;
+
+  // O barbeiro escolhido precisa fazer o servico (ou todos os servicos do pacote)
+  if (barber) {
+    const needed = pkg ? pkgServices.map(ps => ps.id) : [effectiveServiceId];
+    if (!require('./barber-services').barberDoesAll(barber.id, needed)) {
+      return res.status(400).json({ error: `${barber.name} não faz esse serviço. Escolha outro profissional.` });
+    }
+  }
 
   // Cadastra (ou reconhece) o cliente automaticamente pelo telefone, dentro desta barbearia.
   // Assim toda pessoa que agenda pelo link público já aparece em "Gerenciar Clientes" do gestor,
@@ -311,6 +357,9 @@ router.post('/:slug/bookings', async (req, res) => {
   try {
     require('./events').broadcastBookingChange(req.tenantId, 'INSERT', { id: booking.id, status: booking.status });
   } catch (_) { /* SSE é best-effort */ }
+
+  // Avisa o gestor no WhatsApp dele (numero central do sistema, em segundo plano)
+  require('./gestor-notify').notifyBooking(req.tenantId, booking.id, 'novo');
 });
 
 module.exports = router;

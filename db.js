@@ -195,6 +195,18 @@ ensureColumn('bookings', 'source', 'TEXT');
 ensureColumn('bookings', 'client_confirmed_at', 'TEXT');
 ensureColumn('bookings', 'cancelled_by', 'TEXT');
 ensureColumn('bookings', 'rescheduled_at', 'TEXT');
+// Servicos que cada barbeiro faz. Barbeiro SEM linhas nesta tabela = faz todos os servicos.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS barber_services (
+    barber_id INTEGER NOT NULL REFERENCES barbers(id) ON DELETE CASCADE,
+    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    PRIMARY KEY (barber_id, service_id)
+  );
+`);
+
+// Pedido de cancelamento feito pelo cliente no site (o gestor confirma no painel)
+ensureColumn('bookings', 'cancel_requested_at', 'TEXT');
+ensureColumn('bookings', 'cancel_reason', 'TEXT');
 
 // Enquetes enviadas pelo atendente IA: guarda as opcoes para traduzir o voto do cliente
 db.exec(`
@@ -230,6 +242,10 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
+
+// Aviso de agendamento no WhatsApp do gestor (enviado pelo numero central do sistema, via WuzAPI)
+ensureColumn('tenants', 'notify_phone', 'TEXT');
+ensureColumn('tenants', 'notify_enabled', 'INTEGER NOT NULL DEFAULT 1');
 
 // Motor do WhatsApp de cada barbearia: 'evolution' (Evolution API v2) ou 'evogo' (Evolution GO)
 ensureColumn('tenants', 'whatsapp_provider', "TEXT NOT NULL DEFAULT 'evolution'");

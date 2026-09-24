@@ -369,11 +369,8 @@
 
         async function loadDashboard() {
             try {
-                const today = todayBR();
-                document.getElementById('filterDate').value = today;
-                document.getElementById('filterStatus').value = 'confirmed';
                 
-                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadCoverImages(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection(), loadThemeSelector(), loadWhatsappTemplate(), loadReminderConfig(), refreshWhatsappStatus(), loadAiConfig()]);
+                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadCoverImages(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection(), loadThemeSelector(), loadWhatsappTemplate(), loadReminderConfig(), refreshWhatsappStatus(), loadAiConfig(), loadGestorNotify()]);
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
                 showNotification('Erro ao carregar dados do dashboard', 'error');
@@ -1293,29 +1290,32 @@
             }
         }
 
-        async function loadBookings() {
-            const container = document.getElementById('bookingsTable');
-            container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><p>Carregando...</p></div>';
-            
-            try {
-                const filterStatus = document.getElementById('filterStatus').value;
-                let filterDate = document.getElementById('filterDate').value;
-                
-                if (!filterDate) {
-                    const today = todayBR();
-                    filterDate = today;
-                    document.getElementById('filterDate').value = today;
-                }
-                
-                const data = await apiFetch(`/bookings?date=${filterDate}&status=${filterStatus}`);
-                
-                if (!data || data.length === 0) {
-                    const dateFormatted = new Date(filterDate + 'T12:00:00').toLocaleDateString('pt-BR');
-                    container.innerHTML = `<div class="empty-state"><i class="fas fa-calendar" aria-hidden="true"></i><p>Nenhum agendamento encontrado para ${dateFormatted}</p></div>`;
-                    return;
-                }
-                
-                container.innerHTML = data.map(booking => {
+        // ==================== Agenda em calendário ====================
+        // Mês inteiro com a quantidade de agendamentos em cada dia + lista do dia escolhido,
+        // e a visão "Próximos" com todos os agendamentos dos próximos 30 dias agrupados por dia.
+        const agenda = {
+            view: 'calendar',          // 'calendar' | 'upcoming'
+            month: null,               // 'YYYY-MM'
+            selected: null,            // 'YYYY-MM-DD'
+            showCancelled: false,
+            monthData: []
+        };
+        const AGENDA_WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const AGENDA_MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+        function agendaAddDays(dateStr, n) {
+            const d = new Date(dateStr + 'T12:00:00Z');
+            d.setUTCDate(d.getUTCDate() + n);
+            return d.toISOString().slice(0, 10);
+        }
+
+        function agendaVisible(list) {
+            return list
+                .filter(b => agenda.showCancelled || b.status !== 'cancelled')
+                .sort((a, b) => (a.booking_date + a.booking_time).localeCompare(b.booking_date + b.booking_time));
+        }
+
+        function bookingCardHtml(booking) {
                     const date = new Date(booking.booking_date + 'T12:00:00');
                     const dateDayMonth = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
                     const timeFormatted = booking.booking_time.substring(0, 5);
@@ -1344,6 +1344,15 @@
                                     ${booking.client_confirmed_at && booking.status === 'confirmed' ? `<p style="color:#25d366;"><i class="fas fa-check-double" aria-hidden="true"></i> Cliente confirmou presença</p>` : ''}
                                     ${booking.rescheduled_at && booking.status === 'confirmed' ? `<p style="color:var(--text-muted);"><i class="fas fa-rotate" aria-hidden="true"></i> Reagendado pelo cliente no WhatsApp</p>` : ''}
                                     ${booking.cancelled_by === 'cliente_whatsapp' && booking.status === 'cancelled' ? `<p style="color:#e57373;"><i class="fas fa-ban" aria-hidden="true"></i> Cancelado pelo cliente no WhatsApp</p>` : ''}
+                                    ${booking.cancelled_by === 'cliente_site' && booking.status === 'cancelled' ? `<p style="color:#e57373;"><i class="fas fa-ban" aria-hidden="true"></i> Cancelado a pedido do cliente (site)</p>` : ''}
+                                    ${booking.cancel_requested_at && booking.status === 'confirmed' ? `
+                                    <div style="margin-top:8px; padding:10px 12px; border-radius:8px; background:rgba(229,115,115,0.12); border:1px solid rgba(229,115,115,0.45);">
+                                        <p style="color:#e57373; font-weight:600;"><i class="fas fa-hand" aria-hidden="true"></i> Cliente pediu cancelamento pelo site</p>
+                                        ${booking.cancel_reason ? `<p style="font-size:13px; margin-top:4px;">Motivo: ${escapeCancelReason(booking.cancel_reason)}</p>` : ''}
+                                        <button class="btn" style="margin-top:8px; padding:7px 12px; background:#c0392b;" onclick="updateBookingStatus(${booking.id}, 'cancelled')">
+                                            <i class="fas fa-ban" aria-hidden="true"></i> Confirmar cancelamento
+                                        </button>
+                                    </div>` : ''}
                                 </div>
                                 <span class="booking-status status-${booking.status}">
                                     ${booking.status === 'confirmed' ? 'Confirmado' : 
@@ -1387,12 +1396,150 @@
                             </div>
                         </div>
                     `;
-                }).join('');
+        }
+
+        function agendaSetView(view) {
+            agenda.view = view;
+            loadBookings();
+        }
+
+        function agendaMoveMonth(delta) {
+            const [y, m] = agenda.month.split('-').map(Number);
+            const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+            agenda.month = d.toISOString().slice(0, 7);
+            loadBookings();
+        }
+
+        function agendaToday() {
+            const today = todayBR();
+            agenda.month = today.slice(0, 7);
+            agenda.selected = today;
+            agenda.view = 'calendar';
+            loadBookings();
+        }
+
+        function agendaSelectDay(date) {
+            agenda.selected = date;
+            if (date.slice(0, 7) !== agenda.month) {
+                agenda.month = date.slice(0, 7);
+                return loadBookings();
+            }
+            renderAgendaCalendar();
+            renderAgendaDay();
+        }
+
+        function agendaToggleCancelled(checked) {
+            agenda.showCancelled = checked;
+            loadBookings();
+        }
+
+        async function loadBookings() {
+            const container = document.getElementById('bookingsTable');
+            const today = todayBR();
+            if (!agenda.month) agenda.month = today.slice(0, 7);
+            if (!agenda.selected) agenda.selected = today;
+
+            document.querySelectorAll('[data-agenda-view]').forEach(btn =>
+                btn.classList.toggle('active', btn.dataset.agendaView === agenda.view));
+            document.getElementById('agendaCalendar').classList.toggle('hidden', agenda.view !== 'calendar');
+
+            try {
+                if (agenda.view === 'upcoming') {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin" aria-hidden="true"></i><p>Carregando...</p></div>';
+                    const data = await apiFetch(`/bookings?start=${today}&end=${agendaAddDays(today, 30)}&status=all`);
+                    renderAgendaUpcoming(agendaVisible(data || []));
+                    return;
+                }
+
+                // Calendário: busca o mês inteiro de uma vez (sem precisar filtrar)
+                const [y, m] = agenda.month.split('-').map(Number);
+                const first = `${agenda.month}-01`;
+                const last = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+                const data = await apiFetch(`/bookings?start=${first}&end=${last}&status=all`);
+                agenda.monthData = data || [];
+                renderAgendaCalendar();
+                renderAgendaDay();
             } catch (error) {
                 console.error('Erro ao carregar agendamentos:', error);
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i><p>Erro ao carregar agendamentos</p></div>';
                 showNotification('Erro ao carregar agendamentos', 'error');
             }
+        }
+
+        function renderAgendaCalendar() {
+            const box = document.getElementById('agendaCalendar');
+            const [y, m] = agenda.month.split('-').map(Number);
+            const today = todayBR();
+            const firstWeekday = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
+            const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
+
+            // Contagem por dia (sem cancelados) e dias com pedido de cancelamento
+            const byDay = {};
+            for (const b of agenda.monthData) {
+                const d = b.booking_date;
+                byDay[d] = byDay[d] || { count: 0, cancelRequest: false };
+                if (b.status !== 'cancelled') byDay[d].count++;
+                if (b.cancel_requested_at && b.status === 'confirmed') byDay[d].cancelRequest = true;
+            }
+            const totalMonth = Object.values(byDay).reduce((sum, d) => sum + d.count, 0);
+
+            let cells = '';
+            for (let i = 0; i < firstWeekday; i++) cells += '<div class="agenda-cell empty"></div>';
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = `${agenda.month}-${String(day).padStart(2, '0')}`;
+                const info = byDay[date];
+                const classes = ['agenda-cell'];
+                if (date === today) classes.push('today');
+                if (date === agenda.selected) classes.push('selected');
+                if (date < today) classes.push('past');
+                cells += `
+                    <button class="${classes.join(' ')}" onclick="agendaSelectDay('${date}')" aria-label="${day} de ${AGENDA_MONTHS[m - 1]}: ${info ? info.count : 0} agendamentos">
+                        <span class="agenda-day">${day}</span>
+                        ${info && info.count ? `<span class="agenda-count">${info.count}</span>` : ''}
+                        ${info && info.cancelRequest ? '<span class="agenda-alert" title="Pedido de cancelamento"></span>' : ''}
+                    </button>`;
+            }
+
+            box.innerHTML = `
+                <div class="agenda-header">
+                    <button class="agenda-nav" onclick="agendaMoveMonth(-1)" aria-label="Mês anterior"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+                    <div class="agenda-title">${AGENDA_MONTHS[m - 1]} ${y}<small>${totalMonth} agendamento${totalMonth === 1 ? '' : 's'} no mês</small></div>
+                    <button class="agenda-nav" onclick="agendaMoveMonth(1)" aria-label="Próximo mês"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="agenda-grid">
+                    ${AGENDA_WEEKDAYS.map(w => `<div class="agenda-weekday">${w}</div>`).join('')}
+                    ${cells}
+                </div>`;
+        }
+
+        function agendaDayTitle(date) {
+            const today = todayBR();
+            const label = date === today ? 'Hoje' : date === agendaAddDays(today, 1) ? 'Amanhã' : AGENDA_WEEKDAYS[new Date(date + 'T12:00:00Z').getUTCDay()];
+            const [yy, mm, dd] = date.split('-');
+            return `${label}, ${dd}/${mm}/${yy}`;
+        }
+
+        function renderAgendaDay() {
+            const container = document.getElementById('bookingsTable');
+            const list = agendaVisible(agenda.monthData.filter(b => b.booking_date === agenda.selected));
+            container.innerHTML = `
+                <h3 class="agenda-day-title"><i class="fas fa-calendar-day" aria-hidden="true"></i> ${agendaDayTitle(agenda.selected)}
+                    <small>${list.length} agendamento${list.length === 1 ? '' : 's'}</small></h3>
+                ${list.length ? list.map(bookingCardHtml).join('') : '<div class="empty-state"><i class="fas fa-mug-hot" aria-hidden="true"></i><p>Nenhum agendamento neste dia</p></div>'}`;
+        }
+
+        function renderAgendaUpcoming(list) {
+            const container = document.getElementById('bookingsTable');
+            if (!list.length) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-check" aria-hidden="true"></i><p>Nenhum agendamento nos próximos 30 dias</p></div>';
+                return;
+            }
+            const groups = {};
+            for (const b of list) (groups[b.booking_date] = groups[b.booking_date] || []).push(b);
+            container.innerHTML = Object.keys(groups).sort().map(date => `
+                <h3 class="agenda-day-title"><i class="fas fa-calendar-day" aria-hidden="true"></i> ${agendaDayTitle(date)}
+                    <small>${groups[date].length} agendamento${groups[date].length === 1 ? '' : 's'}</small></h3>
+                ${groups[date].map(bookingCardHtml).join('')}`).join('');
         }
 
         async function cancelAndDeleteBooking(bookingId) {
@@ -1416,6 +1563,10 @@
             }
         }
         
+        function escapeCancelReason(text) {
+            return String(text).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
         async function updateBookingStatus(bookingId, status) {
             if (!bookingId) { 
                 showNotification('ID inválido', 'error'); 
@@ -1508,7 +1659,56 @@
         }
 
         // ==================== Pacotes ====================
+        // ==================== Servicos de cada barbeiro ====================
+        // Lista vazia (ou "Todos" marcado) = o barbeiro faz todos os servicos
+        let barberServiceOptions = [];
+        let barbersLoadedOnce = false;
+
+        function renderBarberServicesBox(boxId, selectedIds) {
+            const box = document.getElementById(boxId);
+            if (!box) return;
+            if (!barberServiceOptions.length) {
+                box.innerHTML = '<span style="color:var(--text-muted); font-size:13px;">Cadastre serviços primeiro.</span>';
+                return;
+            }
+            const all = !Array.isArray(selectedIds) || !selectedIds.length;
+            box.innerHTML = `
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
+                    <input type="checkbox" class="bs-all" style="width:auto;" ${all ? 'checked' : ''} onchange="toggleBarberServicesAll('${boxId}', this.checked)"> Todos os serviços
+                </label>
+                ${barberServiceOptions.map(sv => `
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px; padding-left:22px;">
+                        <input type="checkbox" class="bs-item" style="width:auto;" value="${sv.id}"
+                            ${all || selectedIds.includes(sv.id) ? 'checked' : ''} ${all ? 'disabled' : ''}> ${sv.name}
+                    </label>`).join('')}`;
+        }
+
+        function toggleBarberServicesAll(boxId, checked) {
+            document.querySelectorAll(`#${boxId} .bs-item`).forEach(cb => {
+                cb.disabled = checked;
+                if (checked) cb.checked = true;
+            });
+        }
+
+        // [] = todos; senao os ids marcados. null = nenhum marcado (erro)
+        function collectBarberServices(boxId) {
+            const box = document.getElementById(boxId);
+            if (!box || box.querySelector('.bs-all')?.checked) return [];
+            const ids = [...box.querySelectorAll('.bs-item:checked')].map(cb => Number(cb.value));
+            return ids.length ? ids : null;
+        }
+
+        function barberServicesLabel(ids) {
+            if (!Array.isArray(ids) || !ids.length) return 'Todos os serviços';
+            const names = barberServiceOptions.filter(sv => ids.includes(sv.id)).map(sv => sv.name);
+            return names.length ? names.join(', ') : `${ids.length} serviço(s)`;
+        }
+
         function renderPackageServiceChecklist(services) {
+            barberServiceOptions = services.map(sv => ({ id: sv.id, name: sv.name }));
+            renderBarberServicesBox('barberServicesBox', null);
+            // Barbeiros carregaram antes dos servicos: refaz a lista para mostrar os nomes certos
+            if (barbersLoadedOnce) loadBarbers();
             const box = document.getElementById('packageServiceChecklist');
             if (!services.length) {
                 box.innerHTML = '<span style="color:var(--text-muted); font-size:13px;">Cadastre serviços primeiro para poder formar um pacote.</span>';
@@ -1649,8 +1849,8 @@
                 showNotification('Preço inválido!', 'error'); 
                 return; 
             }
-            if (!duration || duration < 15) { 
-                showNotification('Duração mínima: 15 minutos!', 'error'); 
+            if (!duration || duration < 5) { 
+                showNotification('Duração mínima: 5 minutos!', 'error'); 
                 return; 
             }
             
@@ -1771,8 +1971,8 @@
                 showNotification('Preço inválido!', 'error');
                 return;
             }
-            if (!newDuration || parseInt(newDuration) < 15) {
-                showNotification('Duração mínima: 15 minutos!', 'error');
+            if (!newDuration || parseInt(newDuration) < 5) {
+                showNotification('Duração mínima: 5 minutos!', 'error');
                 return;
             }
 
@@ -1810,6 +2010,7 @@
         async function loadBarbers() {
             try {
                 const data = await apiFetch('/barbers');
+                barbersLoadedOnce = true;
                 
                 const container = document.getElementById('barbersList');
                 if (!data || data.length === 0) {
@@ -1830,6 +2031,7 @@
                                 <div class="barber-info">
                                     <h4>${barber.name}</h4>
                                     <p>${barber.specialty || 'Especialidade não informada'}</p>
+                                    <p style="font-size:12px; color:var(--text-muted); margin-top:2px;"><i class="fas fa-scissors" aria-hidden="true"></i> ${barberServicesLabel(barber.service_ids)}</p>
                                 </div>
                             </div>
                             <div class="barber-actions">
@@ -1864,9 +2066,16 @@
                     return;
                 }
 
+                const serviceIds = collectBarberServices('barberServicesBox');
+                if (serviceIds === null) {
+                    showNotification('Marque pelo menos um serviço (ou "Todos os serviços").', 'error');
+                    return;
+                }
+
                 const formData = new FormData();
                 formData.append('name', name);
                 formData.append('specialty', specialty || '');
+                formData.append('service_ids', JSON.stringify(serviceIds));
                 if (photoFile) formData.append('photo', photoFile);
 
                 await apiFetch('/barbers', { method: 'POST', body: formData });
@@ -1875,6 +2084,7 @@
                 document.getElementById('barberName').value = '';
                 document.getElementById('barberSpecialty').value = '';
                 document.getElementById('barberPhoto').value = '';
+                renderBarberServicesBox('barberServicesBox', null);
                 loadBarbers();
             } catch (error) {
                 showNotification('Erro ao adicionar barbeiro: ' + error.message, 'error');
@@ -1888,6 +2098,7 @@
                 document.getElementById('editBarberId').value = barber.id;
                 document.getElementById('editBarberName').value = barber.name || '';
                 document.getElementById('editBarberSpecialty').value = barber.specialty || '';
+                renderBarberServicesBox('editBarberServicesBox', barber.service_ids);
                 
                 const modal = document.getElementById('editBarberModal');
                 modal.classList.remove('hidden');
@@ -1922,9 +2133,16 @@
                     return;
                 }
 
+                const serviceIds = collectBarberServices('editBarberServicesBox');
+                if (serviceIds === null) {
+                    showNotification('Marque pelo menos um serviço (ou "Todos os serviços").', 'error');
+                    return;
+                }
+
                 const formData = new FormData();
                 formData.append('name', name);
                 formData.append('specialty', specialty || '');
+                formData.append('service_ids', JSON.stringify(serviceIds));
                 if (photoFile) formData.append('photo', photoFile);
 
                 await apiFetch(`/barbers/${barberId}`, { method: 'PUT', body: formData });
@@ -2240,8 +2458,8 @@
                 }
                 
                 const intervalTime = parseInt(document.getElementById('intervalTime').value);
-                if (intervalTime < 15 || intervalTime > 120) { 
-                    showNotification('Intervalo deve estar entre 15 e 120 minutos!', 'error'); 
+                if (intervalTime < 5 || intervalTime > 120) { 
+                    showNotification('Intervalo deve estar entre 5 e 120 minutos!', 'error'); 
                     return; 
                 }
                 
@@ -2449,6 +2667,41 @@
                 showNotification('Mensagem salva com sucesso!', 'success');
             } catch (error) {
                 showNotification('Erro ao salvar mensagem: ' + error.message, 'error');
+            }
+        }
+
+        // ==================== Avisos de agendamento no WhatsApp do gestor ====================
+        async function loadGestorNotify() {
+            try {
+                const d = await apiFetch('/whatsapp/gestor-notify');
+                document.getElementById('gestorNotifyPhone').value = d.notify_phone ? String(d.notify_phone).replace(/^55/, '') : '';
+                document.getElementById('gestorNotifyEnabled').checked = d.notify_enabled !== false;
+                document.getElementById('gestorNotifyWarn').classList.toggle('hidden', !!d.sistema_conectado);
+            } catch (_) { /* card opcional */ }
+        }
+
+        async function saveGestorNotify() {
+            try {
+                await apiFetch('/whatsapp/gestor-notify', {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        notify_phone: document.getElementById('gestorNotifyPhone').value,
+                        notify_enabled: document.getElementById('gestorNotifyEnabled').checked
+                    })
+                });
+                showNotification('Avisos salvos!', 'success');
+                loadGestorNotify();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+
+        async function testGestorNotify() {
+            try {
+                await apiFetch('/whatsapp/gestor-notify/test', { method: 'POST' });
+                showNotification('Mensagem de teste enviada para o seu WhatsApp!', 'success');
+            } catch (error) {
+                showNotification(error.message, 'error');
             }
         }
 

@@ -10,6 +10,7 @@ const { normalizePhone } = require('./phone');
 const { checkTenantActive } = require('./tenant');
 const { sendBookingConfirmation, formatDateBR, formatCurrencyBRL } = require('./whatsapp');
 const { tryApplyReward } = require('./loyalty');
+const barberServices = require('./barber-services');
 
 const TZ = 'America/Sao_Paulo';
 const DEBOUNCE_MS = 3000;                 // espera o cliente terminar de mandar mensagens seguidas
@@ -283,8 +284,8 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'listar_servicos',
-      description: 'Lista os serviços com preço e duração.',
-      parameters: { type: 'object', properties: {} }
+      description: 'Lista os serviços com preço e duração. Passe profissional_id para listar só os serviços que esse profissional faz.',
+      parameters: { type: 'object', properties: { profissional_id: { type: 'integer' } } }
     }
   },
   {
@@ -442,6 +443,7 @@ const INTERACTIVE_TOOLS = {
         type: 'object',
         properties: {
           tipo: { type: 'string', enum: ['profissionais', 'servicos'] },
+          profissional_id: { type: 'integer', description: 'Em tipo "servicos": o profissional já escolhido (mostra só o que ele faz)' },
           texto: { type: 'string', description: 'Frase curta antes dos cards, ex: "✂️ Escolha o serviço:"' }
         },
         required: ['tipo', 'texto']
@@ -652,7 +654,9 @@ async function runInteractiveTool(name, args, ctx) {
     const logo = getSetting(tenant.id, 'logo_url');
     let items;
     if (args.tipo === 'servicos') {
+      const allowedIds = args.profissional_id ? barberServices.getServiceIds(args.profissional_id) : null;
       items = db.prepare('SELECT id, name, price, duration, photo_url FROM services WHERE tenant_id = ? ORDER BY id').all(tenant.id)
+        .filter(sv => !allowedIds || allowedIds.includes(sv.id))
         .map(sv => ({ id: `servico_${sv.id}`, titulo: sv.name, descricao: `💰 R$ ${formatCurrencyBRL(sv.price)} · ⏱️ ${sv.duration} min`, foto: sv.photo_url || logo }));
     } else {
       items = db.prepare('SELECT id, name, specialty, photo_url FROM barbers WHERE tenant_id = ? ORDER BY id').all(tenant.id)
@@ -803,13 +807,18 @@ async function runTool(name, args, ctx) {
       const flagsB = interactiveFlags(ctx);
       const hintB = barbers.length > 1 ? (flagsB.cards ? 'Agora mostre com enviar_cards tipo "profissionais".' : flagsB.poll ? 'Agora mostre com enviar_enquete (multipla=false).' : flagsB.list ? 'Agora mostre com enviar_lista (ids "profissional_<id>").' : flagsB.list ? 'Agora mostre com enviar_lista.' : null) : null;
       const single = barbers.length === 1 ? `Só existe ${barbers[0].name}: informe em uma frase e, NA MESMA RESPOSTA, chame listar_servicos e mostre os serviços (não pergunte se pode mostrar).` : null;
-      return { profissionais: barbers.map(b => ({ id: b.id, nome: b.name, especialidade: b.specialty || null })), ...((hintB || single) ? { proximo_passo: hintB || single } : {}) };
+      return { profissionais: barbers.map(b => { const ids = barberServices.getServiceIds(b.id); return { id: b.id, nome: b.name, especialidade: b.specialty || null, faz: ids ? db.prepare(`SELECT name FROM services WHERE id IN (${ids.map(() => '?').join(',')})`).all(...ids).map(r => r.name) : 'todos os serviços' }; }), ...((hintB || single) ? { proximo_passo: hintB || single } : {}) };
     }
 
     case 'listar_servicos': {
-      const services = db.prepare('SELECT id, name, price, duration FROM services WHERE tenant_id = ? ORDER BY id').all(tenantId);
+      let services = db.prepare('SELECT id, name, price, duration FROM services WHERE tenant_id = ? ORDER BY id').all(tenantId);
+      // Cada barbeiro pode fazer so alguns servicos (ex: so corte, so barba)
+      if (args.profissional_id) {
+        const allowed = barberServices.getServiceIds(args.profissional_id);
+        if (allowed) services = services.filter(sv => allowed.includes(sv.id));
+      }
       const flagsS = interactiveFlags(ctx);
-      const hintS = flagsS.cards ? 'Agora mostre com enviar_cards tipo "servicos".' : flagsS.poll ? 'Agora mostre com enviar_enquete (multipla=true, ids "servico_<id>").' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>", descrição com preço e duração).' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>").' : null;
+      const hintS = flagsS.cards ? `Agora mostre com enviar_cards tipo "servicos"${args.profissional_id ? ` e profissional_id ${args.profissional_id}` : ''}.` : flagsS.poll ? 'Agora mostre com enviar_enquete (multipla=true, ids "servico_<id>").' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>", descrição com preço e duração).' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>").' : null;
       return { servicos: services.map(s => ({ id: s.id, nome: s.name, preco: `R$ ${formatCurrencyBRL(s.price)}`, duracao_min: s.duration })), ...(hintS ? { proximo_passo: hintS } : {}) };
     }
 
@@ -818,6 +827,9 @@ async function runTool(name, args, ctx) {
       if (!barber) return { erro: 'Profissional inválido. Chame listar_profissionais.' };
       const loaded = loadServices(tenantId, args.servicos_ids);
       if (loaded.error) return { erro: loaded.error };
+      if (!barberServices.barberDoesAll(barber.id, loaded.services.map(sv => sv.id))) {
+        return { erro: `${barber.name} não faz todos esses serviços. Chame listar_servicos com profissional_id=${barber.id} e ofereça só os que ele faz, ou sugira outro profissional.` };
+      }
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(args.data))) return { erro: 'Data inválida, use AAAA-MM-DD.' };
 
       const duration = loaded.services.reduce((sum, s) => sum + s.duration, 0);
@@ -848,6 +860,9 @@ async function runTool(name, args, ctx) {
       if (!barber) return { erro: 'Profissional inválido.' };
       const loaded = loadServices(tenantId, args.servicos_ids);
       if (loaded.error) return { erro: loaded.error };
+      if (!barberServices.barberDoesAll(barber.id, loaded.services.map(sv => sv.id))) {
+        return { erro: `${barber.name} não faz todos esses serviços. Chame listar_servicos com profissional_id=${barber.id} e ofereça só os que ele faz, ou sugira outro profissional.` };
+      }
 
       const date = String(args.data);
       const time = String(args.hora).slice(0, 5);
@@ -875,6 +890,8 @@ async function runTool(name, args, ctx) {
 
       // Painel do gestor atualiza na hora (mesmo SSE do agendamento pelo link)
       try { require('./events').broadcastBookingChange(tenantId, 'INSERT', { id: booking.id, status: booking.status }); } catch (_) {}
+      // Aviso no WhatsApp do gestor
+      require('./gestor-notify').notifyBooking(tenantId, booking.id, 'novo');
 
       // Mensagem de confirmacao padrao do gestor (template da aba WhatsApp)
       await sendBookingConfirmation({
@@ -899,6 +916,9 @@ async function runTool(name, args, ctx) {
       if (!barber) return { erro: 'Profissional inválido. Chame listar_profissionais.' };
       const loaded = loadServices(tenantId, args.servicos_ids);
       if (loaded.error) return { erro: loaded.error };
+      if (!barberServices.barberDoesAll(barber.id, loaded.services.map(sv => sv.id))) {
+        return { erro: `${barber.name} não faz todos esses serviços. Chame listar_servicos com profissional_id=${barber.id} e ofereça só os que ele faz, ou sugira outro profissional.` };
+      }
       const duration = loaded.services.reduce((sum, s) => sum + s.duration, 0);
       const ignoreId = args.ignorar_agendamento_id && ownBooking(ctx, args.ignorar_agendamento_id) ? Number(args.ignorar_agendamento_id) : null;
       const today = nowBR().date;
@@ -963,6 +983,7 @@ async function runTool(name, args, ctx) {
       if (!b) return { erro: 'Agendamento não encontrado ou já passou.' };
       db.prepare("UPDATE bookings SET client_confirmed_at = datetime('now') WHERE id = ?").run(b.id);
       notifyPanel(tenantId, b.id);
+      require('./gestor-notify').notifyBooking(tenantId, b.id, 'confirmado');
       return { ok: true, mensagem_sugerida: `✅ Presença confirmada! Te esperamos ${shortDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)}. 💈` };
     }
 
@@ -971,6 +992,7 @@ async function runTool(name, args, ctx) {
       if (!b) return { erro: 'Agendamento não encontrado ou já passou.' };
       db.prepare("UPDATE bookings SET status = 'cancelled', cancelled_by = 'cliente_whatsapp' WHERE id = ?").run(b.id);
       notifyPanel(tenantId, b.id);
+      require('./gestor-notify').notifyBooking(tenantId, b.id, 'cancelado');
       return { ok: true, mensagem_sugerida: `❌ Agendamento de ${shortDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)} cancelado. Quando quiser marcar de novo, é só chamar!` };
     }
 
@@ -983,6 +1005,7 @@ async function runTool(name, args, ctx) {
       if (!free.includes(time)) return { erro: 'Esse horário não está disponível.', horarios_livres_nessa_data: free.slice(0, 10) };
       db.prepare("UPDATE bookings SET booking_date = ?, booking_time = ?, rescheduled_at = datetime('now'), client_confirmed_at = NULL, reminder_sent = 0 WHERE id = ?").run(date, time, b.id);
       notifyPanel(tenantId, b.id);
+      require('./gestor-notify').notifyBooking(tenantId, b.id, 'reagendado', { oldDate: b.booking_date, oldTime: b.booking_time });
       return { ok: true, mensagem_sugerida: `🔄 Reagendado! Seu novo horário:\n🗓️ ${shortDate(date)} às ${time}\n💈 ${b.profissional || ''}\n✂️ ${b.servico}` };
     }
 
@@ -1041,7 +1064,7 @@ function stepInstructions(ctx) {
 
   if (f.cards) {
     steps.barber = ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_cards tipo "profissionais".';
-    steps.service = ' Mostre OBRIGATORIAMENTE com enviar_cards tipo "servicos".' + moreServices;
+    steps.service = ' Mostre OBRIGATORIAMENTE com enviar_cards tipo "servicos" e profissional_id do profissional escolhido.' + moreServices;
     steps.time = ' Mostre OBRIGATORIAMENTE com enviar_lista (até 10 horários, ids "hora_HH:MM", secao "🌅 Manhã" / "☀️ Tarde" / "🌙 Noite", botão "Ver horários").';
   } else if (f.poll) {
     steps.barber = ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_enquete (multipla=false, ids "profissional_<id>").';
@@ -1101,7 +1124,7 @@ COMO ATENDER (novo agendamento):
 1. No primeiro contato (se o cliente NÃO tiver agendamento futuro), cumprimente e ofereça as duas opções: ${link ? `agendar sozinho pelo link ${link}` : 'agendar pelo link da barbearia'} OU agendar aqui mesmo pelo WhatsApp, escrevendo ou mandando áudio.${steps.first}
 2. Se quiser agendar por aqui: primeiro identifique o cliente (regra acima) — sempre antes de tudo.
 3. Profissional: chame listar_profissionais. Se só houver um, apenas informe.${steps.barber}
-4. Serviços: chame listar_servicos. O cliente pode escolher VÁRIOS serviços.${steps.service}
+4. Serviços: chame listar_servicos com o profissional_id do profissional escolhido (cada profissional pode fazer só alguns serviços). O cliente pode escolher VÁRIOS serviços.${steps.service}
 5. Data: chame dias_disponiveis e deixe o cliente escolher o dia${interactiveFlags(ctx).list || interactiveFlags(ctx).poll ? ' (mostre com a mesma ferramenta de escolha usada nos serviços)' : ' (mostre numerado)'}. Se o cliente já disse o dia ("amanhã", "sexta"), use a data de hoje acima e pule direto para os horários.
    Horário: chame horarios_disponiveis e ofereça até 10 horários, priorizando o que o cliente pediu ("depois das 15h").${steps.time}
 6. Antes de gravar, mostre o RESUMO (nome, telefone, profissional, serviços, data, hora, valor total e duração) e pergunte se pode confirmar. Só chame criar_agendamento depois de um "sim" claro.${steps.confirm}

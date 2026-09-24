@@ -72,13 +72,21 @@
             window.scrollTo({ top: 0, behavior: 'auto' });
         }
 
+        function currentStep() {
+            if (!selectedBarber) return 'barber';
+            if (!selectedService) return 'service';
+            return selectedDate ? 'time' : 'date';
+        }
+
         function goToBookScreen() {
             showScreen('book');
-            updateStepProgress(selectedService ? (selectedBarber ? (selectedDate ? 'time' : 'date') : 'barber') : 'service');
+            renderBarbers();
+            renderServicesWizard();
+            updateStepProgress(currentStep());
         }
 
         function updateStepProgress(activeStep) {
-            const order = ['service', 'barber', 'date', 'time'];
+            const order = ['barber', 'service', 'date', 'time'];
             const activeIndex = order.indexOf(activeStep);
             document.querySelectorAll('#stepProgress .step-node').forEach(node => {
                 const idx = order.indexOf(node.dataset.step);
@@ -575,6 +583,15 @@
                             &nbsp;•&nbsp; <i class="fas fa-clock" aria-hidden="true"></i> ${b.booking_time.substring(0,5)}
                             ${b.barber_name ? `&nbsp;•&nbsp; <i class="fas fa-user-tie" aria-hidden="true"></i> ${b.barber_name}` : ''}
                         </p>
+                        ${b.cancel_requested ? `
+                            <p style="margin-top:8px; font-size:12.5px; color:var(--red);"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Cancelamento solicitado — aguardando a confirmação da barbearia</p>
+                        ` : b.can_cancel ? `
+                            <div id="cancelBox-${b.id}">
+                                <button class="btn" style="margin-top:10px; padding:9px; background:transparent; border:1px solid var(--red); color:var(--red);" onclick="openCancelRequest(${b.id})">
+                                    <i class="fas fa-ban" aria-hidden="true"></i> Solicitar cancelamento
+                                </button>
+                            </div>
+                        ` : ''}
                         ${b.can_review ? `
                             <button class="btn" style="margin-top:10px; padding:9px;" onclick="openReviewModal(${b.id}, '${(b.service_name || '').replace(/'/g, "\\'")}')">
                                 <i class="fas fa-star" aria-hidden="true"></i> Avaliar atendimento
@@ -586,6 +603,38 @@
                 `).join('');
             } catch (error) {
                 resultsEl.innerHTML = '<p style="color:var(--red); font-size:13px;">Erro ao buscar agendamentos. Tente novamente.</p>';
+            }
+        }
+
+        // ==================== Pedido de cancelamento (o gestor confirma no painel) ====================
+        function openCancelRequest(bookingId) {
+            const box = document.getElementById(`cancelBox-${bookingId}`);
+            if (!box) return;
+            box.innerHTML = `
+                <div style="margin-top:10px; padding:12px; border:1px solid var(--red); border-radius:10px;">
+                    <p style="font-size:13px; margin-bottom:8px;">Quer mesmo cancelar? A barbearia recebe seu pedido no WhatsApp e confirma o cancelamento.</p>
+                    <textarea id="cancelReason-${bookingId}" rows="2" maxlength="300" placeholder="Motivo (opcional)" style="width:100%; padding:10px; border-radius:8px; background:var(--surface-raised); color:var(--ivory); border:1px solid var(--hairline); font-family:inherit; resize:vertical;"></textarea>
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <button class="btn" style="padding:9px; background:var(--red); border-color:var(--red);" onclick="sendCancelRequest(${bookingId})">Confirmar pedido</button>
+                        <button class="btn" style="padding:9px; background:transparent; border:1px solid var(--hairline); color:var(--ivory);" onclick="searchMyBookings()">Voltar</button>
+                    </div>
+                </div>`;
+        }
+
+        async function sendCancelRequest(bookingId) {
+            const reason = (document.getElementById(`cancelReason-${bookingId}`)?.value || '').trim();
+            try {
+                const response = await fetch(`${API_URL}/bookings/${bookingId}/cancel-request`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: lookupPhoneCache, reason })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.error || 'Não foi possível enviar o pedido');
+                await searchMyBookings();
+                alert('Pedido de cancelamento enviado! A barbearia vai confirmar e você recebe o aviso no WhatsApp.');
+            } catch (error) {
+                alert(error.message);
             }
         }
 
@@ -680,6 +729,7 @@
                 if (!response.ok) throw new Error('Falha ao carregar barbeiros');
 
                 barbers = await response.json();
+                renderBarbers(); // passo 1 do agendamento: ja mostra os profissionais
             } catch (error) {
                 console.error('Erro ao carregar barbeiros:', error);
             }
@@ -695,12 +745,31 @@
             return !!(selectedService && selectedService.id === id && !!selectedService.isPackage === !!isPackage);
         }
 
+        // Servicos (e pacotes) que o profissional escolhido faz. Sem profissional = todos.
+        function barberAllowedIds() {
+            return selectedBarber && Array.isArray(selectedBarber.service_ids) ? selectedBarber.service_ids.map(Number) : null;
+        }
+        function servicesForBarber() {
+            const allowed = barberAllowedIds();
+            return allowed ? services.filter(sv => allowed.includes(Number(sv.id))) : services;
+        }
+        function packagesForBarber() {
+            const allowed = barberAllowedIds();
+            return allowed ? packages.filter(pkg => (pkg.services || []).every(sv => allowed.includes(Number(sv.id)))) : packages;
+        }
+
         function renderServicesWizard() {
             const container = document.getElementById('servicesList');
             if (!container) return;
 
+            const hint = document.getElementById('serviceCardHint');
+            if (hint) hint.textContent = selectedBarber ? `Serviços feitos por ${selectedBarber.name}` : '';
+
+            const services = servicesForBarber();
+            const packages = packagesForBarber();
+
             if (services.length === 0 && packages.length === 0) {
-                container.innerHTML = '<p style="color: var(--ivory-muted); text-align: center;">Nenhum serviço disponível</p>';
+                container.innerHTML = `<p style="color: var(--ivory-muted); text-align: center;">${selectedBarber ? 'Este profissional ainda não tem serviços disponíveis.' : 'Nenhum serviço disponível'}</p>`;
                 return;
             }
 
@@ -788,6 +857,19 @@
             selectService(id, { ...pkg, duration: pkg.total_duration, isPackage: true });
         }
 
+        // Ids dos servicos que o item escolhido exige (servico avulso ou todos os do pacote)
+        function requiredServiceIds() {
+            if (!selectedService) return [];
+            if (selectedService.isPackage) return (selectedService.services || []).map(sv => Number(sv.id));
+            return [Number(selectedService.id)];
+        }
+
+        // Barbeiros que fazem o servico escolhido (service_ids null = faz todos)
+        function barbersForSelection() {
+            const needed = requiredServiceIds();
+            return barbers.filter(b => !Array.isArray(b.service_ids) || needed.every(id => b.service_ids.includes(id)));
+        }
+
         function renderBarbers() {
             const container = document.getElementById('barbersList');
             
@@ -796,7 +878,13 @@
                 return;
             }
 
-            container.innerHTML = barbers.map(barber => {
+            const available = barbersForSelection();
+            if (available.length === 0) {
+                container.innerHTML = '<p style="color: var(--ivory-muted); text-align: center;">Nenhum profissional faz esse serviço no momento. Escolha outro serviço.</p>';
+                return;
+            }
+
+            container.innerHTML = available.map(barber => {
                 const photoHtml = barber.photo_url 
                     ? `<img src="${barber.photo_url}" alt="${barber.name}">` 
                     : '<i class="fas fa-user-tie"></i>';
@@ -822,30 +910,33 @@
         function selectService(id, overrideItem) {
             selectedService = overrideItem || services.find(s => s.id === id);
 
-            selectedBarber = null;
+            // Se o profissional ja escolhido nao faz este servico, ele precisa escolher de novo
+            if (selectedBarber && !barbersForSelection().some(b => b.id == selectedBarber.id)) selectedBarber = null;
             selectedDate = null;
             selectedTime = null;
 
-            // Vai para a tela de agendamento e mostra o passo atual
             showScreen('book');
-            updateStepProgress('barber');
 
-            // Marca o card de serviço como completo e realça a seleção nas listas
             const serviceCard = document.getElementById('serviceCard');
             serviceCard.classList.add('completed');
+            serviceCard.classList.remove('active');
             renderServicesWizard();
-
-            // Ativa e exibe o card do barbeiro
-            const barberCard = document.getElementById('barberCard');
-            const barberSelection = document.getElementById('barberSelection');
-            barberSelection.style.display = 'block';
-            barberCard.classList.add('active');
             renderBarbers();
 
-            // Scroll suave para o próximo passo
-            setTimeout(() => {
-                barberCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 100);
+            if (selectedBarber) {
+                // Profissional ja escolhido: segue para data e horario
+                const scheduleCard = document.getElementById('scheduleCard');
+                scheduleCard.classList.add('active');
+                updateStepProgress('date');
+                setTimeout(() => scheduleCard.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+            } else {
+                // Veio pelo servico (tela inicial): agora escolhe quem faz esse servico
+                const barberCard = document.getElementById('barberCard');
+                barberCard.classList.add('active');
+                barberCard.classList.remove('completed');
+                updateStepProgress('barber');
+                setTimeout(() => barberCard.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+            }
 
             renderCalendar();
             document.getElementById('confirmBooking').classList.add('hidden');
@@ -864,22 +955,37 @@
             
             selectedDate = null;
             selectedTime = null;
-            
+
+            // Servico escolhido antes que este profissional nao faz: escolhe de novo
+            if (selectedService) {
+                const allowed = barberAllowedIds();
+                const needed = requiredServiceIds();
+                if (allowed && !needed.every(sid => allowed.includes(sid))) selectedService = null;
+            }
+
             // Marca o card do barbeiro como completo
             const barberCard = document.getElementById('barberCard');
             barberCard.classList.add('completed');
             barberCard.classList.remove('active');
-            
-            // Ativa o card de agendamento
-            const scheduleCard = document.getElementById('scheduleCard');
-            scheduleCard.classList.add('active');
-            updateStepProgress('date');
 
-            // Scroll suave para o calendário
-            setTimeout(() => {
-                scheduleCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 100);
-            
+            // Mostra so os servicos que este profissional faz
+            renderServicesWizard();
+
+            if (selectedService) {
+                // Servico ja escolhido: vai para data e horario
+                const scheduleCard = document.getElementById('scheduleCard');
+                scheduleCard.classList.add('active');
+                updateStepProgress('date');
+                setTimeout(() => scheduleCard.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+            } else {
+                // Passo 2: servicos deste profissional
+                const serviceCard = document.getElementById('serviceCard');
+                serviceCard.classList.add('active');
+                serviceCard.classList.remove('completed');
+                updateStepProgress('service');
+                setTimeout(() => serviceCard.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+            }
+
             renderCalendar();
             document.getElementById('confirmBooking').classList.add('hidden');
         }
@@ -941,13 +1047,13 @@
         }
 
         async function selectDate(year, month, day) {
-            if (!selectedService) {
-                alert('Selecione um serviço primeiro!');
+            if (!selectedBarber) {
+                alert('Escolha o profissional primeiro!');
                 return;
             }
-            
-            if (!selectedBarber) {
-                alert('Selecione um barbeiro primeiro!');
+
+            if (!selectedService) {
+                alert('Escolha o serviço primeiro!');
                 return;
             }
             
@@ -1275,8 +1381,10 @@
                 document.getElementById('scheduleCard').classList.remove('completed', 'active');
                 
                 document.getElementById('confirmBooking').classList.add('hidden');
-                document.getElementById('barberSelection').style.display = 'none';
+                document.getElementById('barberCard').classList.add('active');
                 document.getElementById('timeSlotsContainer').innerHTML = '';
+                renderBarbers();
+                updateStepProgress('barber');
                 renderServices();
                 renderCalendar();
                 updateStepProgress('service');

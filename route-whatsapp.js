@@ -115,6 +115,36 @@ router.put('/template', (req, res) => {
   res.json({ ok: true });
 });
 
+// ==================== Aviso de agendamento no WhatsApp do gestor ====================
+
+router.get('/gestor-notify', async (req, res) => {
+  const t = db.prepare('SELECT notify_phone, notify_enabled FROM tenants WHERE id = ?').get(req.tenantId);
+  const central = await require('./gestor-notify').status().catch(() => ({ status: 'disconnected' }));
+  res.json({ notify_phone: t?.notify_phone || '', notify_enabled: t ? t.notify_enabled !== 0 : true, sistema_conectado: central.status === 'connected' });
+});
+
+router.put('/gestor-notify', (req, res) => {
+  const { notify_phone, notify_enabled } = req.body || {};
+  let n = String(notify_phone || '').replace(/\D/g, '');
+  if (n && (n.length === 10 || n.length === 11)) n = '55' + n;
+  if (n && !(n.startsWith('55') && (n.length === 12 || n.length === 13))) {
+    return res.status(400).json({ error: 'WhatsApp inválido. Use DDD + número, ex: (88) 99999-0000' });
+  }
+  db.prepare('UPDATE tenants SET notify_phone = ?, notify_enabled = ? WHERE id = ?').run(n || null, notify_enabled === false ? 0 : 1, req.tenantId);
+  res.json({ ok: true, notify_phone: n || '' });
+});
+
+router.post('/gestor-notify/test', async (req, res) => {
+  const t = db.prepare('SELECT name, notify_phone FROM tenants WHERE id = ?').get(req.tenantId);
+  if (!t?.notify_phone) return res.status(400).json({ error: 'Salve o seu WhatsApp antes de testar' });
+  try {
+    await require('./gestor-notify').sendTest(t.notify_phone, t.name);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: 'Não consegui enviar: ' + err.message });
+  }
+});
+
 // ==================== Pedidos de "Falar com atendente" ====================
 
 router.get('/handoffs', (req, res) => {
