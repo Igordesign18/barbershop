@@ -410,6 +410,7 @@ async function runInteractiveTool(name, args, ctx) {
   const texto = String(args.texto || '').trim() || 'Escolha uma opção:';
   const done = format => {
     ctx.interactiveSent = true;
+    console.log(`[ia] ${name} enviado como ${format} (tenant ${tenant.id})`);
     return {
       ok: true,
       formato: format,
@@ -498,12 +499,16 @@ async function runTool(name, args, ctx) {
 
     case 'listar_profissionais': {
       const barbers = db.prepare('SELECT id, name, specialty FROM barbers WHERE tenant_id = ? ORDER BY id').all(tenantId);
-      return { profissionais: barbers.map(b => ({ id: b.id, nome: b.name, especialidade: b.specialty || null })) };
+      const flagsB = interactiveFlags(ctx);
+      const hintB = barbers.length > 1 ? (flagsB.carousel ? 'Agora mostre com enviar_carrossel tipo "profissionais".' : flagsB.list ? 'Agora mostre com enviar_lista.' : null) : null;
+      return { profissionais: barbers.map(b => ({ id: b.id, nome: b.name, especialidade: b.specialty || null })), ...(hintB ? { proximo_passo: hintB } : {}) };
     }
 
     case 'listar_servicos': {
       const services = db.prepare('SELECT id, name, price, duration FROM services WHERE tenant_id = ? ORDER BY id').all(tenantId);
-      return { servicos: services.map(s => ({ id: s.id, nome: s.name, preco: `R$ ${formatCurrencyBRL(s.price)}`, duracao_min: s.duration })) };
+      const flagsS = interactiveFlags(ctx);
+      const hintS = flagsS.carousel ? 'Agora mostre com enviar_carrossel tipo "servicos".' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>").' : null;
+      return { servicos: services.map(s => ({ id: s.id, nome: s.name, preco: `R$ ${formatCurrencyBRL(s.price)}`, duracao_min: s.duration })), ...(hintS ? { proximo_passo: hintS } : {}) };
     }
 
     case 'horarios_disponiveis': {
@@ -516,6 +521,7 @@ async function runTool(name, args, ctx) {
       const duration = loaded.services.reduce((sum, s) => sum + s.duration, 0);
       const slots = computeFreeSlots(tenantId, barber.id, args.data, duration);
       const result = { profissional: barber.name, data: args.data, duracao_total_min: duration, horarios_livres: slots };
+      if (slots.length && interactiveFlags(ctx).list) result.proximo_passo = 'Mostre até 10 horários com enviar_lista (ids "hora_HH:MM"), priorizando os mais próximos do que o cliente pediu.';
 
       if (!slots.length) {
         const alternatives = [];
@@ -620,8 +626,28 @@ function interactivePromptBlock(ctx) {
   return lines.join('\n') + '\n';
 }
 
+// Como mostrar cada etapa: com os recursos interativos ligados, a IA e OBRIGADA a usa-los
+function stepInstructions(ctx) {
+  const f = interactiveFlags(ctx);
+  const choose = (carousel, list, text) => carousel && f.carousel ? carousel : list && f.list ? list : text;
+  return {
+    first: f.buttons ? ' Faça isso com enviar_botoes (opções "Agendar por aqui" id "agendar_aqui" e "Receber o link" id "receber_link").' : '',
+    barber: choose(
+      ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_carrossel tipo "profissionais".',
+      ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_lista.',
+      ' Mostre numerado (1, 2, 3...).'),
+    service: choose(
+      ' Mostre OBRIGATORIAMENTE com enviar_carrossel tipo "servicos". Depois de cada escolha, pergunte se quer mais algum serviço.',
+      ' Mostre OBRIGATORIAMENTE com enviar_lista (id "servico_<id>"). Depois de cada escolha, pergunte se quer mais algum serviço.',
+      ' Mostre numerado com preço e duração.'),
+    time: f.list ? ' Mostre os horários OBRIGATORIAMENTE com enviar_lista (até 10, ids "hora_HH:MM").' : '',
+    confirm: f.buttons ? ' Peça a confirmação OBRIGATORIAMENTE com enviar_botoes (Sim id "confirmar_sim" / Não id "confirmar_nao").' : ''
+  };
+}
+
 function buildSystemPrompt(ctx) {
   const { tenant, conv, senderPhone, pushName } = ctx;
+  const steps = stepInstructions(ctx);
   const config = getAiConfig(tenant.id);
   const now = nowBR();
   const baseUrl = (process.env.PUBLIC_BASE_URL || getSetting(tenant.id, 'public_base_url') || '').replace(/\/$/, '');
@@ -655,12 +681,12 @@ ${profile.address ? `Endereço: ${profile.address}\n` : ''}${profile.phone ? `Te
 ${customerBlock}
 
 COMO ATENDER:
-1. No primeiro contato, cumprimente e ofereça as duas opções: ${link ? `agendar sozinho pelo link ${link}` : 'agendar pelo link da barbearia'} OU agendar aqui mesmo pelo WhatsApp, escrevendo ou mandando áudio.
+1. No primeiro contato, cumprimente e ofereça as duas opções: ${link ? `agendar sozinho pelo link ${link}` : 'agendar pelo link da barbearia'} OU agendar aqui mesmo pelo WhatsApp, escrevendo ou mandando áudio.${steps.first}
 2. Se quiser agendar por aqui: primeiro identifique o cliente (regra acima) — sempre antes de tudo.
-3. Profissional: chame listar_profissionais e mostre numerado (1, 2, 3...). Se só houver um, apenas informe.
-4. Serviços: chame listar_servicos e mostre numerado com preço e duração. O cliente pode escolher VÁRIOS serviços.
-5. Data e horário: pergunte o dia de preferência, chame horarios_disponiveis e ofereça algumas opções (não despeje a lista inteira). Entenda "amanhã", "sexta", "depois das 15h" etc. usando a data de hoje acima.
-6. Antes de gravar, mostre o RESUMO (nome, telefone, profissional, serviços, data, hora, valor total e duração) e pergunte se pode confirmar. Só chame criar_agendamento depois de um "sim" claro.
+3. Profissional: chame listar_profissionais. Se só houver um, apenas informe.${steps.barber}
+4. Serviços: chame listar_servicos. O cliente pode escolher VÁRIOS serviços.${steps.service}
+5. Data e horário: pergunte o dia de preferência, chame horarios_disponiveis e ofereça algumas opções (não despeje a lista inteira). Entenda "amanhã", "sexta", "depois das 15h" etc. usando a data de hoje acima.${steps.time}
+6. Antes de gravar, mostre o RESUMO (nome, telefone, profissional, serviços, data, hora, valor total e duração) e pergunte se pode confirmar. Só chame criar_agendamento depois de um "sim" claro.${steps.confirm}
 7. Se o horário não estiver mais livre, ofereça outras opções.
 
 ${interactivePromptBlock(ctx)}
