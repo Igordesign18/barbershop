@@ -408,7 +408,14 @@ async function runInteractiveTool(name, args, ctx) {
   const flags = interactiveFlags(ctx);
   const footer = cut(tenant.name, 60);
   const texto = String(args.texto || '').trim() || 'Escolha uma opção:';
-  const done = format => {
+  // O WhatsApp as vezes aceita botoes/lista/carrossel e simplesmente nao mostra ao cliente
+  // (numeros comuns, conexao nao oficial). Para a conversa nunca travar, depois do envio
+  // interativo sai tambem uma versao curta em texto com as mesmas opcoes.
+  const done = async (format, opcoes) => {
+    if (format === 'interativo' && Array.isArray(opcoes) && opcoes.length) {
+      const backup = `Se as opções não aparecerem aí, é só responder com o número:\n${opcoes.map((o, i) => `*${i + 1}.* ${o.titulo}`).join('\n')}`;
+      await waProvider.sendText(instance, replyTo, backup).catch(() => {});
+    }
     ctx.interactiveSent = true;
     console.log(`[ia] ${name} enviado como ${format} (tenant ${tenant.id})`);
     return {
@@ -425,7 +432,7 @@ async function runInteractiveTool(name, args, ctx) {
     const format = await waProvider.sendInteractive(instance, replyTo, 'buttons',
       { title: ' ', text: texto, footer, buttons: opcoes.map(o => ({ id: o.id, text: o.titulo })) },
       numberedFallback(texto, opcoes));
-    return done(format);
+    return done(format, opcoes);
   }
 
   if (name === 'enviar_lista') {
@@ -435,7 +442,7 @@ async function runInteractiveTool(name, args, ctx) {
     const format = await waProvider.sendInteractive(instance, replyTo, 'list',
       { title: cut(tenant.name, 60), text: texto, footer, buttonText: cut(args.botao || 'Ver opções', 20), sections: [{ title: 'Opções', rows: opcoes.map(o => ({ id: o.id, title: o.titulo, description: o.descricao })) }] },
       numberedFallback(texto, opcoes));
-    return done(format);
+    return done(format, opcoes);
   }
 
   if (name === 'enviar_carrossel') {
@@ -460,7 +467,7 @@ async function runInteractiveTool(name, args, ctx) {
         cards: items.map(i => ({ title: cut(i.titulo, 60), imageUrl: i.image, body: `*${i.titulo}*\n${i.descricao}`, buttons: [{ id: i.id, text: cut(`Escolher ${i.botao}`, 20) }] }))
       },
       numberedFallback(texto, items));
-    return done(format);
+    return done(format, items);
   }
 
   return { erro: `Ferramenta desconhecida: ${name}` };
@@ -691,6 +698,7 @@ COMO ATENDER:
 
 ${interactivePromptBlock(ctx)}
 REGRAS:
+- Não pergunte "quer que eu mostre...?": quando for a etapa, já mostre (profissionais, serviços, horários). Com um único profissional, informe e siga direto para os serviços.
 - Nunca invente serviços, preços, profissionais ou horários: use sempre as ferramentas.
 - Não mostre IDs nem nomes de ferramentas para o cliente. Aceite que ele responda pelo número da lista ou pelo nome.
 - Não marque em dia FECHADO nem em horário passado.

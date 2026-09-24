@@ -39,6 +39,41 @@ function wasSentBySystem(id) {
   return !!id && (sentIds.has(id) || evolution.wasSentBySystem(id));
 }
 
+// Alguns contatos (conta Business, numero fixo, contas novas com LID) nao passam na checagem
+// "numero existe no WhatsApp" do Evolution GO e o envio pelo telefone falha com
+// "is not registered on WhatsApp". O webhook traz o LID do contato; guardamos para reenviar por ele.
+const altJids = new Map(); // digitos do telefone -> "xxxx@lid"
+function onlyDigits(value) {
+  return String(value || '').split('@')[0].replace(/\D/g, '');
+}
+function rememberAltJid(phone, lid) {
+  const digits = onlyDigits(phone);
+  if (!digits || !lid || !String(lid).endsWith('@lid')) return;
+  altJids.set(digits, lid);
+  // mesmo numero com/sem o 9 (o sistema pode guardar o telefone com o 9 adicionado)
+  if (digits.startsWith('55') && digits.length === 12) altJids.set(digits.slice(0, 4) + '9' + digits.slice(4), lid);
+  if (digits.startsWith('55') && digits.length === 13 && digits[4] === '9') altJids.set(digits.slice(0, 4) + digits.slice(5), lid);
+  if (altJids.size > 20000) altJids.delete(altJids.keys().next().value);
+}
+function altJidFor(number) {
+  return altJids.get(onlyDigits(number)) || null;
+}
+function isNotRegisteredError(err) {
+  return /not registered on WhatsApp/i.test(err?.message || '');
+}
+
+// Executa um envio no GO; se o numero "nao existe", tenta de novo pelo LID do contato
+async function goSend(number, fn) {
+  try {
+    return await fn(number);
+  } catch (err) {
+    const lid = isNotRegisteredError(err) ? altJidFor(number) : null;
+    if (!lid) throw err;
+    console.warn(`[whatsapp] ${onlyDigits(number)} recusado pelo GO, reenviando pelo LID ${lid}`);
+    return fn(lid);
+  }
+}
+
 function getInstance(tenantId) {
   return db.prepare('SELECT * FROM whatsapp_instances WHERE tenant_id = ?').get(tenantId);
 }
@@ -191,7 +226,7 @@ async function setWebhook(instance, webhookUrl) {
 async function sendText(instance, number, text) {
   const provider = normalizeProvider(instance.provider);
   if (provider === 'evogo') {
-    const id = await evogo.sendText(instance.instance_token, number, text);
+    const id = await goSend(number, to => evogo.sendText(instance.instance_token, to, text));
     rememberSentId(id);
     return id;
   }
@@ -215,9 +250,9 @@ async function sendInteractive(instance, number, kind, payload, fallbackText) {
     if (!supports(instance, kind)) throw new Error(`${kind} não suportado neste motor`);
     let id = null;
     if (provider === 'evogo') {
-      if (kind === 'buttons') id = await evogo.sendButtons(instance.instance_token, number, payload);
-      else if (kind === 'list') id = await evogo.sendList(instance.instance_token, number, payload);
-      else id = await evogo.sendCarousel(instance.instance_token, number, payload);
+      id = await goSend(number, to => kind === 'buttons' ? evogo.sendButtons(instance.instance_token, to, payload)
+        : kind === 'list' ? evogo.sendList(instance.instance_token, to, payload)
+        : evogo.sendCarousel(instance.instance_token, to, payload));
     } else {
       const data = kind === 'buttons'
         ? await evolution.sendButtons(instance.instance_name, number, payload)
@@ -235,7 +270,7 @@ async function sendInteractive(instance, number, kind, payload, fallbackText) {
 
 async function sendPresence(instance, number, delay = 1500) {
   try {
-    if (normalizeProvider(instance.provider) === 'evogo') await evogo.sendPresence(instance.instance_token, number, delay);
+    if (normalizeProvider(instance.provider) === 'evogo') await evogo.sendPresence(instance.instance_token, altJidFor(number) || number, delay);
     else await evolution.sendPresence(instance.instance_name, number, 'composing', delay);
   } catch (_) { /* best-effort */ }
 }
@@ -309,12 +344,15 @@ function normalizeWebhook(provider, body) {
     const message = data.Message || {};
     const audio = message.audioMessage;
     const chatId = String(info.Chat || '');
+    const goPhone = phoneFromJid(info.Sender) || phoneFromJid(chatId) || phoneFromJid(info.SenderAlt);
+    const goLid = [info.SenderAlt, info.Sender, info.Chat].map(String).find(j => j.endsWith('@lid'));
+    if (goPhone && goLid && !info.IsFromMe) rememberAltJid(goPhone, goLid.split(':')[0].replace(/\.\d+@/, '@'));
     return [{
       id: info.ID,
       chatId,
       isGroup: !!info.IsGroup || chatId.endsWith('@g.us'),
       fromMe: !!info.IsFromMe,
-      senderPhone: phoneFromJid(info.Sender) || phoneFromJid(chatId) || phoneFromJid(info.SenderAlt),
+      senderPhone: goPhone,
       pushName: info.PushName || '',
       timestamp: info.Timestamp ? Math.floor(new Date(info.Timestamp).getTime() / 1000) : 0,
       text: textFromMessage(message).trim(),
@@ -336,6 +374,8 @@ function normalizeWebhook(provider, body) {
     const audio = data.message?.audioMessage;
     const senderPhone = [key.remoteJid, key.remoteJidAlt, key.senderPn, data.senderPn, key.participantAlt]
       .map(phoneFromJid).find(Boolean) || null;
+    const v2Lid = [key.remoteJid, key.remoteJidAlt, key.senderLid].map(String).find(j => j.endsWith('@lid'));
+    if (senderPhone && v2Lid && !key.fromMe) rememberAltJid(senderPhone, v2Lid);
     return {
       id: key.id,
       chatId: key.remoteJid,
