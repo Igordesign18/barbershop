@@ -296,6 +296,7 @@ async function sendInteractive(instance, number, kind, payload, fallbackText) {
       id = data?.key?.id || null;
     }
     rememberSentId(id);
+    console.log(`[whatsapp] ${kind} enviado para ${onlyDigits(number)} (id ${id || '?'})`);
     return 'interativo';
   } catch (err) {
     console.error(`[whatsapp] ${kind} falhou (${provider}), enviando texto:`, err.message);

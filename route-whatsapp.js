@@ -162,7 +162,7 @@ router.put('/ai', async (req, res) => {
     extra_instructions: String(extra_instructions || '').trim().slice(0, 2000),
     buttons_enabled: !!buttons_enabled,
     // Formato desconhecido vira texto numerado
-    choice_format: ['text', 'poll', 'list'].includes(choice_format) ? choice_format : 'text',
+    choice_format: ['text', 'poll', 'list', 'buttons'].includes(choice_format) ? choice_format : 'text',
     backup_text: backup_text !== false
   };
 

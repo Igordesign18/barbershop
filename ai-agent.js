@@ -24,7 +24,7 @@ const DEFAULT_AI_CONFIG = {
   assistant_name: 'Assistente Virtual',
   extra_instructions: '',
   buttons_enabled: false,     // botoes para escolhas rapidas: agendar aqui/link, confirmar (PRO)
-  choice_format: 'text',      // profissional/servicos/horarios: 'text' | 'poll' | 'list' (PRO)
+  choice_format: 'text',      // profissional/servicos/horarios: 'text' | 'poll' | 'list' | 'buttons' (blocos de 3 botoes) (PRO)
   backup_text: true           // depois da lista, manda as opcoes tambem em texto numerado
 };
 
@@ -34,7 +34,7 @@ function isProTenant(tenant) {
   return !!tenant && String(tenant.plan || '').toLowerCase() === 'pro';
 }
 
-const CHOICE_FORMATS = ['text', 'poll', 'list'];
+const CHOICE_FORMATS = ['text', 'poll', 'list', 'buttons'];
 
 // Converte configuracoes antigas (caixinhas poll/interactive) para o formato novo.
 // O carrossel foi removido: quem usava carrossel passa para texto numerado.
@@ -495,7 +495,8 @@ function interactiveFlags(ctx) {
   return {
     poll: !!(allowed && format === 'poll' && waProvider.supports(ctx.instance, 'poll')),
     buttons: !!(allowed && config.buttons_enabled && waProvider.supports(ctx.instance, 'buttons')),
-    list: !!(allowed && format === 'list' && waProvider.supports(ctx.instance, 'list')),
+    list: !!(allowed && (format === 'list' || format === 'buttons') && waProvider.supports(ctx.instance, 'list')),
+    listAsButtons: format === 'buttons',
     backup: config.backup_text !== false
   };
 }
@@ -516,6 +517,29 @@ function cut(text, max) {
 
 function numberedFallback(texto, opcoes) {
   return `${texto}\n\n${opcoes.map((o, i) => `*${i + 1}.* ${o.titulo}${o.descricao ? ` — ${o.descricao}` : ''}`).join('\n')}\n\nResponda com o número ou o nome.`;
+}
+
+// Envia opcoes em blocos de ate 3 botoes (o WhatsApp so aceita 3 por mensagem).
+// Maximo 6 opcoes (2 mensagens); com mais, a 6a vira "Ver mais" (ou "Outro horario" em horarios).
+async function sendButtonBlocks(ctx, texto, opcoes, footerText) {
+  let items = opcoes.map(o => ({ id: o.id, titulo: cut(o.botao || o.titulo, 20) }));
+  const hasOther = items.some(o => o.id === OTHER_TIME.id);
+  if (items.length > 6) {
+    const extra = hasOther ? { id: OTHER_TIME.id, titulo: OTHER_TIME.titulo } : { id: 'ver_mais', titulo: '➕ Ver mais' };
+    items = [...items.filter(o => o.id !== extra.id).slice(0, 5), extra];
+  }
+  const blocks = [];
+  for (let i = 0; i < items.length; i += 3) blocks.push(items.slice(i, i + 3));
+  let format = 'interativo';
+  for (let i = 0; i < blocks.length; i++) {
+    const text = i === 0 ? texto : 'Mais opções 👇';
+    const r = await waProvider.sendInteractive(ctx.instance, ctx.replyTo, 'buttons',
+      { title: ' ', text, footer: footerText || ' ', buttons: blocks[i].map(o => ({ id: o.id, text: o.titulo })) },
+      numberedFallback(text, blocks[i]));
+    if (r === 'texto') format = 'texto';
+  }
+  console.log(`[whatsapp] ${items.length} opções enviadas em ${blocks.length} bloco(s) de botões`);
+  return { format, items };
 }
 
 // Opcao extra que acompanha toda oferta de horarios
@@ -610,6 +634,12 @@ async function runInteractiveTool(name, args, ctx) {
       let sec = sections.find(x => x.title === title);
       if (!sec) { sec = { title, rows: [] }; sections.push(sec); }
       sec.rows.push({ id: o.id, title: o.titulo, description: o.descricao });
+    }
+    if (flags.listAsButtons) {
+      const r = await sendButtonBlocks(ctx, texto, opcoes, footer);
+      const result = await done(r.format, null); // botoes: sem texto de reserva
+      if (r.items.some(o => o.id === 'ver_mais')) result.instrucao += ' Se o cliente tocar em "Ver mais" (id "ver_mais"), envie as próximas opções que ficaram de fora.';
+      return result;
     }
     const format = await waProvider.sendInteractive(instance, replyTo, 'list',
       { title: cut(tenant.name, 60), text: texto, footer, buttonText: cut(args.botao || 'Ver opções', 20), sections },
@@ -1037,12 +1067,13 @@ function enqueue(key, task) {
 // ==================== Menu principal (enviado pelo sistema, sempre igual) ====================
 
 const MENU_OPTIONS = [
-  { id: 'menu_agendar', titulo: '📅 Agendar horário', descricao: 'Escolha profissional, serviço e horário' },
-  { id: 'menu_meus', titulo: '🗓️ Meus agendamentos', descricao: 'Confirmar, reagendar ou cancelar' },
-  { id: 'menu_servicos', titulo: '✂️ Serviços e preços', descricao: 'Veja nossa tabela' },
-  { id: 'menu_link', titulo: '🔗 Agendar pelo site', descricao: 'Receba o link' },
-  { id: 'menu_endereco', titulo: '📍 Endereço e horários', descricao: 'Onde estamos e quando abrimos' },
-  { id: 'menu_atendente', titulo: '💬 Falar com atendente', descricao: 'Uma pessoa da equipe responde' }
+  // botao = texto curto para quando o menu vai em botoes (limite de 20 caracteres do WhatsApp)
+  { id: 'menu_agendar', titulo: '📅 Agendar horário', botao: '📅 Agendar horário', descricao: 'Escolha profissional, serviço e horário' },
+  { id: 'menu_meus', titulo: '🗓️ Meus agendamentos', botao: '🗓️ Meus horários', descricao: 'Confirmar, reagendar ou cancelar' },
+  { id: 'menu_servicos', titulo: '✂️ Serviços e preços', botao: '✂️ Serviços e preços', descricao: 'Veja nossa tabela' },
+  { id: 'menu_link', titulo: '🔗 Agendar pelo site', botao: '🔗 Agendar no site', descricao: 'Receba o link' },
+  { id: 'menu_endereco', titulo: '📍 Endereço e horários', botao: '📍 Endereço', descricao: 'Onde estamos e quando abrimos' },
+  { id: 'menu_atendente', titulo: '💬 Falar com atendente', botao: '💬 Atendente', descricao: 'Uma pessoa da equipe responde' }
 ];
 const MENU_IDS = [...MENU_OPTIONS.map(o => o.id), 'menu_abrir'];
 const BTN_AGENDAR = { id: 'menu_agendar', titulo: '📅 Agendar horário' };
@@ -1068,8 +1099,9 @@ function isGreeting(text) {
 function menuStyle(ctx) {
   const config = getAiConfig(ctx.tenant.id);
   return {
-    list: config.buttons_enabled || config.choice_format === 'list',
-    buttons: config.buttons_enabled
+    list: config.choice_format === 'list',
+    blocks: config.choice_format !== 'list' && (config.buttons_enabled || config.choice_format === 'buttons'),
+    buttons: config.buttons_enabled || config.choice_format === 'buttons'
   };
 }
 
@@ -1098,6 +1130,10 @@ async function sendMenuList(ctx, texto) {
       sections: [{ title: 'Atendimento', rows: MENU_OPTIONS.map(o => ({ id: o.id, title: o.titulo, description: o.descricao })) }]
     }, fallback);
     if (format === 'texto') rememberNumbered(ctx, MENU_OPTIONS);
+  } else if (style.blocks) {
+    // Lista nao aparece em WhatsApp comum pelo GO: menu em 2 mensagens de 3 botoes
+    const r = await sendButtonBlocks(ctx, texto, MENU_OPTIONS, ctx.tenant.name);
+    if (r.format === 'texto') rememberNumbered(ctx, MENU_OPTIONS);
   } else {
     await waProvider.sendText(ctx.instance, ctx.replyTo, fallback);
     rememberNumbered(ctx, MENU_OPTIONS);
