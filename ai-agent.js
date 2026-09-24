@@ -518,6 +518,12 @@ function numberedFallback(texto, opcoes) {
   return `${texto}\n\n${opcoes.map((o, i) => `*${i + 1}.* ${o.titulo}${o.descricao ? ` — ${o.descricao}` : ''}`).join('\n')}\n\nResponda com o número ou o nome.`;
 }
 
+// Opcao extra que acompanha toda oferta de horarios
+const OTHER_TIME = { id: 'hora_outro', titulo: '🕐 Outro horário', descricao: 'Ver outros horários ou outro dia' };
+function isTimeOption(id) {
+  return /^hora_/.test(String(id || ''));
+}
+
 async function runInteractiveTool(name, args, ctx) {
   const { tenant, instance, replyTo } = ctx;
   const flags = interactiveFlags(ctx);
@@ -575,7 +581,12 @@ async function runInteractiveTool(name, args, ctx) {
 
   if (name === 'enviar_botoes') {
     if (!flags.buttons) return { erro: 'Botões desativados. Envie as opções em texto numerado.' };
-    const opcoes = (args.opcoes || []).slice(0, 3).map(o => ({ id: cut(o.id, 60), titulo: cut(o.titulo, 20) })).filter(o => o.titulo);
+    let opcoes = (args.opcoes || []).map(o => ({ id: cut(o.id, 60), titulo: cut(o.titulo, 20) })).filter(o => o.titulo);
+    // Horarios em botoes: o WhatsApp so permite 3 botoes, entao vao 2 horarios + "Outro horario"
+    if (opcoes.some(o => isTimeOption(o.id))) {
+      opcoes = [...opcoes.filter(o => isTimeOption(o.id) && o.id !== OTHER_TIME.id).slice(0, 2), { id: OTHER_TIME.id, titulo: OTHER_TIME.titulo }];
+    }
+    opcoes = opcoes.slice(0, 3);
     if (!opcoes.length) return { erro: 'Informe ao menos uma opção.' };
     const format = await waProvider.sendInteractive(instance, replyTo, 'buttons',
       { title: ' ', text: texto, footer, buttons: opcoes.map(o => ({ id: o.id, text: o.titulo })) },
@@ -585,7 +596,12 @@ async function runInteractiveTool(name, args, ctx) {
 
   if (name === 'enviar_lista') {
     if (!flags.list) return { erro: 'Listas desativadas. Envie as opções em texto numerado.' };
-    const opcoes = (args.opcoes || []).slice(0, 10).map(o => ({ id: cut(o.id, 60), titulo: cut(o.titulo, 24), descricao: cut(o.descricao, 72), secao: cut(o.secao, 24) })).filter(o => o.titulo);
+    let opcoes = (args.opcoes || []).map(o => ({ id: cut(o.id, 60), titulo: cut(o.titulo, 24), descricao: cut(o.descricao, 72), secao: cut(o.secao, 24) })).filter(o => o.titulo);
+    // Lista de horarios: sempre termina com "Outro horario" (ate 9 horarios + essa opcao = limite de 10)
+    if (opcoes.some(o => isTimeOption(o.id))) {
+      opcoes = [...opcoes.filter(o => o.id !== OTHER_TIME.id).slice(0, 9), { ...OTHER_TIME, secao: '🔎 Não achou?' }];
+    }
+    opcoes = opcoes.slice(0, 10);
     if (!opcoes.length) return { erro: 'Informe ao menos uma opção.' };
     // Agrupa em secoes (ex: Manha / Tarde / Noite) mantendo a ordem em que vieram
     const sections = [];
@@ -937,6 +953,8 @@ COMO ATENDER (novo agendamento):
    Horário: chame horarios_disponiveis e ofereça até 10 horários, priorizando o que o cliente pediu ("depois das 15h").${steps.time}
 6. Antes de gravar, mostre o RESUMO (nome, telefone, profissional, serviços, data, hora, valor total e duração) e pergunte se pode confirmar. Só chame criar_agendamento depois de um "sim" claro.${steps.confirm}
 7. Se o horário não estiver mais livre, ofereça outras opções.
+
+HORÁRIOS: toda oferta de horários (botões ou lista) ganha automaticamente a opção "🕐 Outro horário" (id "hora_outro"). Quando o cliente escolher "hora_outro", pergunte com enviar_botoes ("🌅 Manhã" id "periodo_manha" / "☀️ Tarde" id "periodo_tarde" / "📅 Outro dia" id "outro_dia"): para manhã/tarde mostre os horários desse período com enviar_lista; para outro dia chame dias_disponiveis e mostre a lista de dias.
 
 GERENCIAR AGENDAMENTO EXISTENTE (opções que chegam dos botões):
 - "ag_ver_<id>": chame mostrar_agendamento com esse id.
