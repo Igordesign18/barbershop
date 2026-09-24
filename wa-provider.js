@@ -5,6 +5,7 @@
 const { db } = require('./db');
 const evolution = require('./evolution');
 const evogo = require('./evolution-go');
+const crypto = require('crypto');
 
 const PROVIDERS = {
   evolution: 'Evolution API v2',
@@ -239,7 +240,44 @@ async function sendText(instance, number, text) {
 function supports(instance, kind) {
   const provider = normalizeProvider(instance?.provider);
   if (kind === 'carousel') return provider === 'evogo';
+  if (kind === 'poll') return !!instance;
   return kind === 'buttons' || kind === 'list';
+}
+
+// Envia uma enquete e devolve o ID da mensagem (usado para ligar o voto a ela depois)
+async function sendPoll(instance, number, { question, options, maxAnswer }) {
+  let id;
+  if (normalizeProvider(instance.provider) === 'evogo') {
+    id = await goSend(number, to => evogo.sendPoll(instance.instance_token, to, { question, options, maxAnswer }));
+  } else {
+    const data = await evolution.sendPoll(instance.instance_name, number, { question, options, maxAnswer });
+    id = data?.key?.id || null;
+  }
+  rememberSentId(id);
+  return id;
+}
+
+// Traduz um voto (msg.pollVote do normalizeWebhook) para os textos das opcoes marcadas.
+// options = textos exatos das opcoes da enquete enviada.
+async function resolvePollVote(instance, pollVote, options) {
+  // Evolution v2 ja entrega os nomes das opcoes marcadas
+  if (Array.isArray(pollVote.names)) return pollVote.names.filter(n => options.includes(n));
+
+  if (normalizeProvider(instance.provider) !== 'evogo') return null;
+
+  // Evolution GO: grava o voto decifrado e expoe por /polls/:id/results com hashes SHA-256.
+  // O voto e gravado em segundo plano, entao tentamos algumas vezes.
+  const hashToOption = new Map(options.map(o => [crypto.createHash('sha256').update(o).digest('hex'), o]));
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await new Promise(r => setTimeout(r, attempt === 0 ? 800 : 1200));
+    const results = await evogo.getPollResults(instance.instance_token, pollVote.pollId).catch(() => null);
+    const votes = Array.isArray(results?.votes) ? results.votes : [];
+    if (!votes.length) continue;
+    const vote = votes.find(v => v.voteMessageId === pollVote.voteId) || votes[votes.length - 1];
+    if (pollVote.voteId && vote.voteMessageId !== pollVote.voteId && attempt < 4) continue; // ainda nao gravou este voto
+    return (vote.selectedOptions || []).map(h => hashToOption.get(String(h).toLowerCase())).filter(Boolean);
+  }
+  return null;
 }
 
 // Envia botoes/lista/carrossel. Se o motor recusar (erro), manda o texto numerado no lugar,
@@ -356,6 +394,10 @@ function normalizeWebhook(provider, body) {
       pushName: info.PushName || '',
       timestamp: info.Timestamp ? Math.floor(new Date(info.Timestamp).getTime() / 1000) : 0,
       text: textFromMessage(message).trim(),
+      pollVote: message.pollUpdateMessage ? {
+        pollId: message.pollUpdateMessage.pollCreationMessageKey?.ID || message.pollUpdateMessage.pollCreationMessageKey?.id || null,
+        voteId: info.ID
+      } : null,
       hasAudio: !!audio,
       audioMimetype: message.mimetype || audio?.mimetype || 'audio/ogg',
       audioInline: message.base64 ? { base64: message.base64, mimetype: message.mimetype || 'audio/ogg' } : null,
@@ -385,6 +427,12 @@ function normalizeWebhook(provider, body) {
       pushName: data.pushName || '',
       timestamp: Number(data.messageTimestamp || 0),
       text: textFromMessage(data.message).trim(),
+      pollVote: data.message?.pollUpdateMessage ? {
+        pollId: data.message.pollUpdateMessage.pollCreationMessageKey?.id || null,
+        voteId: key.id,
+        // A v2 ja troca os hashes pelos nomes das opcoes marcadas
+        names: (data.message.pollUpdateMessage.vote?.selectedOptions || []).filter(o => typeof o === 'string')
+      } : null,
       hasAudio: !!audio,
       audioMimetype: audio?.mimetype || 'audio/ogg',
       audioInline: data.message?.base64 ? { base64: data.message.base64, mimetype: audio?.mimetype || 'audio/ogg' } : null,
@@ -409,6 +457,8 @@ module.exports = {
   sendText,
   supports,
   sendInteractive,
+  sendPoll,
+  resolvePollVote,
   sendPresence,
   downloadAudio,
   normalizeWebhook,

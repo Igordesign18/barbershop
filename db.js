@@ -192,6 +192,19 @@ ensureColumn('tenants', 'plan', "TEXT NOT NULL DEFAULT 'basic'");
 // Origem do agendamento: 'link' (pagina publica), 'whatsapp_ia' (atendente IA), etc.
 ensureColumn('bookings', 'source', 'TEXT');
 
+// Enquetes enviadas pelo atendente IA: guarda as opcoes para traduzir o voto do cliente
+db.exec(`
+  CREATE TABLE IF NOT EXISTS ai_polls (
+    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    poll_id TEXT NOT NULL,
+    chat_id TEXT NOT NULL,
+    question TEXT NOT NULL,
+    options TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (tenant_id, poll_id)
+  );
+`);
+
 // Configuracoes globais do sistema, editadas pelo super admin (ex: chave da OpenAI)
 db.exec(`
   CREATE TABLE IF NOT EXISTS system_settings (

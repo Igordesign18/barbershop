@@ -134,13 +134,14 @@ router.put('/ai', async (req, res) => {
     return res.status(403).json({ error: 'O atendente com IA é exclusivo do plano PRO. Fale com o suporte para fazer o upgrade.' });
   }
 
-  const { enabled, assistant_name, extra_instructions, interactive_enabled, carousel_enabled } = req.body || {};
+  const { enabled, assistant_name, extra_instructions, interactive_enabled, carousel_enabled, poll_enabled } = req.body || {};
   const current = getAiConfig(req.tenantId);
   const config = {
     ...current,
     enabled: !!enabled,
     assistant_name: String(assistant_name || current.assistant_name || 'Assistente Virtual').trim().slice(0, 40) || 'Assistente Virtual',
     extra_instructions: String(extra_instructions || '').trim().slice(0, 2000),
+    poll_enabled: !!poll_enabled,
     interactive_enabled: !!interactive_enabled,
     // Carrossel so existe na Evolution GO
     carousel_enabled: !!carousel_enabled && waProvider.normalizeProvider(req.tenant.whatsapp_provider) === 'evogo'

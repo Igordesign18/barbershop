@@ -177,6 +177,26 @@ async function sendCarousel(token, number, { text, footer, cards }) {
   return data?.Info?.ID || null;
 }
 
+// Enquete. maxAnswer = quantas opcoes o cliente pode marcar (1 = escolha unica)
+async function sendPoll(token, number, { question, options, maxAnswer }) {
+  const data = await goFetch('/send/poll', {
+    method: 'POST',
+    token,
+    body: { number, question, maxAnswer: maxAnswer || 1, options }
+  });
+  return data?.Info?.ID || null;
+}
+
+// Votos ja decifrados pelo GO (as opcoes vem como hash SHA-256 do texto de cada opcao)
+async function getPollResults(token, pollMessageId) {
+  try {
+    return await goFetch(`/polls/${encodeURIComponent(pollMessageId)}/results`, { token });
+  } catch (err) {
+    if (err.status === 404) return null; // ainda sem votos gravados
+    throw err;
+  }
+}
+
 async function sendPresence(token, number, delay = 1500) {
   return goFetch('/message/presence', { method: 'POST', token, body: { number, state: 'composing', delay } });
 }
@@ -206,6 +226,8 @@ module.exports = {
   sendButtons,
   sendList,
   sendCarousel,
+  sendPoll,
+  getPollResults,
   sendPresence,
   downloadMedia
 };

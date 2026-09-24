@@ -130,6 +130,16 @@ async function sendList(instanceName, number, { title, text, footer, buttonText,
   return data;
 }
 
+// Enquete (recurso comum do WhatsApp, aparece em qualquer celular)
+async function sendPoll(instanceName, number, { question, options, maxAnswer }) {
+  const data = await evoFetch(`/message/sendPoll/${encodeURIComponent(instanceName)}`, {
+    method: 'POST',
+    body: JSON.stringify({ number, name: question, selectableCount: maxAnswer || 1, values: options })
+  });
+  rememberSentId(data?.key?.id);
+  return data;
+}
+
 // Mostra "digitando..." / "gravando..." pro cliente (best-effort, nunca quebra nada)
 async function sendPresence(instanceName, numberDigitsOnly, presence = 'composing', delay = 1500) {
   try {
@@ -174,6 +184,7 @@ module.exports = {
   sendText,
   sendButtons,
   sendList,
+  sendPoll,
   sendPresence,
   setWebhook,
   getBase64FromMediaMessage,

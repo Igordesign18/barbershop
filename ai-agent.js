@@ -23,6 +23,7 @@ const DEFAULT_AI_CONFIG = {
   enabled: false,
   assistant_name: 'Assistente Virtual',
   extra_instructions: '',
+  poll_enabled: false,        // enquetes (PRO) - aparecem em qualquer celular
   interactive_enabled: false, // botoes e listas (PRO)
   carousel_enabled: false     // carrossel com fotos de profissionais/servicos (PRO, so Evolution GO)
 };
@@ -351,6 +352,25 @@ const INTERACTIVE_TOOLS = {
       }
     }
   },
+  enviar_enquete: {
+    type: 'function',
+    function: {
+      name: 'enviar_enquete',
+      description: 'Envia uma ENQUETE do WhatsApp (aparece em qualquer celular) para o cliente escolher tocando. Use para profissional, serviços (pode marcar vários), horários e confirmação. O voto volta como mensagem.',
+      parameters: {
+        type: 'object',
+        properties: {
+          pergunta: { type: 'string', description: 'Pergunta curta, ex: "Quais serviços você quer?"' },
+          opcoes: {
+            type: 'array', minItems: 2, maxItems: 12,
+            items: { type: 'object', properties: { id: { type: 'string' }, titulo: { type: 'string', description: 'Texto da opção, ex: "Corte — R$ 25,00"' } }, required: ['id', 'titulo'] }
+          },
+          multipla: { type: 'boolean', description: 'true = pode marcar várias opções (ex: serviços). false = só uma (ex: horário, confirmação).' }
+        },
+        required: ['pergunta', 'opcoes']
+      }
+    }
+  },
   enviar_carrossel: {
     type: 'function',
     function: {
@@ -372,6 +392,7 @@ function interactiveFlags(ctx) {
   const config = getAiConfig(ctx.tenant.id);
   const allowed = isProTenant(ctx.tenant) && ctx.instance; // somente plano PRO
   return {
+    poll: !!(allowed && config.poll_enabled && waProvider.supports(ctx.instance, 'poll')),
     buttons: !!(allowed && config.interactive_enabled && waProvider.supports(ctx.instance, 'buttons')),
     list: !!(allowed && config.interactive_enabled && waProvider.supports(ctx.instance, 'list')),
     carousel: !!(allowed && config.carousel_enabled && waProvider.supports(ctx.instance, 'carousel'))
@@ -381,6 +402,7 @@ function interactiveFlags(ctx) {
 function toolsFor(ctx) {
   const flags = interactiveFlags(ctx);
   const tools = [...TOOLS];
+  if (flags.poll) tools.push(INTERACTIVE_TOOLS.enviar_enquete);
   if (flags.buttons) tools.push(INTERACTIVE_TOOLS.enviar_botoes);
   if (flags.list) tools.push(INTERACTIVE_TOOLS.enviar_lista);
   if (flags.carousel) tools.push(INTERACTIVE_TOOLS.enviar_carrossel);
@@ -424,6 +446,38 @@ async function runInteractiveTool(name, args, ctx) {
       instrucao: 'As opções JÁ foram enviadas ao cliente. Não repita as opções. Se não tiver mais nada a dizer agora, responda somente com "-" e aguarde a escolha.'
     };
   };
+
+  if (name === 'enviar_enquete') {
+    if (!flags.poll) return { erro: 'Enquetes desativadas. Envie as opções em texto numerado.' };
+    const seen = new Set();
+    const opcoes = (args.opcoes || []).slice(0, 12)
+      .map(o => ({ id: cut(o.id, 60), titulo: cut(o.titulo, 100) }))
+      .filter(o => o.titulo && !seen.has(o.titulo) && seen.add(o.titulo));
+    if (opcoes.length < 2) return { erro: 'A enquete precisa de pelo menos 2 opções diferentes. Para uma opção só, apenas informe em texto.' };
+    const pergunta = cut(String(args.pergunta || texto), 255);
+    const multipla = !!args.multipla;
+
+    try {
+      const pollId = await waProvider.sendPoll(instance, replyTo, {
+        question: pergunta,
+        options: opcoes.map(o => o.titulo),
+        maxAnswer: multipla ? opcoes.length : 1
+      });
+      if (pollId) {
+        db.prepare(`
+          INSERT INTO ai_polls (tenant_id, poll_id, chat_id, question, options) VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT(tenant_id, poll_id) DO UPDATE SET options = excluded.options, question = excluded.question
+        `).run(tenant.id, pollId, ctx.conv.chat_id, pergunta, JSON.stringify(opcoes));
+      }
+      const result = await done('enquete');
+      if (multipla) result.instrucao += ' O cliente pode marcar várias; quando o voto chegar, confirme o que ele marcou.';
+      return result;
+    } catch (err) {
+      console.error(`[ia] enquete falhou (tenant ${tenant.id}), enviando texto:`, err.message);
+      await waProvider.sendText(instance, replyTo, numberedFallback(pergunta, opcoes));
+      return done('texto');
+    }
+  }
 
   if (name === 'enviar_botoes') {
     if (!flags.buttons) return { erro: 'Botões desativados. Envie as opções em texto numerado.' };
@@ -507,14 +561,14 @@ async function runTool(name, args, ctx) {
     case 'listar_profissionais': {
       const barbers = db.prepare('SELECT id, name, specialty FROM barbers WHERE tenant_id = ? ORDER BY id').all(tenantId);
       const flagsB = interactiveFlags(ctx);
-      const hintB = barbers.length > 1 ? (flagsB.carousel ? 'Agora mostre com enviar_carrossel tipo "profissionais".' : flagsB.list ? 'Agora mostre com enviar_lista.' : null) : null;
+      const hintB = barbers.length > 1 ? (flagsB.poll ? 'Agora mostre com enviar_enquete (multipla=false).' : flagsB.carousel ? 'Agora mostre com enviar_carrossel tipo "profissionais".' : flagsB.list ? 'Agora mostre com enviar_lista.' : null) : null;
       return { profissionais: barbers.map(b => ({ id: b.id, nome: b.name, especialidade: b.specialty || null })), ...(hintB ? { proximo_passo: hintB } : {}) };
     }
 
     case 'listar_servicos': {
       const services = db.prepare('SELECT id, name, price, duration FROM services WHERE tenant_id = ? ORDER BY id').all(tenantId);
       const flagsS = interactiveFlags(ctx);
-      const hintS = flagsS.carousel ? 'Agora mostre com enviar_carrossel tipo "servicos".' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>").' : null;
+      const hintS = flagsS.poll ? 'Agora mostre com enviar_enquete (multipla=true, ids "servico_<id>").' : flagsS.carousel ? 'Agora mostre com enviar_carrossel tipo "servicos".' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>").' : null;
       return { servicos: services.map(s => ({ id: s.id, nome: s.name, preco: `R$ ${formatCurrencyBRL(s.price)}`, duracao_min: s.duration })), ...(hintS ? { proximo_passo: hintS } : {}) };
     }
 
@@ -528,7 +582,8 @@ async function runTool(name, args, ctx) {
       const duration = loaded.services.reduce((sum, s) => sum + s.duration, 0);
       const slots = computeFreeSlots(tenantId, barber.id, args.data, duration);
       const result = { profissional: barber.name, data: args.data, duracao_total_min: duration, horarios_livres: slots };
-      if (slots.length && interactiveFlags(ctx).list) result.proximo_passo = 'Mostre até 10 horários com enviar_lista (ids "hora_HH:MM"), priorizando os mais próximos do que o cliente pediu.';
+      if (slots.length && interactiveFlags(ctx).poll) result.proximo_passo = 'Mostre até 12 horários com enviar_enquete (multipla=false, ids "hora_HH:MM"), priorizando os mais próximos do que o cliente pediu.';
+      else if (slots.length && interactiveFlags(ctx).list) result.proximo_passo = 'Mostre até 10 horários com enviar_lista (ids "hora_HH:MM"), priorizando os mais próximos do que o cliente pediu.';
 
       if (!slots.length) {
         const alternatives = [];
@@ -609,6 +664,7 @@ async function runTool(name, args, ctx) {
       return { agendamentos: rows.map(r => ({ data: formatDateBR(r.booking_date), hora: r.booking_time.slice(0, 5), servico: r.servico, profissional: r.profissional })) };
     }
 
+    case 'enviar_enquete':
     case 'enviar_botoes':
     case 'enviar_lista':
     case 'enviar_carrossel':
@@ -623,8 +679,9 @@ async function runTool(name, args, ctx) {
 
 function interactivePromptBlock(ctx) {
   const flags = interactiveFlags(ctx);
-  if (!flags.buttons && !flags.list && !flags.carousel) return '';
+  if (!flags.poll && !flags.buttons && !flags.list && !flags.carousel) return '';
   const lines = ['OPÇÕES INTERATIVAS (use sempre que fizer sentido, em vez de lista em texto):'];
+  if (flags.poll) lines.push('- enviar_enquete: enquete do WhatsApp (formato preferido). O voto chega como "[cliente votou na enquete ...] opções (ids: ...)".');
   if (flags.carousel) lines.push('- enviar_carrossel: para mostrar profissionais ou serviços com foto (ids "profissional_<id>" / "servico_<id>").');
   if (flags.list) lines.push('- enviar_lista: para horários livres (até 10 por vez), serviços ou profissionais. Use ids como "hora_14:30", "servico_3", "profissional_2".');
   if (flags.buttons) lines.push('- enviar_botoes: para escolhas curtas de até 3 opções, como confirmar o resumo (ids "confirmar_sim" / "confirmar_nao") ou "Agendar por aqui" / "Receber o link".');
@@ -636,6 +693,16 @@ function interactivePromptBlock(ctx) {
 // Como mostrar cada etapa: com os recursos interativos ligados, a IA e OBRIGADA a usa-los
 function stepInstructions(ctx) {
   const f = interactiveFlags(ctx);
+  // Enquete tem prioridade: e o unico formato de escolha que aparece em qualquer celular
+  if (f.poll) {
+    return {
+      first: ' Faça isso com enviar_enquete (opções "Agendar por aqui" id "agendar_aqui" e "Receber o link" id "receber_link"), junto com o link na pergunta ou em texto antes.',
+      barber: ' Com mais de um profissional, mostre OBRIGATORIAMENTE com enviar_enquete (multipla=false, ids "profissional_<id>").',
+      service: ' Mostre OBRIGATORIAMENTE com enviar_enquete (multipla=true, ids "servico_<id>", título com nome e preço), para o cliente marcar todos que quiser de uma vez.',
+      time: ' Mostre OBRIGATORIAMENTE com enviar_enquete (multipla=false, até 12 horários, ids "hora_HH:MM").',
+      confirm: ' Peça a confirmação OBRIGATORIAMENTE com enviar_enquete (multipla=false: "Sim, confirmar" id "confirmar_sim" / "Não, quero mudar" id "confirmar_nao").'
+    };
+  }
   const choose = (carousel, list, text) => carousel && f.carousel ? carousel : list && f.list ? list : text;
   return {
     first: f.buttons ? ' Faça isso com enviar_botoes (opções "Agendar por aqui" id "agendar_aqui" e "Receber o link" id "receber_link").' : '',
@@ -794,14 +861,17 @@ async function processBatch({ tenantId, chatId, replyTo, senderPhone, pushName, 
 
 function queueMessage(payload) {
   const key = `${payload.tenantId}:${payload.chatId}`;
-  const buf = buffers.get(key) || { texts: [] };
-  buf.texts.push(payload.text);
+  const buf = buffers.get(key) || { texts: [], polls: new Map() };
+  // Voto de enquete: o cliente pode marcar/desmarcar varias vezes seguidas; vale so o ultimo estado
+  if (payload.pollKey) buf.polls.set(payload.pollKey, payload.text);
+  else buf.texts.push(payload.text);
   buf.payload = payload;
   clearTimeout(buf.timer);
   buf.timer = setTimeout(() => {
     buffers.delete(key);
-    enqueue(key, () => processBatch({ ...buf.payload, texts: buf.texts }));
-  }, DEBOUNCE_MS);
+    const texts = [...buf.texts, ...buf.polls.values()];
+    enqueue(key, () => processBatch({ ...buf.payload, texts }));
+  }, buf.polls.size ? DEBOUNCE_MS * 2 : DEBOUNCE_MS); // espera um pouco mais em enquete de multipla escolha
   buffers.set(key, buf);
 }
 
@@ -817,6 +887,18 @@ function alreadySeen(id) {
     for (const [k, ts] of seenMessageIds) if (ts < limit) seenMessageIds.delete(k);
   }
   return false;
+}
+
+// Converte o voto em texto para a IA: '[cliente votou na enquete "X"] Corte, Barba (ids: servico_1, servico_2)'
+async function pollVoteToText(tenant, instance, pollVote) {
+  if (!pollVote.pollId) return null;
+  const poll = db.prepare('SELECT * FROM ai_polls WHERE tenant_id = ? AND poll_id = ?').get(tenant.id, pollVote.pollId);
+  if (!poll) return null; // enquete que nao foi a IA que mandou
+  const options = JSON.parse(poll.options || '[]');
+  const names = await waProvider.resolvePollVote(instance, pollVote, options.map(o => o.titulo));
+  if (!names || !names.length) return null; // desmarcou tudo ou voto ilegivel
+  const chosen = options.filter(o => names.includes(o.titulo));
+  return `[cliente votou na enquete "${poll.question}"] ${chosen.map(o => o.titulo).join(', ')} (ids: ${chosen.map(o => o.id).join(', ')})`;
 }
 
 // Recebe o webhook dos dois motores (Evolution API v2 e Evolution GO).
@@ -845,6 +927,16 @@ async function handleWebhookEvent(instanceName, body) {
     const senderPhone = msg.senderPhone;
     const replyTo = senderPhone || chatId;
     let text = msg.text;
+
+    // Voto em enquete enviada pela IA
+    if (msg.pollVote) {
+      const voteText = await pollVoteToText(tenant, instance, msg.pollVote).catch(err => {
+        console.error(`[ia] falha ao ler voto da enquete (tenant ${tenant.id}):`, err.message);
+        return null;
+      });
+      if (voteText) queueMessage({ tenantId: tenant.id, chatId, replyTo, senderPhone, pushName: msg.pushName, text: voteText, pollKey: msg.pollVote.pollId });
+      continue;
+    }
 
     if (!text && msg.hasAudio) {
       if (!openai.isConfigured()) continue;

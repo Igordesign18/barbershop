@@ -2461,6 +2461,7 @@
                 document.getElementById('aiEnabled').checked = !!data.config.enabled;
                 document.getElementById('aiAssistantName').value = data.config.assistant_name || '';
                 document.getElementById('aiExtraInstructions').value = data.config.extra_instructions || '';
+                document.getElementById('aiPollEnabled').checked = !!data.config.poll_enabled;
                 document.getElementById('aiInteractiveEnabled').checked = !!data.config.interactive_enabled;
                 const carousel = document.getElementById('aiCarouselEnabled');
                 const isGo = data.provider === 'evogo';
@@ -2485,6 +2486,7 @@
                 enabled: document.getElementById('aiEnabled').checked,
                 assistant_name: document.getElementById('aiAssistantName').value.trim(),
                 extra_instructions: document.getElementById('aiExtraInstructions').value.trim(),
+                poll_enabled: document.getElementById('aiPollEnabled').checked,
                 interactive_enabled: document.getElementById('aiInteractiveEnabled').checked,
                 carousel_enabled: document.getElementById('aiCarouselEnabled').checked
             };

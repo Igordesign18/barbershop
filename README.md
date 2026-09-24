@@ -176,3 +176,13 @@ avise que eu ajusto `evolution.js`.
   URL pública (`PUBLIC_BASE_URL`), porque o servidor GO baixa a foto para montar o card.
 - Se o motor devolver erro ao enviar (ex.: Evolution 2.3.7), a IA manda as mesmas opções em texto
   numerado automaticamente. O clique do cliente chega para a IA com o id da opção escolhida.
+
+## Enquetes (plano PRO) — recomendado
+
+- Card do atendente IA → "Usar enquetes para o cliente escolher".
+- A IA manda enquete para: primeiro contato (agendar aqui / receber link), profissional,
+  serviços (marcar vários), horários (até 12) e confirmação.
+- Enquete é recurso normal do WhatsApp: aparece em qualquer celular (diferente de botões/listas).
+- Voto: Evolution v2 já entrega o nome da opção; Evolution GO grava o voto decifrado e o
+  BarberSync consulta `/polls/:id/results` (precisa do Postgres do GO configurado).
+- Com enquete ligada, ela tem prioridade sobre botões, listas e carrossel.
