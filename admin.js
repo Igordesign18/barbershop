@@ -1942,6 +1942,92 @@
             document.getElementById('editPackageModal').classList.add('hidden');
         }
 
+        // Modal "Novo agendamento" (agenda do Admin)
+        async function openNewBookingModal() {
+            const form = document.getElementById('newBookingForm');
+            form.reset();
+            document.getElementById('newBookingDate').value = new Date().toISOString().slice(0, 10);
+
+            const itemSelect = document.getElementById('newBookingItem');
+            const barberSelect = document.getElementById('newBookingBarber');
+            itemSelect.innerHTML = '<option value="">Carregando...</option>';
+            barberSelect.innerHTML = '<option value="">Sem preferência</option>';
+
+            try {
+                const [services, packages, barbers, clients] = await Promise.all([
+                    apiFetch('/services'),
+                    apiFetch('/packages'),
+                    apiFetch('/barbers'),
+                    apiFetch('/clients').catch(() => [])
+                ]);
+
+                const options = ['<option value="">Selecione...</option>'];
+                if (services?.length) {
+                    options.push('<optgroup label="Serviços">' + services.map(s =>
+                        `<option value="s-${s.id}">${s.name} (R$ ${Number(s.price).toFixed(2)})</option>`
+                    ).join('') + '</optgroup>');
+                }
+                const activePackages = (packages || []).filter(p => p.active);
+                if (activePackages.length) {
+                    options.push('<optgroup label="Pacotes">' + activePackages.map(p =>
+                        `<option value="p-${p.id}">${p.name} (R$ ${Number(p.price).toFixed(2)})</option>`
+                    ).join('') + '</optgroup>');
+                }
+                itemSelect.innerHTML = options.join('');
+
+                if (barbers?.length) {
+                    barberSelect.innerHTML = '<option value="">Sem preferência</option>' +
+                        barbers.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+                }
+
+                const clientsByPhone = {};
+                document.getElementById('newBookingClientsList').innerHTML = (clients || []).map(c => {
+                    if (c.phone) clientsByPhone[c.phone] = c.full_name || '';
+                    return `<option value="${c.phone || ''}">${c.full_name || ''}</option>`;
+                }).join('');
+
+                const phoneInput = document.getElementById('newBookingPhone');
+                phoneInput.oninput = () => {
+                    const match = clientsByPhone[phoneInput.value];
+                    if (match) document.getElementById('newBookingName').value = match;
+                };
+            } catch (error) {
+                showNotification('Erro ao carregar dados do agendamento: ' + error.message, 'error');
+            }
+
+            document.getElementById('newBookingModal').classList.remove('hidden');
+        }
+
+        function closeNewBookingModal() {
+            document.getElementById('newBookingModal').classList.add('hidden');
+        }
+
+        document.getElementById('newBookingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const itemValue = document.getElementById('newBookingItem').value;
+            if (!itemValue) { showNotification('Selecione um serviço ou pacote!', 'error'); return; }
+            const [kind, rawId] = itemValue.split('-');
+
+            const payload = {
+                customer_phone: document.getElementById('newBookingPhone').value,
+                customer_full_name: document.getElementById('newBookingName').value,
+                barber_id: document.getElementById('newBookingBarber').value || null,
+                booking_date: document.getElementById('newBookingDate').value,
+                booking_time: document.getElementById('newBookingTime').value
+            };
+            if (kind === 'p') payload.package_id = rawId; else payload.service_id = rawId;
+
+            try {
+                await apiFetch('/bookings', { method: 'POST', body: JSON.stringify(payload) });
+                showNotification('Agendamento criado com sucesso!', 'success');
+                closeNewBookingModal();
+                loadBookings();
+            } catch (error) {
+                showNotification('Erro ao criar agendamento: ' + error.message, 'error');
+            }
+        });
+
         document.getElementById('editPackageForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('editPackageId').value;
