@@ -149,7 +149,6 @@ const TITLES = {
   cancelado: '❌ *Agendamento cancelado pelo cliente*',
   reagendado: '🔄 *Agendamento reagendado pelo cliente*',
   confirmado: '✅ *Cliente confirmou presença*',
-  pedido_cancelamento: '🚫 *Pedido de cancelamento*',
   cancelado_gestor: '❌ *Cancelamento confirmado*',
   avaliacao_baixa: '⚠️ *Avaliação baixa recebida*'
 };
@@ -174,13 +173,10 @@ function buildMessage(tenant, b, kind, extra = {}) {
   lines.push(`⏱️ *Duração:* ${b.duracao} min`);
   lines.push(`💰 *Valor:* R$ ${brl(valor)}${b.reward_label ? ` (🎁 ${b.reward_label})` : ''}`);
   if (kind === 'novo') lines.push(`📍 *Origem:* ${ORIGINS[b.source] || ORIGINS.link}`);
+  if (kind === 'cancelado' && extra.reason) lines.push(`📝 *Motivo:* ${extra.reason}`);
   if (kind === 'avaliacao_baixa') {
     lines.push(`⭐ *Nota:* ${'⭐'.repeat(extra.rating || 1)} (${extra.rating || '-'} de 5)`);
     lines.push('', '👉 Vale chamar esse cliente para entender o que aconteceu.');
-  }
-  if (kind === 'pedido_cancelamento') {
-    lines.push(`📝 *Motivo:* ${extra.reason || 'não informado'}`);
-    lines.push('', '👉 O cliente pediu pelo site. Abra o painel para *confirmar o cancelamento* e liberar o horário.');
   }
   return lines.join('\n');
 }

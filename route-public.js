@@ -152,7 +152,7 @@ router.get('/:slug/bookings/lookup', (req, res) => {
 
   const normalizedPhone = normalizePhone(phone);
   const rows = db.prepare(`
-    SELECT b.id, b.booking_date, b.booking_time, b.status, b.cancel_requested_at,
+    SELECT b.id, b.booking_date, b.booking_time, b.status,
            COALESCE(b.item_name, s.name) AS service_name, s.price AS service_price,
            br.name AS barber_name,
            r.id AS review_id
@@ -170,9 +170,8 @@ router.get('/:slug/bookings/lookup', (req, res) => {
     ...row,
     can_review: row.status === 'completed' && !row.review_id,
     has_review: !!row.review_id,
-    // Pode pedir cancelamento: agendamento confirmado, ainda por acontecer e sem pedido anterior
-    can_cancel: row.status === 'confirmed' && !row.cancel_requested_at && isFuture(row, now),
-    cancel_requested: row.status === 'confirmed' && !!row.cancel_requested_at
+    // Pode cancelar: agendamento confirmado e ainda por acontecer
+    can_cancel: row.status === 'confirmed' && isFuture(row, now)
   })));
 });
 
@@ -187,8 +186,8 @@ function isFuture(booking, now) {
   return booking.booking_date > now.date || (booking.booking_date === now.date && String(booking.booking_time).slice(0, 5) > now.time);
 }
 
-// Cliente pede o cancelamento pelo site. Nao cancela na hora: o gestor recebe no WhatsApp
-// e confirma no painel (evita que alguem cancele o horario de outra pessoa so sabendo o telefone).
+// Cliente cancela pelo site. Cancela na hora e libera o horario; o gestor so recebe o aviso
+// no WhatsApp (numero central do super admin), sem precisar confirmar nada no painel.
 router.post('/:slug/bookings/:id/cancel-request', (req, res) => {
   const { phone, reason } = req.body || {};
   if (!phone) return res.status(400).json({ error: 'Informe o telefone' });
@@ -198,13 +197,12 @@ router.post('/:slug/bookings/:id/cancel-request', (req, res) => {
   if (normalizePhone(phone) !== booking.customer_phone) return res.status(403).json({ error: 'Este agendamento não pertence a este telefone' });
   if (booking.status !== 'confirmed') return res.status(400).json({ error: 'Este agendamento não pode mais ser cancelado' });
   if (!isFuture(booking, nowBrasilia())) return res.status(400).json({ error: 'Este horário já passou' });
-  if (booking.cancel_requested_at) return res.json({ ok: true, already: true });
 
   const motivo = String(reason || '').trim().slice(0, 300) || null;
-  db.prepare("UPDATE bookings SET cancel_requested_at = datetime('now'), cancel_reason = ? WHERE id = ?").run(motivo, booking.id);
+  db.prepare("UPDATE bookings SET status = 'cancelled', cancelled_by = 'cliente_site', cancel_reason = ? WHERE id = ?").run(motivo, booking.id);
 
-  try { require('./events').broadcastBookingChange(req.tenantId, 'UPDATE', { id: booking.id, status: booking.status }); } catch (_) {}
-  require('./gestor-notify').notifyBooking(req.tenantId, booking.id, 'pedido_cancelamento', { reason: motivo });
+  try { require('./events').broadcastBookingChange(req.tenantId, 'UPDATE', { id: booking.id, status: 'cancelled' }); } catch (_) {}
+  require('./gestor-notify').notifyBooking(req.tenantId, booking.id, 'cancelado', { reason: motivo });
 
   res.json({ ok: true });
 });

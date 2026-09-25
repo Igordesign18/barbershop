@@ -197,7 +197,7 @@ router.patch('/:id/status', (req, res) => {
   const allowed = ['confirmed', 'completed', 'cancelled', 'pending'];
   if (!allowed.includes(status)) return res.status(400).json({ error: 'Status invalido' });
 
-  const before = db.prepare('SELECT status, user_id, service_id, item_price, discount_applied, cancel_requested_at, customer_full_name, customer_phone, booking_date, booking_time FROM bookings WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
+  const before = db.prepare('SELECT status, user_id, service_id, item_price, discount_applied, customer_full_name, customer_phone, booking_date, booking_time FROM bookings WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
   if (!before) return res.status(404).json({ error: 'Agendamento nao encontrado' });
 
   const info = db.prepare('UPDATE bookings SET status = ? WHERE id = ? AND tenant_id = ?').run(status, req.params.id, req.tenantId);
@@ -219,35 +219,11 @@ router.patch('/:id/status', (req, res) => {
     db.prepare("UPDATE bookings SET completed_at = datetime('now'), followup_sent = 0, review_requested_at = NULL WHERE id = ?").run(req.params.id);
   }
 
-  // Gestor confirmou um cancelamento que o cliente pediu pelo site: avisa o cliente
-  if (status === 'cancelled' && before.status !== 'cancelled' && before.cancel_requested_at) {
-    db.prepare("UPDATE bookings SET cancelled_by = 'cliente_site' WHERE id = ?").run(req.params.id);
-    notifyClientCancelConfirmed(req.tenantId, before);
-  }
-
   const row = db.prepare(JOIN_SELECT + ' AND b.id = ?').get(req.tenantId, req.params.id);
   const booking = toBookingJson(row);
   broadcastBookingChange(req.tenantId, 'UPDATE', booking);
   res.json(booking);
 });
-
-// Mensagem ao cliente pelo WhatsApp da barbearia (se estiver conectado). Nunca quebra a rota.
-function notifyClientCancelConfirmed(tenantId, b) {
-  setImmediate(async () => {
-    try {
-      const waProvider = require('./wa-provider');
-      const instance = waProvider.getInstance(tenantId);
-      if (!instance || instance.status !== 'connected' || !waProvider.isConfigured(instance.provider) || !b.customer_phone) return;
-      const tenant = db.prepare('SELECT name FROM tenants WHERE id = ?').get(tenantId);
-      const [y, m, d] = String(b.booking_date).split('-');
-      const first = String(b.customer_full_name || '').split(' ')[0];
-      await waProvider.sendText(instance, b.customer_phone,
-        `❌ Olá${first ? `, ${first}` : ''}! Seu cancelamento do horário de *${d}/${m}/${y} às ${String(b.booking_time).slice(0, 5)}* na *${tenant?.name || 'barbearia'}* foi confirmado.\n\nQuando quiser, é só agendar de novo. 💈`);
-    } catch (err) {
-      console.error('[cancelamento] aviso ao cliente falhou:', err.message);
-    }
-  });
-}
 
 router.delete('/:id', (req, res) => {
   const row = db.prepare(JOIN_SELECT + ' AND b.id = ?').get(req.tenantId, req.params.id);

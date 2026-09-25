@@ -1486,15 +1486,9 @@
                                     ${booking.client_confirmed_at && booking.status === 'confirmed' ? `<p style="color:#25d366;"><i class="fas fa-check-double" aria-hidden="true"></i> Cliente confirmou presença</p>` : ''}
                                     ${booking.rescheduled_at && booking.status === 'confirmed' ? `<p style="color:var(--text-muted);"><i class="fas fa-rotate" aria-hidden="true"></i> Reagendado pelo cliente no WhatsApp</p>` : ''}
                                     ${booking.cancelled_by === 'cliente_whatsapp' && booking.status === 'cancelled' ? `<p style="color:#e57373;"><i class="fas fa-ban" aria-hidden="true"></i> Cancelado pelo cliente no WhatsApp</p>` : ''}
-                                    ${booking.cancelled_by === 'cliente_site' && booking.status === 'cancelled' ? `<p style="color:#e57373;"><i class="fas fa-ban" aria-hidden="true"></i> Cancelado a pedido do cliente (site)</p>` : ''}
-                                    ${booking.cancel_requested_at && booking.status === 'confirmed' ? `
-                                    <div style="margin-top:8px; padding:10px 12px; border-radius:8px; background:rgba(229,115,115,0.12); border:1px solid rgba(229,115,115,0.45);">
-                                        <p style="color:#e57373; font-weight:600;"><i class="fas fa-hand" aria-hidden="true"></i> Cliente pediu cancelamento pelo site</p>
-                                        ${booking.cancel_reason ? `<p style="font-size:13px; margin-top:4px;">Motivo: ${escapeCancelReason(booking.cancel_reason)}</p>` : ''}
-                                        <button class="btn" style="margin-top:8px; padding:7px 12px; background:#c0392b;" onclick="updateBookingStatus(${booking.id}, 'cancelled')">
-                                            <i class="fas fa-ban" aria-hidden="true"></i> Confirmar cancelamento
-                                        </button>
-                                    </div>` : ''}
+                                    ${booking.cancelled_by === 'cliente_site' && booking.status === 'cancelled' ? `
+                                    <p style="color:#e57373;"><i class="fas fa-ban" aria-hidden="true"></i> Cancelado pelo cliente no site</p>
+                                    ${booking.cancel_reason ? `<p style="font-size:13px; color:#e57373;">Motivo: ${escapeCancelReason(booking.cancel_reason)}</p>` : ''}` : ''}
                                 </div>
                                 <span class="booking-status status-${booking.status}">
                                     ${booking.status === 'confirmed' ? 'Confirmado' : 
@@ -1611,14 +1605,13 @@
             const firstWeekday = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();
             const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
 
-            // Contagem por dia (sem cancelados) e dias com pedido de cancelamento
+            // Contagem por dia (sem cancelados)
             const byDay = {};
             for (const b of agenda.monthData) {
                 const d = b.booking_date;
-                byDay[d] = byDay[d] || { count: 0, cancelRequest: false };
+                byDay[d] = byDay[d] || { count: 0 };
                 const matches = agenda.statusFilter === 'all' ? b.status !== 'cancelled' : b.status === agenda.statusFilter;
                 if (matches) byDay[d].count++;
-                if (b.cancel_requested_at && b.status === 'confirmed') byDay[d].cancelRequest = true;
             }
             const totalMonth = Object.values(byDay).reduce((sum, d) => sum + d.count, 0);
 
@@ -1635,7 +1628,6 @@
                     <button class="${classes.join(' ')}" onclick="agendaSelectDay('${date}')" aria-label="${day} de ${AGENDA_MONTHS[m - 1]}: ${info ? info.count : 0} agendamentos">
                         <span class="agenda-day">${day}</span>
                         ${info && info.count ? `<span class="agenda-count">${info.count}</span>` : ''}
-                        ${info && info.cancelRequest ? '<span class="agenda-alert" title="Pedido de cancelamento"></span>' : ''}
                     </button>`;
             }
 

@@ -584,12 +584,10 @@
                             &nbsp;•&nbsp; <i class="fas fa-clock" aria-hidden="true"></i> ${b.booking_time.substring(0,5)}
                             ${b.barber_name ? `&nbsp;•&nbsp; <i class="fas fa-user-tie" aria-hidden="true"></i> ${b.barber_name}` : ''}
                         </p>
-                        ${b.cancel_requested ? `
-                            <p style="margin-top:8px; font-size:12.5px; color:var(--red);"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Cancelamento solicitado — aguardando a confirmação da barbearia</p>
-                        ` : b.can_cancel ? `
+                        ${b.can_cancel ? `
                             <div id="cancelBox-${b.id}">
                                 <button class="btn" style="margin-top:10px; padding:9px; background:transparent; border:1px solid var(--red); color:var(--red);" onclick="openCancelRequest(${b.id})">
-                                    <i class="fas fa-ban" aria-hidden="true"></i> Solicitar cancelamento
+                                    <i class="fas fa-ban" aria-hidden="true"></i> Cancelar agendamento
                                 </button>
                             </div>
                         ` : ''}
@@ -671,16 +669,16 @@
             }
         }
 
-        // ==================== Pedido de cancelamento (o gestor confirma no painel) ====================
+        // ==================== Cancelamento (instantâneo — a barbearia só recebe o aviso) ====================
         function openCancelRequest(bookingId) {
             const box = document.getElementById(`cancelBox-${bookingId}`);
             if (!box) return;
             box.innerHTML = `
                 <div style="margin-top:10px; padding:12px; border:1px solid var(--red); border-radius:10px;">
-                    <p style="font-size:13px; margin-bottom:8px;">Quer mesmo cancelar? A barbearia recebe seu pedido no WhatsApp e confirma o cancelamento.</p>
+                    <p style="font-size:13px; margin-bottom:8px;">Quer mesmo cancelar? O horário é liberado na hora e a barbearia é avisada no WhatsApp.</p>
                     <textarea id="cancelReason-${bookingId}" rows="2" maxlength="300" placeholder="Motivo (opcional)" style="width:100%; padding:10px; border-radius:8px; background:var(--surface-raised); color:var(--ivory); border:1px solid var(--hairline); font-family:inherit; resize:vertical;"></textarea>
                     <div style="display:flex; gap:8px; margin-top:8px;">
-                        <button class="btn" style="padding:9px; background:var(--red); border-color:var(--red);" onclick="sendCancelRequest(${bookingId})">Confirmar pedido</button>
+                        <button class="btn" style="padding:9px; background:var(--red); border-color:var(--red);" onclick="sendCancelRequest(${bookingId})">Confirmar cancelamento</button>
                         <button class="btn" style="padding:9px; background:transparent; border:1px solid var(--hairline); color:var(--ivory);" onclick="searchMyBookings()">Voltar</button>
                     </div>
                 </div>`;
@@ -695,9 +693,9 @@
                     body: JSON.stringify({ phone: lookupPhoneCache, reason })
                 });
                 const data = await response.json().catch(() => ({}));
-                if (!response.ok) throw new Error(data.error || 'Não foi possível enviar o pedido');
+                if (!response.ok) throw new Error(data.error || 'Não foi possível cancelar');
                 await searchMyBookings();
-                alert('Pedido de cancelamento enviado! A barbearia vai confirmar e você recebe o aviso no WhatsApp.');
+                alert('Agendamento cancelado! A barbearia foi avisada no WhatsApp.');
             } catch (error) {
                 alert(error.message);
             }
