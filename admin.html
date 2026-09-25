@@ -8,19 +8,20 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/admin.css">
+    <link rel="stylesheet" href="/admin-theme.css">
 </head>
 <body>
     <header>
         <div class="header-content">
             <div class="logo">
                 <div class="barber-photo" aria-label="Ícone da barbearia">
-                    <i class="fas fa-crown" aria-hidden="true"></i>
+                    <i class="fas fa-scissors" aria-hidden="true"></i>
                 </div>
                 <div>
-                    <h1>Painel <span class="admin-badge">GESTOR</span></h1>
+                    <h1 id="panelShopName">Painel <span class="admin-badge">Gestor</span></h1>
                     <p style="color: var(--text-muted); font-size: 13px;">Área administrativa da sua barbearia</p>
                 </div>
             </div>
@@ -85,7 +86,7 @@
                     <i class="fas fa-sign-in-alt" aria-hidden="true"></i> Entrar
                 </button>
             </form>
-            <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 2px solid #333;">
+            <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--line, #DDE3EA);">
                 <a href="index.html" style="color: var(--lime); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; transition: all 0.3s;">
                     <i class="fas fa-user-circle" style="font-size: 18px;" aria-hidden="true"></i>
                     <span>Entrar como Cliente</span>
@@ -96,6 +97,23 @@
 
     <div class="main-content" id="mainContent">
         <div class="dashboard-container tab-panel" id="dashboardContainer" data-tab="dashboard">
+            <section class="today-panel" aria-label="Resumo de hoje">
+                <div class="today-hero">
+                    <h2 id="todayGreeting">Olá!</h2>
+                    <div class="today-date" id="todayDate"></div>
+                    <div class="today-kpis">
+                        <div class="today-kpi"><strong id="todayTotal">0</strong><span>agendados hoje</span></div>
+                        <div class="today-kpi"><strong id="todayRemaining">0</strong><span>ainda por atender</span></div>
+                        <div class="today-kpi"><strong id="todayDone">0</strong><span>concluídos</span></div>
+                        <div class="today-kpi"><strong id="todayRevenue">R$ 0</strong><span>faturado hoje</span></div>
+                    </div>
+                </div>
+                <div class="today-next">
+                    <h3>Próximos de hoje <button type="button" onclick="switchTab('agendamentos')">Ver agenda</button></h3>
+                    <div id="todayNextList"><div class="today-empty">Carregando...</div></div>
+                </div>
+            </section>
+
             <div class="period-selector" role="tablist" aria-label="Seletor de período">
                 <button class="period-btn active" onclick="changePeriod('today')" role="tab" aria-selected="true">
                     <i class="fas fa-calendar-day" aria-hidden="true"></i> Hoje
@@ -592,17 +610,17 @@
                 </div>
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button class="btn" onclick="saveGestorNotify()"><i class="fas fa-save" aria-hidden="true"></i> Salvar</button>
-                    <button class="btn" onclick="testGestorNotify()" style="background:transparent; border:1px solid var(--primary-color, #c6a15b); color: var(--text);"><i class="fas fa-paper-plane" aria-hidden="true"></i> Enviar teste</button>
+                    <button class="btn-secondary btn" onclick="testGestorNotify()"><i class="fas fa-paper-plane" aria-hidden="true"></i> Enviar teste</button>
                 </div>
             </div>
 
             <div class="card full-width tab-panel" id="aiCard" data-tab="marketing" data-subtab="ia">
-                <h2><i class="fas fa-robot" aria-hidden="true"></i> Atendente IA no WhatsApp <span id="aiPlanBadge" style="font-size:11px; padding:3px 10px; border-radius:100px; margin-left:6px; background: linear-gradient(135deg, #c6a15b, #e7cf93); color:#1a140c; font-weight:700;">PRO</span></h2>
+                <h2><i class="fas fa-robot" aria-hidden="true"></i> Atendente IA no WhatsApp <span id="aiPlanBadge" style="font-size:11px; padding:3px 10px; border-radius:100px; margin-left:6px; background: var(--pole-red-soft, #FBEAEC); color: var(--pole-red, #C8102E); font-weight:700;">PRO</span></h2>
                 <p style="color: var(--text-muted); margin-bottom: 15px;">
                     Quando o cliente chamar no WhatsApp da barbearia, a IA oferece o link de agendamento ou agenda ali mesmo, por mensagem de texto ou áudio: confirma nome e telefone, mostra os profissionais, os serviços (pode escolher vários) e os horários livres. O agendamento cai direto no seu painel.
                 </p>
 
-                <div id="aiLockedBox" class="hidden" style="padding:14px; border-radius:10px; border:1px dashed rgba(198,161,91,0.5); color: var(--text-muted);">
+                <div id="aiLockedBox" class="hidden" style="padding:14px; border-radius:10px; border:1px dashed rgba(15,27,45,0.5); color: var(--text-muted);">
                     <i class="fas fa-lock" aria-hidden="true"></i> Recurso exclusivo do <strong>plano PRO</strong>. Fale com o suporte para fazer o upgrade.
                 </div>
 
@@ -629,7 +647,7 @@
                         </small>
                     </div>
 
-                    <div class="form-group" style="padding:12px; border-radius:10px; border:1px solid rgba(198,161,91,0.35);">
+                    <div class="form-group" style="padding:12px; border-radius:10px; border:1px solid rgba(15,27,45,0.35);">
                         <label for="aiButtonsEnabled" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                             <input type="checkbox" id="aiButtonsEnabled" style="width:auto;">
                             <span>Usar botões nas escolhas rápidas (agendar aqui / receber link, confirmar)</span>
@@ -1006,7 +1024,7 @@
                 <div class="form-group">
                     <label>Foto do corte/serviço (aparece em círculo pro cliente)</label>
                     <div style="display:flex; align-items:center; gap:14px; margin-bottom:8px;">
-                        <div id="editServicePhotoPreviewBox" style="width:64px; height:64px; border-radius:50%; overflow:hidden; background:var(--dark-bg); display:flex; align-items:center; justify-content:center; border:1px solid var(--hairline, rgba(198,161,91,0.2)); flex-shrink:0;">
+                        <div id="editServicePhotoPreviewBox" style="width:64px; height:64px; border-radius:50%; overflow:hidden; background:var(--dark-bg); display:flex; align-items:center; justify-content:center; border:1px solid var(--hairline, rgba(15,27,45,0.2)); flex-shrink:0;">
                             <img id="editServicePhotoPreview" src="" alt="" style="width:100%; height:100%; object-fit:cover; display:none;">
                             <i class="fas fa-image" aria-hidden="true" style="color:var(--text-muted);"></i>
                         </div>

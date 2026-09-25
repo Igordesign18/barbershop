@@ -76,7 +76,7 @@
                 const progress = Math.min((now - startTime) / duration, 1);
                 const eased = 1 - Math.pow(1 - progress, 3);
                 const current = startValue + (endValue - startValue) * eased;
-                el.textContent = `${prefix}${current.toFixed(decimals)}${suffix}`;
+                el.textContent = `${prefix}${current.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${suffix}`;
                 if (progress < 1) requestAnimationFrame(tick);
             }
             requestAnimationFrame(tick);
@@ -112,11 +112,12 @@
                 position: fixed; 
                 top: 80px; 
                 right: 20px; 
-                background: ${type === 'warning' ? 'var(--orange)' : type === 'error' ? 'var(--red)' : 'var(--lime)'}; 
-                color: ${type === 'warning' || type === 'error' ? 'white' : 'var(--dark-bg)'}; 
+                background: ${type === 'warning' ? 'var(--orange)' : type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : 'var(--lime)'}; 
+                color: white; 
                 padding: 15px 20px; 
-                border-radius: 8px; 
-                box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
+                border-radius: 10px; 
+                box-shadow: 0 12px 32px rgba(15,27,45,0.18); 
+                font-family: inherit; font-size: 14px; 
                 z-index: 1000; 
                 animation: slideIn 0.3s; 
                 font-weight: bold; 
@@ -288,6 +289,7 @@
                     showNotification('Um agendamento foi cancelado/excluído!', 'warning');
                 }
                 loadBookings();
+                loadTodayOverview();
                 if (document.getElementById('dashboardContainer').classList.contains('active')) {
                     loadStats();
                     updateCharts();
@@ -371,6 +373,8 @@
             try {
                 
                 setMarketingSubtab('whatsapp'); // aba Marketing abre na seção WhatsApp
+                setPanelShopName();
+                loadTodayOverview();
                 await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadCoverImages(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection(), loadThemeSelector(), loadWhatsappTemplate(), loadReminderConfig(), refreshWhatsappStatus(), loadAiConfig(), loadGestorNotify(), loadAutomations()]);
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
@@ -548,7 +552,7 @@
                 }
                 grid.innerHTML = data.photos.map(url => `
                     <div style="position:relative; width:90px; height:90px;">
-                        <img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:8px; border:1px solid var(--hairline, rgba(198,161,91,0.2));">
+                        <img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:8px; border:1px solid var(--hairline, rgba(15,27,45,0.2));">
                         <button onclick="removeCoverImage('${url}')" title="Remover"
                             style="position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:50%; background:var(--red); color:#fff; border:none; cursor:pointer; font-size:11px;">
                             <i class="fas fa-times"></i>
@@ -605,7 +609,7 @@
                 }
                 grid.innerHTML = data.photos.map(url => `
                     <div style="position:relative; width:90px; height:90px;">
-                        <img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:8px; border:1px solid var(--hairline, rgba(198,161,91,0.2));">
+                        <img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:8px; border:1px solid var(--hairline, rgba(15,27,45,0.2));">
                         <button onclick="removeGalleryPhoto('${url}')" title="Remover"
                             style="position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:50%; background:var(--red); color:#fff; border:none; cursor:pointer; font-size:11px;">
                             <i class="fas fa-times"></i>
@@ -1057,10 +1061,13 @@
 
         function initializeCharts() {
             if (chartsInitialized) return;
+            if (typeof Chart === 'undefined') return; // biblioteca de graficos nao carregou: o resto do painel segue funcionando
 
-            const textColor = '#f2ede3';
-            const gridColor = 'rgba(198, 161, 91, 0.12)';
-            const mutedColor = '#a69c8c';
+            const textColor = '#1F2A3C';
+            const gridColor = 'rgba(15, 27, 45, 0.06)';
+            const mutedColor = '#667085';
+            Chart.defaults.font.family = "'Manrope', system-ui, sans-serif";
+            Chart.defaults.font.size = 12;
 
             const defaultOptions = {
                 responsive: true,
@@ -1093,8 +1100,9 @@
                     datasets: [{
                         label: 'Agendamentos',
                         data: [0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(198, 161, 91, 0.8)',
-                        borderColor: 'rgba(198, 161, 91, 1)',
+                        backgroundColor: 'rgba(15, 27, 45, 0.88)',
+                        borderColor: 'rgba(15, 27, 45, 1)',
+                        borderRadius: 6,
                         borderWidth: 2
                     }]
                 },
@@ -1109,8 +1117,8 @@
                     datasets: [{
                         label: 'Agendamentos por Horário',
                         data: [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(111, 174, 122, 0.2)',
-                        borderColor: 'rgba(111, 174, 122, 1)',
+                        backgroundColor: 'rgba(47, 91, 211, 0.12)',
+                        borderColor: 'rgba(47, 91, 211, 1)',
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4
@@ -1127,11 +1135,11 @@
                     datasets: [{
                         data: [],
                         backgroundColor: [
-                            'rgba(198, 161, 91, 0.8)',
-                            'rgba(111, 174, 122, 0.8)',
-                            'rgba(212, 146, 46, 0.8)',
-                            'rgba(193, 92, 92, 0.8)',
-                            'rgba(122, 47, 63, 0.8)'
+                            '#0F1B2D',
+                            '#2F5BD3',
+                            '#1F7A54',
+                            '#C8102E',
+                            '#98A2B3'
                         ],
                         borderWidth: 2
                     }]
@@ -1158,8 +1166,8 @@
                     datasets: [{
                         label: 'Faturamento (R$) - Apenas Concluídos',
                         data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(212, 146, 46, 0.2)',
-                        borderColor: 'rgba(212, 146, 46, 1)',
+                        backgroundColor: 'rgba(31, 122, 84, 0.12)',
+                        borderColor: 'rgba(31, 122, 84, 1)',
                         borderWidth: 3,
                         fill: true,
                         tension: 0.4
@@ -1176,8 +1184,9 @@
                     datasets: [{
                         label: 'Agendamentos',
                         data: [0],
-                        backgroundColor: 'rgba(122, 47, 63, 0.8)',
-                        borderColor: 'rgba(122, 47, 63, 1)',
+                        backgroundColor: 'rgba(47, 91, 211, 0.85)',
+                        borderColor: 'rgba(47, 91, 211, 1)',
+                        borderRadius: 6,
                         borderWidth: 2
                     }]
                 },
@@ -1192,8 +1201,9 @@
                     datasets: [{
                         label: 'Taxa de Cancelamento (%)',
                         data: [0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(193, 92, 92, 0.8)',
-                        borderColor: 'rgba(193, 92, 92, 1)',
+                        backgroundColor: 'rgba(200, 16, 46, 0.85)',
+                        borderColor: 'rgba(200, 16, 46, 1)',
+                        borderRadius: 6,
                         borderWidth: 2
                     }]
                 },
@@ -1288,6 +1298,58 @@
 
             } catch (error) {
                 console.error('Erro ao atualizar gráficos:', error);
+            }
+        }
+
+        // ==================== Dashboard: resumo de hoje ====================
+        function setPanelShopName() {
+            const h1 = document.getElementById('panelShopName');
+            if (!h1 || !currentTenant?.name) return;
+            h1.innerHTML = `${escapeCancelReason(currentTenant.name)} <span class="admin-badge">Gestor</span>`;
+        }
+
+        async function loadTodayOverview() {
+            const today = todayBR();
+            const hour = new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false }) * 1;
+            const greet = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+            document.getElementById('todayGreeting').textContent = `${greet}!`;
+            const dateLabel = new Date(today + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('todayDate').textContent = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1);
+
+            try {
+                const list = (await apiFetch(`/bookings?date=${today}&status=all`)) || [];
+                const active = list.filter(b => b.status !== 'cancelled')
+                    .sort((a, b) => a.booking_time.localeCompare(b.booking_time));
+                const nowHM = new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false });
+                const remaining = active.filter(b => b.status === 'confirmed' && b.booking_time.slice(0, 5) >= nowHM);
+                const done = active.filter(b => b.status === 'completed');
+                const revenue = done.reduce((sum, b) => sum + Math.max(0, (b.services?.price || 0) - (b.discount_applied || 0)), 0);
+
+                document.getElementById('todayTotal').textContent = active.length;
+                document.getElementById('todayRemaining').textContent = remaining.length;
+                document.getElementById('todayDone').textContent = done.length;
+                document.getElementById('todayRevenue').textContent = 'R$ ' + revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+                // Proximos: os que ainda vao acontecer; se ja acabou o dia, os ultimos atendidos
+                const upcoming = remaining.slice(0, 5);
+                const box = document.getElementById('todayNextList');
+                if (!active.length) {
+                    box.innerHTML = '<div class="today-empty">Nenhum agendamento para hoje.</div>';
+                    return;
+                }
+                const rows = (upcoming.length ? upcoming : done.slice(-3)).map((b, i) => {
+                    const time = b.booking_time.slice(0, 5);
+                    const name = escapeCancelReason(b.users?.full_name || b.customer_full_name || 'Cliente');
+                    const service = escapeCancelReason(b.services?.name || 'Serviço');
+                    const barber = b.barbers?.name ? ` · ${escapeCancelReason(b.barbers.name)}` : '';
+                    const tag = b.status === 'completed' ? '<span class="next-tag done">Concluído</span>'
+                        : i === 0 && upcoming.length ? '<span class="next-tag now">Próximo</span>'
+                        : `<span class="next-tag">${time}</span>`;
+                    return `<div class="next-row"><div class="next-time">${time}</div><div class="next-info"><strong>${name}</strong><span>${service}${barber}</span></div>${tag}</div>`;
+                }).join('');
+                box.innerHTML = rows || '<div class="today-empty">Todos os atendimentos de hoje já passaram.</div>';
+            } catch (error) {
+                console.error('Erro no resumo de hoje:', error);
             }
         }
 
@@ -2909,6 +2971,7 @@
                         return;
                     }
                     currentAdmin = { id: data.auth.sub, email: data.auth.email };
+                    if (data.tenant) currentTenant = data.tenant;
                     showAdminPanel();
                 })
                 .catch(() => {

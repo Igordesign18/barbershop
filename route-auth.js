@@ -34,7 +34,9 @@ router.post('/login', (req, res) => {
 });
 
 router.get('/me', requireAuth, (req, res) => {
-  res.json({ auth: req.auth });
+  // Nome da barbearia para o cabecalho do painel
+  const tenant = req.auth.tenant_id ? db.prepare('SELECT name, slug, plan FROM tenants WHERE id = ?').get(req.auth.tenant_id) : null;
+  res.json({ auth: req.auth, tenant: tenant || null });
 });
 
 module.exports = router;
