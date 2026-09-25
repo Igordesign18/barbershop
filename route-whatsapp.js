@@ -115,6 +115,21 @@ router.put('/template', (req, res) => {
   res.json({ ok: true });
 });
 
+// ==================== Automações PRO (retorno, avaliação, aniversário) ====================
+
+router.get('/automations', (req, res) => {
+  const automations = require('./automations');
+  res.json({ is_pro: automations.isPro(req.tenant), config: automations.getAutomations(req.tenantId) });
+});
+
+router.put('/automations', (req, res) => {
+  const automations = require('./automations');
+  if (!automations.isPro(req.tenant)) {
+    return res.status(403).json({ error: 'As automações de mensagens são exclusivas do plano PRO.' });
+  }
+  res.json({ ok: true, config: automations.saveAutomations(req.tenantId, req.body || {}) });
+});
+
 // ==================== Aviso de agendamento no WhatsApp do gestor ====================
 
 router.get('/gestor-notify', async (req, res) => {

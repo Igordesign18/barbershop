@@ -105,6 +105,11 @@ router.patch('/:id/status', (req, res) => {
     addProgressOnCompletion(req.tenantId, before.user_id, paidPrice);
   }
 
+  // Marca quando foi concluido (base do pedido de avaliacao e da mensagem de retorno)
+  if (status === 'completed' && before.status !== 'completed') {
+    db.prepare("UPDATE bookings SET completed_at = datetime('now'), followup_sent = 0, review_requested_at = NULL WHERE id = ?").run(req.params.id);
+  }
+
   // Gestor confirmou um cancelamento que o cliente pediu pelo site: avisa o cliente
   if (status === 'cancelled' && before.status !== 'cancelled' && before.cancel_requested_at) {
     db.prepare("UPDATE bookings SET cancelled_by = 'cliente_site' WHERE id = ?").run(req.params.id);

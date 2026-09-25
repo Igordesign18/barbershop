@@ -370,7 +370,8 @@
         async function loadDashboard() {
             try {
                 
-                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadCoverImages(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection(), loadThemeSelector(), loadWhatsappTemplate(), loadReminderConfig(), refreshWhatsappStatus(), loadAiConfig(), loadGestorNotify()]);
+                setMarketingSubtab('whatsapp'); // aba Marketing abre na seção WhatsApp
+                await Promise.all([loadBookings(), loadServices(), loadBarbers(), loadClients(), loadScheduleSettings(), loadBranding(), loadCoverImages(), loadGallery(), loadShopProfile(), loadReviews(), loadLoyaltyConfig(), loadPackages(), loadSubscriptionsSection(), loadThemeSelector(), loadWhatsappTemplate(), loadReminderConfig(), refreshWhatsappStatus(), loadAiConfig(), loadGestorNotify(), loadAutomations()]);
             } catch (error) {
                 console.error('Erro ao carregar dashboard:', error);
                 showNotification('Erro ao carregar dados do dashboard', 'error');
@@ -2189,13 +2190,14 @@
             try {
                 await apiFetch('/clients', {
                     method: 'POST',
-                    body: JSON.stringify({ full_name: fullName, email: email, phone: phone })
+                    body: JSON.stringify({ full_name: fullName, email: email, phone: phone, birth_date: document.getElementById('newClientBirth').value || null })
                 });
 
                 showNotification('Cliente cadastrado com sucesso!', 'success');
                 document.getElementById('newClientName').value = '';
                 document.getElementById('newClientEmail').value = '';
                 document.getElementById('newClientPhone').value = '';
+                document.getElementById('newClientBirth').value = '';
                 loadClients();
             } catch (error) {
                 showNotification('Erro ao cadastrar cliente: ' + error.message, 'error');
@@ -2223,6 +2225,7 @@
                                 <h4><i class="fas fa-user" aria-hidden="true"></i> ${client.full_name || 'Nome não informado'}</h4>
                                 <p><i class="fas fa-envelope" aria-hidden="true"></i> ${client.email}</p>
                                 <p><i class="fas fa-phone" aria-hidden="true"></i> ${client.phone || 'Telefone não informado'}</p>
+                                ${client.birth_date ? `<p><i class="fas fa-cake-candles" aria-hidden="true"></i> Aniversário: ${client.birth_date.slice(8, 10)}/${client.birth_date.slice(5, 7)}</p>` : ''}
                                 <div class="client-stats">
                                     <span class="client-stat">
                                         <i class="fas fa-calendar-check" aria-hidden="true"></i> 
@@ -2269,6 +2272,7 @@
                 document.getElementById('editClientName').value = client.full_name || '';
                 document.getElementById('editClientEmail').value = client.email || '';
                 document.getElementById('editClientPhone').value = client.phone || '';
+                document.getElementById('editClientBirth').value = client.birth_date || '';
                 
                 const modal = document.getElementById('editClientModal');
                 modal.classList.remove('hidden');
@@ -2308,7 +2312,7 @@
             try {
                 await apiFetch(`/clients/${clientId}`, {
                     method: 'PUT',
-                    body: JSON.stringify({ full_name: fullName, email: email, phone: phone })
+                    body: JSON.stringify({ full_name: fullName, email: email, phone: phone, birth_date: document.getElementById('editClientBirth').value || null })
                 });
                 
                 showNotification('Cliente atualizado com sucesso!', 'success');
@@ -2667,6 +2671,69 @@
                 showNotification('Mensagem salva com sucesso!', 'success');
             } catch (error) {
                 showNotification('Erro ao salvar mensagem: ' + error.message, 'error');
+            }
+        }
+
+        // ==================== Aba Marketing organizada em seções ====================
+        function setMarketingSubtab(name) {
+            document.querySelectorAll('[data-subtab]').forEach(el => el.classList.toggle('subtab-on', el.dataset.subtab === name));
+            document.querySelectorAll('.marketing-chip').forEach(btn => btn.classList.toggle('active', btn.dataset.subtabTarget === name));
+        }
+
+        // ==================== Automações PRO: retorno, avaliação e aniversário ====================
+        const AUTO_TOGGLES = ['autoFollowupEnabled', 'autoReviewEnabled', 'autoBirthdayEnabled'];
+
+        function refreshAutomationItems() {
+            AUTO_TOGGLES.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) input.closest('.automation-item').classList.toggle('off', !input.checked);
+            });
+        }
+
+        async function loadAutomations() {
+            try {
+                const data = await apiFetch('/whatsapp/automations');
+                document.getElementById('automationsLocked').classList.toggle('hidden', !!data.is_pro);
+                document.getElementById('automationsBox').classList.toggle('hidden', !data.is_pro);
+                if (!data.is_pro) return;
+                const c = data.config;
+                document.getElementById('autoFollowupEnabled').checked = !!c.followup_enabled;
+                document.getElementById('autoFollowupDays').value = c.followup_days;
+                document.getElementById('autoFollowupMessage').value = c.followup_message || '';
+                document.getElementById('autoReviewEnabled').checked = !!c.review_enabled;
+                document.getElementById('autoReviewDelay').value = c.review_delay_hours;
+                document.getElementById('autoBirthdayEnabled').checked = !!c.birthday_enabled;
+                document.getElementById('autoBirthdayMessage').value = c.birthday_message || '';
+                AUTO_TOGGLES.forEach(id => { document.getElementById(id).onchange = refreshAutomationItems; });
+                refreshAutomationItems();
+            } catch (error) {
+                console.error('Erro ao carregar automações:', error);
+            }
+        }
+
+        async function saveAutomations() {
+            const days = parseInt(document.getElementById('autoFollowupDays').value, 10);
+            if (!days || days < 1 || days > 30) {
+                showNotification('O convite de retorno pode ser de 1 a 30 dias.', 'error');
+                return;
+            }
+            try {
+                await apiFetch('/whatsapp/automations', {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        followup_enabled: document.getElementById('autoFollowupEnabled').checked,
+                        followup_days: days,
+                        followup_message: document.getElementById('autoFollowupMessage').value,
+                        review_enabled: document.getElementById('autoReviewEnabled').checked,
+                        review_delay_hours: parseInt(document.getElementById('autoReviewDelay').value, 10) || 2,
+                        birthday_enabled: document.getElementById('autoBirthdayEnabled').checked,
+                        birthday_message: document.getElementById('autoBirthdayMessage').value
+                    })
+                });
+                showNotification('Automações salvas!', 'success');
+                loadAutomations();
+            } catch (error) {
+                showNotification('Erro ao salvar automações: ' + error.message, 'error');
             }
         }
 

@@ -204,6 +204,13 @@ db.exec(`
   );
 `);
 
+// Automacoes PRO: pos-atendimento (retorno e avaliacao) e aniversario do cliente
+ensureColumn('bookings', 'completed_at', 'TEXT');
+ensureColumn('bookings', 'followup_sent', 'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('bookings', 'review_requested_at', 'TEXT');
+ensureColumn('users', 'birth_date', 'TEXT');           // AAAA-MM-DD
+ensureColumn('users', 'birthday_sent_year', 'INTEGER'); // ano da ultima mensagem de parabens
+
 // Pedido de cancelamento feito pelo cliente no site (o gestor confirma no painel)
 ensureColumn('bookings', 'cancel_requested_at', 'TEXT');
 ensureColumn('bookings', 'cancel_reason', 'TEXT');

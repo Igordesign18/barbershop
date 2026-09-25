@@ -1542,3 +1542,29 @@
   .agenda-day { font-size: 13px; }
   .agenda-count { font-size: 9.5px; padding: 2px 5px; }
 }
+
+/* ==================== Marketing organizado em seções ==================== */
+.marketing-subnav-wrap.tab-active { display: block; }
+.marketing-subnav { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px; scrollbar-width: none; }
+.marketing-subnav::-webkit-scrollbar { display: none; }
+.marketing-chip { flex: 0 0 auto; background: var(--dark-card); color: var(--text); border: 1px solid var(--hairline); border-radius: 100px; padding: 9px 14px; font-size: 13px; cursor: pointer; font-family: inherit; transition: var(--transition); white-space: nowrap; }
+.marketing-chip:hover { border-color: var(--lime); }
+.marketing-chip.active { background: var(--lime); color: #1a140c; border-color: var(--lime); font-weight: 600; }
+/* Dentro da aba Marketing, so aparece a secao escolhida */
+.tab-panel.tab-active[data-subtab]:not(.subtab-on) { display: none; }
+
+.pro-badge { font-size: 11px; padding: 3px 10px; border-radius: 100px; margin-left: 6px; background: linear-gradient(135deg, #c6a15b, #e7cf93); color: #1a140c; font-weight: 700; vertical-align: middle; }
+.locked-box { padding: 14px; border-radius: 10px; border: 1px dashed rgba(198,161,91,0.5); color: var(--text-muted); }
+.automation-item { border: 1px solid var(--hairline); border-radius: 12px; padding: 14px; margin-bottom: 14px; background: var(--dark-card-raised); }
+.automation-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.automation-head h3 { font-size: 15px; color: var(--brass-light); margin-bottom: 4px; }
+.automation-head p { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+.auto-textarea { width: 100%; font-family: inherit; padding: 10px; border-radius: 8px; background: var(--dark-bg); color: var(--text); border: 1px solid var(--hairline); resize: vertical; }
+.auto-help { color: var(--text-muted); display: block; margin-top: 6px; font-size: 12px; }
+.automation-item.off .form-group { opacity: 0.5; }
+.switch { position: relative; display: inline-block; width: 48px; height: 26px; flex: 0 0 auto; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch .slider { position: absolute; inset: 0; background: #3a3128; border-radius: 26px; cursor: pointer; transition: var(--transition); }
+.switch .slider::before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: var(--text); border-radius: 50%; transition: var(--transition); }
+.switch input:checked + .slider { background: var(--lime); }
+.switch input:checked + .slider::before { transform: translateX(22px); background: #1a140c; }

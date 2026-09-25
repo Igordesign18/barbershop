@@ -80,4 +80,5 @@ app.get('/:slug', (req, res) => {
 app.listen(PORT, () => {
   console.log(`BarberSync rodando em http://localhost:${PORT} (fuso: ${process.env.TZ})`);
   startReminderScheduler();
+  require('./automations').startAutomationsScheduler(); // retorno, avaliação e aniversário (PRO)
 });

@@ -471,7 +471,82 @@
                 </button>
             </div>
 
-            <div class="card full-width tab-panel" id="whatsappCard" data-tab="marketing">
+            <div class="full-width tab-panel marketing-subnav-wrap" data-tab="marketing">
+                <div class="marketing-subnav" role="tablist" aria-label="Seções de Marketing">
+                    <button class="marketing-chip active" data-subtab-target="whatsapp" onclick="setMarketingSubtab('whatsapp')"><i class="fab fa-whatsapp" aria-hidden="true"></i> WhatsApp</button>
+                    <button class="marketing-chip" data-subtab-target="ia" onclick="setMarketingSubtab('ia')"><i class="fas fa-robot" aria-hidden="true"></i> Atendente IA</button>
+                    <button class="marketing-chip" data-subtab-target="automacoes" onclick="setMarketingSubtab('automacoes')"><i class="fas fa-bolt" aria-hidden="true"></i> Automações</button>
+                    <button class="marketing-chip" data-subtab-target="fidelidade" onclick="setMarketingSubtab('fidelidade')"><i class="fas fa-gift" aria-hidden="true"></i> Fidelidade e avaliações</button>
+                    <button class="marketing-chip" data-subtab-target="avisos" onclick="setMarketingSubtab('avisos')"><i class="fas fa-bell" aria-hidden="true"></i> Avisos para você</button>
+                </div>
+            </div>
+
+            <div class="card full-width tab-panel" id="automationsCard" data-tab="marketing" data-subtab="automacoes">
+                <h2><i class="fas fa-bolt" aria-hidden="true"></i> Automações de mensagens <span class="pro-badge">PRO</span></h2>
+                <p style="color: var(--text-muted); margin-bottom: 15px;">
+                    Mensagens enviadas sozinhas pelo WhatsApp da barbearia, das 9h às 20h. Precisa do WhatsApp conectado.
+                </p>
+
+                <div id="automationsLocked" class="hidden locked-box">
+                    <i class="fas fa-lock" aria-hidden="true"></i> Recurso exclusivo do <strong>plano PRO</strong>. Fale com o suporte para fazer o upgrade.
+                </div>
+
+                <div id="automationsBox" class="hidden">
+                    <div class="automation-item">
+                        <div class="automation-head">
+                            <div>
+                                <h3><i class="fas fa-rotate-right" aria-hidden="true"></i> Convite de retorno</h3>
+                                <p>Depois de um atendimento concluído, convida o cliente para agendar de novo. Não envia se ele já tiver outro horário marcado.</p>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="autoFollowupEnabled"><span class="slider"></span></label>
+                        </div>
+                        <div class="form-group">
+                            <label for="autoFollowupDays">Enviar quantos dias depois do atendimento? (1 a 30)</label>
+                            <input type="number" id="autoFollowupDays" min="1" max="30" value="20">
+                        </div>
+                        <div class="form-group">
+                            <label for="autoFollowupMessage">Mensagem</label>
+                            <textarea id="autoFollowupMessage" rows="5" maxlength="1000" class="auto-textarea"></textarea>
+                            <small class="auto-help">Use: {{cliente}} {{barbearia}} {{dias}} {{servico}} {{link}}</small>
+                        </div>
+                    </div>
+
+                    <div class="automation-item">
+                        <div class="automation-head">
+                            <div>
+                                <h3><i class="fas fa-star" aria-hidden="true"></i> Pedido de avaliação</h3>
+                                <p>Depois que você marca o agendamento como <strong>Concluído</strong>, o cliente recebe uma lista com estrelas (1 a 5). A nota aparece em "Fidelidade e avaliações" e, se for 3 ou menos, você é avisado no seu WhatsApp.</p>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="autoReviewEnabled"><span class="slider"></span></label>
+                        </div>
+                        <div class="form-group">
+                            <label for="autoReviewDelay">Enviar quantas horas depois de concluir?</label>
+                            <input type="number" id="autoReviewDelay" min="1" max="48" value="2">
+                        </div>
+                    </div>
+
+                    <div class="automation-item">
+                        <div class="automation-head">
+                            <div>
+                                <h3><i class="fas fa-cake-candles" aria-hidden="true"></i> Parabéns no aniversário</h3>
+                                <p>No dia do aniversário, o cliente recebe os parabéns em nome da barbearia. Cadastre a data de nascimento em <strong>Clientes</strong>.</p>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="autoBirthdayEnabled"><span class="slider"></span></label>
+                        </div>
+                        <div class="form-group">
+                            <label for="autoBirthdayMessage">Mensagem</label>
+                            <textarea id="autoBirthdayMessage" rows="5" maxlength="1000" class="auto-textarea"></textarea>
+                            <small class="auto-help">Use: {{cliente}} {{barbearia}} {{link}}</small>
+                        </div>
+                    </div>
+
+                    <button class="btn" onclick="saveAutomations()">
+                        <i class="fas fa-save" aria-hidden="true"></i> Salvar Automações
+                    </button>
+                </div>
+            </div>
+
+            <div class="card full-width tab-panel" id="whatsappCard" data-tab="marketing" data-subtab="whatsapp">
                 <h2><i class="fab fa-whatsapp" aria-hidden="true"></i> WhatsApp da Barbearia</h2>
                 <p style="color: var(--text-muted); margin-bottom: 15px;">
                     Conecte o número de WhatsApp da sua barbearia para enviar automaticamente a confirmação de cada agendamento para o cliente.
@@ -507,7 +582,7 @@
                 </button>
             </div>
 
-            <div class="card full-width tab-panel" id="gestorNotifyCard" data-tab="marketing">
+            <div class="card full-width tab-panel" id="gestorNotifyCard" data-tab="marketing" data-subtab="avisos">
                 <h2><i class="fas fa-bell" aria-hidden="true"></i> Avisos de agendamento no seu WhatsApp</h2>
                 <p style="color: var(--text-muted); margin-bottom: 15px;">
                     Receba no seu WhatsApp cada novo agendamento, cancelamento, reagendamento e confirmação de presença — com nome e telefone do cliente, serviço, profissional, data, hora e valor.
@@ -531,7 +606,7 @@
                 </div>
             </div>
 
-            <div class="card full-width tab-panel" id="aiCard" data-tab="marketing">
+            <div class="card full-width tab-panel" id="aiCard" data-tab="marketing" data-subtab="ia">
                 <h2><i class="fas fa-robot" aria-hidden="true"></i> Atendente IA no WhatsApp <span id="aiPlanBadge" style="font-size:11px; padding:3px 10px; border-radius:100px; margin-left:6px; background: linear-gradient(135deg, #c6a15b, #e7cf93); color:#1a140c; font-weight:700;">PRO</span></h2>
                 <p style="color: var(--text-muted); margin-bottom: 15px;">
                     Quando o cliente chamar no WhatsApp da barbearia, a IA oferece o link de agendamento ou agenda ali mesmo, por mensagem de texto ou áudio: confirma nome e telefone, mostra os profissionais, os serviços (pode escolher vários) e os horários livres. O agendamento cai direto no seu painel.
@@ -594,7 +669,7 @@
                 </div>
             </div>
 
-            <div class="card full-width tab-panel" id="reminderCard" data-tab="marketing">
+            <div class="card full-width tab-panel" id="reminderCard" data-tab="marketing" data-subtab="automacoes">
                 <h2><i class="fas fa-bell" aria-hidden="true"></i> Lembrete de Agendamento</h2>
                 <p style="color: var(--text-muted); margin-bottom: 15px;">
                     Envia uma mensagem automática pro cliente um tempo antes do horário marcado, avisando do agendamento. Precisa do WhatsApp conectado acima.
@@ -676,7 +751,7 @@
                 <div id="subscriptionsList"></div>
             </div>
 
-            <div class="card full-width tab-panel" id="loyaltyCard" data-tab="marketing">
+            <div class="card full-width tab-panel" id="loyaltyCard" data-tab="marketing" data-subtab="fidelidade">
                 <h2><i class="fas fa-gift" aria-hidden="true"></i> Programa de Fidelidade</h2>
                 <p style="color: var(--text-muted); margin-bottom: 15px;">
                     Quando ativado, a recompensa é aplicada automaticamente no agendamento assim que o cliente atinge a meta — sem precisar fazer nada manualmente.
@@ -731,7 +806,7 @@
                 </button>
             </div>
 
-            <div class="card full-width tab-panel" id="reviewsCard" data-tab="marketing">
+            <div class="card full-width tab-panel" id="reviewsCard" data-tab="marketing" data-subtab="fidelidade">
                 <h2><i class="fas fa-star" aria-hidden="true"></i> Avaliações dos Clientes</h2>
                 <p style="color: var(--text-muted); margin-bottom: 15px;">
                     Feedback interno — o cliente só consegue avaliar depois que você marca o atendimento como concluído. Isso não aparece na página pública.
@@ -759,6 +834,10 @@
                 <div class="form-group">
                     <label for="newClientPhone">Telefone</label>
                     <input type="text" id="newClientPhone" placeholder="(88) 99999-9999">
+                </div>
+                <div class="form-group">
+                    <label for="newClientBirth">Data de nascimento <span style="color:var(--text-muted); font-weight:400;">(opcional — parabéns automático no plano PRO)</span></label>
+                    <input type="date" id="newClientBirth">
                 </div>
                 <button class="btn" onclick="addClient()">
                     <i class="fas fa-plus" aria-hidden="true"></i> Cadastrar Cliente
@@ -849,6 +928,10 @@
                 <div class="form-group">
                     <label for="editClientPhone">Telefone</label>
                     <input type="tel" id="editClientPhone" required placeholder="(00) 00000-0000">
+                </div>
+                <div class="form-group">
+                    <label for="editClientBirth">Data de nascimento</label>
+                    <input type="date" id="editClientBirth">
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button type="submit" class="btn" style="flex: 1; min-width: 150px;">
