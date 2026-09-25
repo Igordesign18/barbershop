@@ -121,6 +121,7 @@
         }
         
         formatPhoneInput(document.getElementById('bookingPhone'));
+        setupCustomerRecognition();
         
         // Funções utilitárias
         // Sempre calcula "agora" no fuso de Brasília, independente do fuso do aparelho do cliente
@@ -603,6 +604,70 @@
                 `).join('');
             } catch (error) {
                 resultsEl.innerHTML = '<p style="color:var(--red); font-size:13px;">Erro ao buscar agendamentos. Tente novamente.</p>';
+            }
+        }
+
+        // ==================== Cliente já cadastrado: reconhece pelo telefone ====================
+        // Ao digitar o telefone, se o cliente já agendou antes, não pede o nome de novo
+        // e só mostra a data de nascimento se ainda não tiver.
+        let recognizedCustomer = null;
+        const SAVED_PHONE_KEY = () => 'bs_phone_' + TENANT_SLUG;
+
+        function setupCustomerRecognition() {
+            const phoneInput = document.getElementById('bookingPhone');
+            const birthInput = document.getElementById('bookingBirthDate');
+            if (!phoneInput) return;
+            if (birthInput) birthInput.max = new Date().toISOString().slice(0, 10);
+
+            let lastChecked = '';
+            const check = async () => {
+                const digits = phoneInput.value.replace(/\D/g, '');
+                if (digits.length !== 11) {
+                    if (recognizedCustomer) applyRecognition(null);
+                    lastChecked = '';
+                    return;
+                }
+                if (digits === lastChecked) return;
+                lastChecked = digits;
+                try {
+                    const response = await fetch(`${API_URL}/customer?phone=${encodeURIComponent('55' + digits)}`);
+                    const data = await response.json();
+                    applyRecognition(data && data.found ? data : null);
+                } catch (_) {
+                    applyRecognition(null);
+                }
+            };
+            phoneInput.addEventListener('input', check);
+            phoneInput.addEventListener('blur', check);
+
+            // Telefone usado da ultima vez neste aparelho
+            try {
+                const saved = localStorage.getItem(SAVED_PHONE_KEY());
+                if (saved && !phoneInput.value) {
+                    const d = saved.replace(/\D/g, '').replace(/^55/, '');
+                    if (d.length === 11) {
+                        phoneInput.value = `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+                        check();
+                    }
+                }
+            } catch (_) {}
+        }
+
+        function applyRecognition(customer) {
+            recognizedCustomer = customer;
+            const welcome = document.getElementById('customerWelcome');
+            const nameGroup = document.getElementById('bookingNameGroup');
+            const birthGroup = document.getElementById('bookingBirthGroup');
+            if (customer) {
+                const safeName = String(customer.first_name || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+                welcome.innerHTML = `👋 Bem-vindo de volta${safeName ? `, <strong>${safeName}</strong>` : ''}! Seu cadastro já está aqui, não precisa preencher de novo.`;
+                welcome.classList.remove('hidden');
+                nameGroup.classList.add('hidden');
+                birthGroup.classList.toggle('hidden', !!customer.has_birth_date);
+            } else {
+                welcome.classList.add('hidden');
+                nameGroup.classList.remove('hidden');
+                birthGroup.classList.remove('hidden');
             }
         }
 
@@ -1282,7 +1347,7 @@
             const bookingFullName = sanitizeInput(document.getElementById('bookingFullName').value);
             const bookingPhoneRaw = document.getElementById('bookingPhone').value;
 
-            if (!bookingFullName || bookingFullName.length < 3) {
+            if (!recognizedCustomer && (!bookingFullName || bookingFullName.length < 3)) {
                 alert('Nome completo inválido!');
                 btn.disabled = false;
                 btn.innerHTML = '<span>Confirmar Agendamento</span>';
@@ -1305,8 +1370,9 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        customer_full_name: bookingFullName,
+                        customer_full_name: recognizedCustomer ? '' : bookingFullName,
                         customer_phone: finalPhoneFormatted,
+                        birth_date: document.getElementById('bookingBirthDate')?.value || null,
                         ...(selectedService.isPackage ? { package_id: selectedService.id } : { service_id: selectedService.id }),
                         barber_id: barberIdToSave,
                         booking_date: dateStr,
@@ -1320,6 +1386,11 @@
                 }
 
                 const bookingData = await response.json();
+
+                // Lembra o telefone neste aparelho para a proxima vez
+                try { localStorage.setItem(SAVED_PHONE_KEY(), finalPhoneFormatted); } catch (_) {}
+                const displayName = recognizedCustomer ? (recognizedCustomer.first_name || 'Cliente') : bookingFullName;
+                if (document.getElementById('bookingBirthDate')?.value && recognizedCustomer) recognizedCustomer.has_birth_date = true;
 
                 const modal = document.getElementById('confirmationModal');
                 const modalDetails = document.getElementById('modalDetails');
@@ -1336,7 +1407,7 @@
                 modalDetails.innerHTML = `
                     <p>
                         <strong><i class="fas fa-user"></i> Cliente:</strong>
-                        <span>${bookingFullName}</span>
+                        <span>${displayName}</span>
                     </p>
                     <p>
                         <strong><i class="fas fa-phone"></i> Telefone:</strong>

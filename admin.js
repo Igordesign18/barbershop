@@ -2699,11 +2699,9 @@
                 const c = data.config;
                 document.getElementById('autoFollowupEnabled').checked = !!c.followup_enabled;
                 document.getElementById('autoFollowupDays').value = c.followup_days;
-                document.getElementById('autoFollowupMessage').value = c.followup_message || '';
                 document.getElementById('autoReviewEnabled').checked = !!c.review_enabled;
                 document.getElementById('autoReviewDelay').value = c.review_delay_hours;
                 document.getElementById('autoBirthdayEnabled').checked = !!c.birthday_enabled;
-                document.getElementById('autoBirthdayMessage').value = c.birthday_message || '';
                 AUTO_TOGGLES.forEach(id => { document.getElementById(id).onchange = refreshAutomationItems; });
                 refreshAutomationItems();
             } catch (error) {
@@ -2723,11 +2721,9 @@
                     body: JSON.stringify({
                         followup_enabled: document.getElementById('autoFollowupEnabled').checked,
                         followup_days: days,
-                        followup_message: document.getElementById('autoFollowupMessage').value,
                         review_enabled: document.getElementById('autoReviewEnabled').checked,
                         review_delay_hours: parseInt(document.getElementById('autoReviewDelay').value, 10) || 2,
-                        birthday_enabled: document.getElementById('autoBirthdayEnabled').checked,
-                        birthday_message: document.getElementById('autoBirthdayMessage').value
+                        birthday_enabled: document.getElementById('autoBirthdayEnabled').checked
                     })
                 });
                 showNotification('Automações salvas!', 'success');

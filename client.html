@@ -172,10 +172,6 @@
                         <div class="unverified-user-fields" id="unverifiedUserFields">
                             <h5><i class="fas fa-info-circle"></i> Seus dados de contato</h5>
                             <div class="form-group">
-                                <label for="bookingFullName">Nome completo</label>
-                                <input type="text" id="bookingFullName" placeholder="Seu nome completo" required>
-                            </div>
-                            <div class="form-group">
                                 <label for="bookingPhone">Telefone (WhatsApp)</label>
                                 <div style="position: relative;">
                                     <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--ivory-muted); pointer-events: none;">+55</span>
@@ -183,6 +179,18 @@
                                 </div>
                                 <small style="color: var(--ivory-muted); font-size: 11.5px; margin-top: 6px; display: block;">
                                     DDD + 9 dígitos (11 dígitos no total)
+                                </small>
+                            </div>
+                            <div id="customerWelcome" class="hidden" style="padding: 12px 14px; border-radius: 10px; margin-bottom: 14px; background: rgba(111,174,122,0.12); border: 1px solid rgba(111,174,122,0.45); font-size: 14px;"></div>
+                            <div class="form-group" id="bookingNameGroup">
+                                <label for="bookingFullName">Nome completo</label>
+                                <input type="text" id="bookingFullName" placeholder="Seu nome completo" required>
+                            </div>
+                            <div class="form-group" id="bookingBirthGroup">
+                                <label for="bookingBirthDate">Data de nascimento <span style="color: var(--ivory-muted); font-weight: 400;">(opcional)</span></label>
+                                <input type="date" id="bookingBirthDate" max="">
+                                <small style="color: var(--ivory-muted); font-size: 11.5px; margin-top: 6px; display: block;">
+                                    🎂 Para receber nossos parabéns no seu aniversário.
                                 </small>
                             </div>
                         </div>

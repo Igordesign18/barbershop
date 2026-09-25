@@ -504,11 +504,6 @@
                             <label for="autoFollowupDays">Enviar quantos dias depois do atendimento? (1 a 30)</label>
                             <input type="number" id="autoFollowupDays" min="1" max="30" value="20">
                         </div>
-                        <div class="form-group">
-                            <label for="autoFollowupMessage">Mensagem</label>
-                            <textarea id="autoFollowupMessage" rows="5" maxlength="1000" class="auto-textarea"></textarea>
-                            <small class="auto-help">Use: {{cliente}} {{barbearia}} {{dias}} {{servico}} {{link}}</small>
-                        </div>
                     </div>
 
                     <div class="automation-item">
@@ -532,11 +527,6 @@
                                 <p>No dia do aniversário, o cliente recebe os parabéns em nome da barbearia. Cadastre a data de nascimento em <strong>Clientes</strong>.</p>
                             </div>
                             <label class="switch"><input type="checkbox" id="autoBirthdayEnabled"><span class="slider"></span></label>
-                        </div>
-                        <div class="form-group">
-                            <label for="autoBirthdayMessage">Mensagem</label>
-                            <textarea id="autoBirthdayMessage" rows="5" maxlength="1000" class="auto-textarea"></textarea>
-                            <small class="auto-help">Use: {{cliente}} {{barbearia}} {{link}}</small>
                         </div>
                     </div>
 

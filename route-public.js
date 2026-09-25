@@ -51,6 +51,16 @@ router.get('/:slug/packages', (req, res) => {
   res.json(withServices);
 });
 
+// Reconhece o cliente pelo telefone para nao pedir tudo de novo.
+// Devolve so o primeiro nome (privacidade) e se ja tem data de nascimento.
+router.get('/:slug/customer', (req, res) => {
+  const phone = normalizePhone(req.query.phone || '');
+  if (!phone) return res.json({ found: false });
+  const user = db.prepare('SELECT full_name, birth_date FROM users WHERE tenant_id = ? AND phone = ?').get(req.tenantId, phone);
+  if (!user) return res.json({ found: false });
+  res.json({ found: true, first_name: String(user.full_name || '').trim().split(/\s+/)[0] || '', has_birth_date: !!user.birth_date });
+});
+
 router.get('/:slug/barbers', (req, res) => {
   const barbers = db.prepare('SELECT * FROM barbers WHERE tenant_id = ? ORDER BY id ASC').all(req.tenantId);
   // service_ids: servicos que cada um faz (null = todos) — a pagina mostra so quem faz o servico escolhido
@@ -242,7 +252,17 @@ router.get('/:slug/bookings/availability', (req, res) => {
 });
 
 router.post('/:slug/bookings', async (req, res) => {
-  const { customer_full_name, customer_phone, service_id, package_id, barber_id, booking_date, booking_time } = req.body || {};
+  const { customer_phone, service_id, package_id, barber_id, booking_date, booking_time } = req.body || {};
+  let { customer_full_name } = req.body || {};
+  // Data de nascimento opcional (AAAA-MM-DD) — usada nos parabens automaticos
+  const rawBirth = String(req.body?.birth_date || '').trim();
+  const birthDate = /^\d{4}-\d{2}-\d{2}$/.test(rawBirth) && !isNaN(new Date(rawBirth + 'T12:00:00Z')) && rawBirth < new Date().toISOString().slice(0, 10) && rawBirth > '1900-01-01' ? rawBirth : null;
+
+  // Cliente ja cadastrado pode agendar so com o telefone: usa o nome que ja temos
+  if ((!customer_full_name || String(customer_full_name).trim().length < 3) && customer_phone) {
+    const known = db.prepare('SELECT full_name FROM users WHERE tenant_id = ? AND phone = ?').get(req.tenantId, normalizePhone(customer_phone));
+    if (known?.full_name) customer_full_name = known.full_name;
+  }
 
   if (!customer_full_name || customer_full_name.trim().length < 3) {
     return res.status(400).json({ error: 'Nome completo invalido' });
@@ -312,9 +332,13 @@ router.post('/:slug/bookings', async (req, res) => {
     if (user.full_name !== finalName) {
       db.prepare('UPDATE users SET full_name = ? WHERE id = ?').run(finalName, user.id);
     }
+    // So preenche a data de nascimento se ainda nao tinha (nao sobrescreve)
+    if (birthDate && !user.birth_date) {
+      db.prepare('UPDATE users SET birth_date = ? WHERE id = ?').run(birthDate, user.id);
+    }
   } else {
-    const userResult = db.prepare('INSERT INTO users (tenant_id, full_name, phone) VALUES (?, ?, ?)')
-      .run(req.tenantId, finalName, finalPhone);
+    const userResult = db.prepare('INSERT INTO users (tenant_id, full_name, phone, birth_date) VALUES (?, ?, ?, ?)')
+      .run(req.tenantId, finalName, finalPhone, birthDate);
     user = { id: userResult.lastInsertRowid };
   }
 

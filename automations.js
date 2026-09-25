@@ -30,7 +30,13 @@ function getAutomations(tenantId) {
   const row = db.prepare("SELECT value FROM settings WHERE tenant_id = ? AND key = 'automations'").get(tenantId);
   let saved = {};
   try { saved = row?.value ? JSON.parse(row.value) : {}; } catch { saved = {}; }
-  return { ...DEFAULT_AUTOMATIONS, ...saved };
+  // As mensagens sao sempre as padrao do sistema (o gestor nao edita o texto)
+  return {
+    ...DEFAULT_AUTOMATIONS,
+    ...saved,
+    followup_message: DEFAULT_AUTOMATIONS.followup_message,
+    birthday_message: DEFAULT_AUTOMATIONS.birthday_message
+  };
 }
 
 function saveAutomations(tenantId, input) {
@@ -39,18 +45,12 @@ function saveAutomations(tenantId, input) {
     const n = parseInt(v, 10);
     return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
   };
-  const text = (v, fallback) => {
-    const t = String(v ?? '').trim().slice(0, 1000);
-    return t || fallback;
-  };
   const config = {
     followup_enabled: !!input.followup_enabled,
     followup_days: clampInt(input.followup_days, 1, 30, current.followup_days),
-    followup_message: text(input.followup_message, DEFAULT_AUTOMATIONS.followup_message),
     review_enabled: !!input.review_enabled,
     review_delay_hours: clampInt(input.review_delay_hours, 1, 48, current.review_delay_hours),
-    birthday_enabled: !!input.birthday_enabled,
-    birthday_message: text(input.birthday_message, DEFAULT_AUTOMATIONS.birthday_message)
+    birthday_enabled: !!input.birthday_enabled
   };
   db.prepare(`
     INSERT INTO settings (tenant_id, key, value) VALUES (?, 'automations', ?)
