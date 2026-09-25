@@ -271,24 +271,26 @@ input[type="checkbox"] { accent-color: var(--gold); width: 18px; height: 18px; }
 .dashboard-container { max-width: 1180px; margin: 0 auto; padding: 22px 16px 40px; }
 .period-selector {
     display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important;
-    gap: 4px !important; background: var(--surface); border: 1px solid var(--line);
+    gap: 6px !important; background: var(--surface); border: 1px solid var(--line);
     border-radius: 14px; padding: 4px !important; width: fit-content; max-width: 100%;
-    overflow-x: auto; margin: 0 0 16px !important;
+    overflow-x: auto; margin: 0 0 16px !important; scrollbar-width: none;
 }
+.period-selector::-webkit-scrollbar { display: none; }
 .period-btn {
     width: auto !important;
-    background: transparent !important;
+    background: var(--surface-2) !important;
     color: var(--muted) !important;
-    border: none !important;
+    border: 1px solid var(--line-strong) !important;
     border-radius: 10px !important;
     font-weight: 700 !important;
     font-size: 13px !important;
     box-shadow: none !important;
     white-space: nowrap;
+    flex: 0 0 auto;
     padding: 9px 14px !important;
 }
 .period-btn:hover { color: var(--ink-dim) !important; background: rgba(255,255,255,0.04) !important; }
-.period-btn.active { background: var(--gold) !important; color: var(--gold-ink) !important; }
+.period-btn.active { background: var(--gold) !important; color: var(--gold-ink) !important; border-color: var(--gold) !important; }
 
 .stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 14px !important; max-width: none !important; padding: 0 !important; margin-bottom: 16px !important; }
 @media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
@@ -465,12 +467,19 @@ input[type="checkbox"] { accent-color: var(--gold); width: 18px; height: 18px; }
 .agenda-status-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: 0.8; }
 .agenda-status-chip.active { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
 
-/* Botão fixo "Novo agendamento" (abre a página pública da barbearia em nova aba) */
+/* Mobile: preenche a largura toda em 2 colunas, sem sobrar espaço torto na direita */
+@media (max-width: 480px) {
+    .agenda-status-filter { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .agenda-status-chip { justify-content: center; width: 100%; }
+}
+
+/* Botão fixo "Novo agendamento" (abre o modal de agendamento manual no Admin) */
 .agenda-new-booking {
     display: flex; align-items: center; justify-content: center; gap: 8px;
-    width: 100%; margin-top: 18px; padding: 14px; border-radius: 100px;
+    width: 100%; margin-top: 18px; padding: 14px; border-radius: 100px; border: none;
     background: var(--gold); color: var(--gold-ink); font-weight: 800; font-size: 14.5px;
     text-decoration: none; box-shadow: 0 10px 24px rgba(217,168,92,0.18);
+    cursor: pointer; font-family: inherit;
 }
 .agenda-new-booking:hover { filter: brightness(1.06); }
 

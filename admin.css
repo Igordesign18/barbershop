@@ -1521,7 +1521,7 @@
 .agenda-title small { display: block; font-size: 12px; font-weight: 400; color: var(--text-muted); margin-top: 2px; }
 .agenda-nav { background: transparent; border: 1px solid var(--hairline); color: var(--text); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; }
 .agenda-nav:hover { border-color: var(--lime); color: var(--lime); }
-.agenda-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.agenda-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .agenda-weekday { text-align: center; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; padding-bottom: 4px; }
 .agenda-cell { position: relative; aspect-ratio: 1 / 1; min-height: 42px; background: var(--dark-card); border: 1px solid transparent; border-radius: 10px; color: var(--text); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-family: inherit; transition: var(--transition); padding: 0; }
 .agenda-cell.empty { background: transparent; cursor: default; }

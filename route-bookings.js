@@ -3,7 +3,10 @@ const { db } = require('./db');
 const { requireManager } = require('./auth');
 const { requireActiveTenant } = require('./tenant');
 const { broadcastBookingChange } = require('./events');
-const { addProgressOnCompletion } = require('./loyalty');
+const { addProgressOnCompletion, tryApplyReward } = require('./loyalty');
+const { normalizePhone } = require('./phone');
+const { sendBookingConfirmation } = require('./whatsapp');
+const { barberDoesAll } = require('./barber-services');
 
 const router = express.Router();
 router.use(requireManager, requireActiveTenant);
@@ -81,6 +84,112 @@ router.get('/', (req, res) => {
 
   const rows = db.prepare(sql).all(...params);
   res.json(rows.map(toBookingJson));
+});
+
+// Agendamento criado manualmente pelo gestor direto no Admin (sem passar pela pagina publica)
+router.post('/', (req, res) => {
+  const { customer_phone, booking_date, booking_time } = req.body || {};
+  // O select do Admin manda os ids como string; normaliza para numero (evita bind mismatch no better-sqlite3)
+  const service_id = req.body?.service_id ? Number(req.body.service_id) : null;
+  const package_id = req.body?.package_id ? Number(req.body.package_id) : null;
+  const barber_id = req.body?.barber_id ? Number(req.body.barber_id) : null;
+  let { customer_full_name } = req.body || {};
+
+  if ((!customer_full_name || String(customer_full_name).trim().length < 3) && customer_phone) {
+    const known = db.prepare('SELECT full_name FROM users WHERE tenant_id = ? AND phone = ?').get(req.tenantId, normalizePhone(customer_phone));
+    if (known?.full_name) customer_full_name = known.full_name;
+  }
+
+  if (!customer_full_name || customer_full_name.trim().length < 3) {
+    return res.status(400).json({ error: 'Nome completo invalido' });
+  }
+  if (!customer_phone) return res.status(400).json({ error: 'Telefone invalido' });
+  if ((!service_id && !package_id) || !booking_date || !booking_time) {
+    return res.status(400).json({ error: 'Dados do agendamento incompletos' });
+  }
+
+  // Um agendamento e ou um servico avulso, ou um pacote - nunca os dois (mesma regra da pagina publica)
+  let pkg = null;
+  let pkgServices = [];
+  let itemName, itemPrice, itemDuration, effectiveServiceId;
+
+  if (package_id) {
+    pkg = db.prepare('SELECT * FROM packages WHERE id = ? AND tenant_id = ? AND active = 1').get(package_id, req.tenantId);
+    if (!pkg) return res.status(400).json({ error: 'Pacote invalido' });
+
+    pkgServices = db.prepare(`
+      SELECT s.id, s.duration FROM package_services ps JOIN services s ON s.id = ps.service_id WHERE ps.package_id = ?
+    `).all(pkg.id);
+    if (!pkgServices.length) return res.status(400).json({ error: 'Pacote sem servicos configurados' });
+
+    itemName = pkg.name;
+    itemPrice = pkg.price;
+    itemDuration = pkgServices.reduce((sum, s) => sum + s.duration, 0);
+    effectiveServiceId = pkgServices[0].id;
+  } else {
+    const service = db.prepare('SELECT * FROM services WHERE id = ? AND tenant_id = ?').get(service_id, req.tenantId);
+    if (!service) return res.status(400).json({ error: 'Servico invalido' });
+
+    itemName = service.name;
+    itemPrice = service.price;
+    itemDuration = service.duration;
+    effectiveServiceId = service.id;
+  }
+
+  const barber = barber_id ? db.prepare('SELECT * FROM barbers WHERE id = ? AND tenant_id = ?').get(barber_id, req.tenantId) : null;
+  if (barber_id && !barber) return res.status(400).json({ error: 'Profissional invalido' });
+
+  if (barber) {
+    const needed = pkg ? pkgServices.map(ps => ps.id) : [effectiveServiceId];
+    if (!barberDoesAll(barber.id, needed)) {
+      return res.status(400).json({ error: `${barber.name} nao faz esse servico. Escolha outro profissional.` });
+    }
+  }
+
+  // Cadastra (ou reconhece) o cliente automaticamente pelo telefone, igual a pagina publica
+  const finalName = customer_full_name.trim();
+  const finalPhone = normalizePhone(customer_phone);
+  if (!finalPhone) return res.status(400).json({ error: 'Telefone invalido' });
+
+  let user = db.prepare('SELECT * FROM users WHERE tenant_id = ? AND phone = ?').get(req.tenantId, finalPhone);
+  if (user) {
+    if (user.full_name !== finalName) {
+      db.prepare('UPDATE users SET full_name = ? WHERE id = ?').run(finalName, user.id);
+    }
+  } else {
+    const userResult = db.prepare('INSERT INTO users (tenant_id, full_name, phone) VALUES (?, ?, ?)')
+      .run(req.tenantId, finalName, finalPhone);
+    user = { id: userResult.lastInsertRowid };
+  }
+
+  const result = db.prepare(`
+    INSERT INTO bookings (tenant_id, user_id, customer_full_name, customer_phone, service_id, package_id, item_name, item_price, item_duration, barber_id, booking_date, booking_time, status, source)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', 'admin')
+  `).run(req.tenantId, user.id, finalName, finalPhone, effectiveServiceId, pkg ? pkg.id : null, itemName, itemPrice, itemDuration, barber_id || null, booking_date, booking_time);
+
+  // Fidelidade: se o cliente ja atingiu a meta, aplica o desconto/gratuidade automaticamente
+  const reward = tryApplyReward(req.tenantId, user.id, itemPrice);
+  if (reward.discount > 0) {
+    db.prepare('UPDATE bookings SET discount_applied = ?, reward_label = ? WHERE id = ?')
+      .run(reward.discount, reward.label, result.lastInsertRowid);
+  }
+
+  const row = db.prepare(JOIN_SELECT + ' AND b.id = ?').get(req.tenantId, result.lastInsertRowid);
+  const booking = toBookingJson(row);
+  broadcastBookingChange(req.tenantId, 'INSERT', booking);
+
+  res.status(201).json(booking);
+
+  // Confirmacao por WhatsApp em segundo plano (nunca atrasa nem quebra a resposta)
+  sendBookingConfirmation({
+    tenant: req.tenant,
+    booking: db.prepare('SELECT * FROM bookings WHERE id = ?').get(result.lastInsertRowid),
+    clientName: finalName,
+    clientPhone: finalPhone,
+    serviceName: itemName,
+    servicePrice: Math.max(0, itemPrice - (booking.discount_applied || 0)),
+    barberName: barber ? barber.name : null
+  });
 });
 
 router.patch('/:id/status', (req, res) => {
