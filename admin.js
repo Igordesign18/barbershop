@@ -1063,9 +1063,9 @@
             if (chartsInitialized) return;
             if (typeof Chart === 'undefined') return; // biblioteca de graficos nao carregou: o resto do painel segue funcionando
 
-            const textColor = '#1F2A3C';
-            const gridColor = 'rgba(15, 27, 45, 0.06)';
-            const mutedColor = '#667085';
+            const textColor = '#F5F5F3';
+            const gridColor = 'rgba(255, 255, 255, 0.06)';
+            const mutedColor = '#9CA3AF';
             Chart.defaults.font.family = "'Manrope', system-ui, sans-serif";
             Chart.defaults.font.size = 12;
 
@@ -1100,8 +1100,8 @@
                     datasets: [{
                         label: 'Agendamentos',
                         data: [0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(15, 27, 45, 0.88)',
-                        borderColor: 'rgba(15, 27, 45, 1)',
+                        backgroundColor: 'rgba(217, 168, 92, 0.85)',
+                        borderColor: 'rgba(217, 168, 92, 1)',
                         borderRadius: 6,
                         borderWidth: 2
                     }]
@@ -1117,9 +1117,12 @@
                     datasets: [{
                         label: 'Agendamentos por Horário',
                         data: [0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(47, 91, 211, 0.12)',
-                        borderColor: 'rgba(47, 91, 211, 1)',
+                        backgroundColor: 'rgba(217, 168, 92, 0.14)',
+                        borderColor: 'rgba(217, 168, 92, 1)',
                         borderWidth: 3,
+                        pointBackgroundColor: 'rgba(217, 168, 92, 1)',
+                        pointBorderColor: '#101318',
+                        pointRadius: 4,
                         fill: true,
                         tension: 0.4
                     }]
@@ -1135,26 +1138,22 @@
                     datasets: [{
                         data: [],
                         backgroundColor: [
-                            '#0F1B2D',
-                            '#2F5BD3',
-                            '#1F7A54',
-                            '#C8102E',
-                            '#98A2B3'
+                            '#D9A85C',
+                            '#34D399',
+                            '#6EA8FE',
+                            '#F5A623',
+                            '#9CA3AF'
                         ],
-                        borderWidth: 2
+                        borderColor: '#101318',
+                        borderWidth: 3,
+                        hoverOffset: 6
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                color: textColor
-                            }
-                        }
-                    }
+                    cutout: '68%',
+                    plugins: { legend: { display: false } }
                 }
             });
 
@@ -1166,9 +1165,12 @@
                     datasets: [{
                         label: 'Faturamento (R$) - Apenas Concluídos',
                         data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(31, 122, 84, 0.12)',
-                        borderColor: 'rgba(31, 122, 84, 1)',
+                        backgroundColor: 'rgba(52, 211, 153, 0.12)',
+                        borderColor: 'rgba(52, 211, 153, 1)',
                         borderWidth: 3,
+                        pointBackgroundColor: 'rgba(52, 211, 153, 1)',
+                        pointBorderColor: '#101318',
+                        pointRadius: 4,
                         fill: true,
                         tension: 0.4
                     }]
@@ -1184,8 +1186,8 @@
                     datasets: [{
                         label: 'Agendamentos',
                         data: [0],
-                        backgroundColor: 'rgba(47, 91, 211, 0.85)',
-                        borderColor: 'rgba(47, 91, 211, 1)',
+                        backgroundColor: 'rgba(110, 168, 254, 0.85)',
+                        borderColor: 'rgba(110, 168, 254, 1)',
                         borderRadius: 6,
                         borderWidth: 2
                     }]
@@ -1201,8 +1203,8 @@
                     datasets: [{
                         label: 'Taxa de Cancelamento (%)',
                         data: [0, 0, 0, 0, 0, 0],
-                        backgroundColor: 'rgba(200, 16, 46, 0.85)',
-                        borderColor: 'rgba(200, 16, 46, 1)',
+                        backgroundColor: 'rgba(240, 104, 92, 0.85)',
+                        borderColor: 'rgba(240, 104, 92, 1)',
                         borderRadius: 6,
                         borderWidth: 2
                     }]
@@ -1252,6 +1254,7 @@
                 charts.servicesChart.data.labels = topServices.map(([name]) => name);
                 charts.servicesChart.data.datasets[0].data = topServices.map(([, count]) => count);
                 charts.servicesChart.update();
+                renderDonutLegend('servicesDonutLegend', topServices, charts.servicesChart.data.datasets[0].backgroundColor);
 
                 const monthlyRevenue = {};
                 bookingsData.forEach(booking => {
@@ -1306,29 +1309,48 @@
             const h1 = document.getElementById('panelShopName');
             if (!h1 || !currentTenant?.name) return;
             h1.innerHTML = `${escapeCancelReason(currentTenant.name)} <span class="admin-badge">Gestor</span>`;
+
+            const link = document.getElementById('agendaNewBookingLink');
+            if (link && currentTenant?.slug) link.href = `/${currentTenant.slug}`;
         }
 
         async function loadTodayOverview() {
             const today = todayBR();
+            const yesterday = new Date(today + 'T12:00:00');
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yStr = yesterday.toISOString().slice(0, 10);
+
             const hour = new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false }) * 1;
             const greet = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
-            document.getElementById('todayGreeting').textContent = `${greet}!`;
+            const firstName = currentAdmin?.email ? currentAdmin.email.split('@')[0] : '';
+            document.getElementById('todayGreeting').textContent = `${greet}${firstName ? ', ' + firstName.charAt(0).toUpperCase() + firstName.slice(1) : ''}!`;
             const dateLabel = new Date(today + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
             document.getElementById('todayDate').textContent = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1);
 
             try {
-                const list = (await apiFetch(`/bookings?date=${today}&status=all`)) || [];
-                const active = list.filter(b => b.status !== 'cancelled')
+                const [list, yList] = await Promise.all([
+                    apiFetch(`/bookings?date=${today}&status=all`),
+                    apiFetch(`/bookings?date=${yStr}&status=all`)
+                ]);
+                const active = (list || []).filter(b => b.status !== 'cancelled')
                     .sort((a, b) => a.booking_time.localeCompare(b.booking_time));
                 const nowHM = new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hour12: false });
                 const remaining = active.filter(b => b.status === 'confirmed' && b.booking_time.slice(0, 5) >= nowHM);
                 const done = active.filter(b => b.status === 'completed');
                 const revenue = done.reduce((sum, b) => sum + Math.max(0, (b.services?.price || 0) - (b.discount_applied || 0)), 0);
 
+                // Mesmos numeros de ontem, para o selo "vs ontem" (so faz sentido comparar como esta agora: total do dia e faturamento)
+                const yActive = (yList || []).filter(b => b.status !== 'cancelled');
+                const yRevenue = yActive.filter(b => b.status === 'completed')
+                    .reduce((sum, b) => sum + Math.max(0, (b.services?.price || 0) - (b.discount_applied || 0)), 0);
+
                 document.getElementById('todayTotal').textContent = active.length;
                 document.getElementById('todayRemaining').textContent = remaining.length;
                 document.getElementById('todayDone').textContent = done.length;
                 document.getElementById('todayRevenue').textContent = 'R$ ' + revenue.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+                setTrendPill('todayTotalTrend', active.length, yActive.length, 'vs ontem');
+                setTrendPill('todayRevenueTrend', revenue, yRevenue, 'vs ontem');
 
                 // Proximos: os que ainda vao acontecer; se ja acabou o dia, os ultimos atendidos
                 const upcoming = remaining.slice(0, 5);
@@ -1339,13 +1361,14 @@
                 }
                 const rows = (upcoming.length ? upcoming : done.slice(-3)).map((b, i) => {
                     const time = b.booking_time.slice(0, 5);
-                    const name = escapeCancelReason(b.users?.full_name || b.customer_full_name || 'Cliente');
+                    const fullName = b.users?.full_name || b.customer_full_name || 'Cliente';
+                    const name = escapeCancelReason(fullName);
                     const service = escapeCancelReason(b.services?.name || 'Serviço');
                     const barber = b.barbers?.name ? ` · ${escapeCancelReason(b.barbers.name)}` : '';
                     const tag = b.status === 'completed' ? '<span class="next-tag done">Concluído</span>'
                         : i === 0 && upcoming.length ? '<span class="next-tag now">Próximo</span>'
                         : `<span class="next-tag">${time}</span>`;
-                    return `<div class="next-row"><div class="next-time">${time}</div><div class="next-info"><strong>${name}</strong><span>${service}${barber}</span></div>${tag}</div>`;
+                    return `<div class="next-row"><div class="next-time-col"><div class="next-time">${time}</div><div class="next-avatar">${initialsOf(fullName)}</div></div><div class="next-info"><strong>${name}</strong><span>${service}${barber}</span></div>${tag}</div>`;
                 }).join('');
                 box.innerHTML = rows || '<div class="today-empty">Todos os atendimentos de hoje já passaram.</div>';
             } catch (error) {
@@ -1353,6 +1376,39 @@
             }
         }
 
+        // Iniciais do nome (para o avatar redondo nas listas)
+        function initialsOf(name) {
+            const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+            if (!parts.length) return '?';
+            return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+        }
+
+        // Selo "+X% vs ontem" — so aparece quando ha uma base de comparacao (ontem != 0)
+        // Legenda customizada do donut: nome, percentual e contagem (o Chart.js so mostra o nome)
+        function renderDonutLegend(elId, entries, colors) {
+            const box = document.getElementById(elId);
+            if (!box) return;
+            const total = entries.reduce((sum, [, count]) => sum + count, 0);
+            if (!total) { box.innerHTML = ''; return; }
+            box.innerHTML = entries.map(([name, count], i) => {
+                const pct = Math.round((count / total) * 100);
+                return `<div class="donut-legend-row"><span class="donut-legend-dot" style="background:${colors[i % colors.length]}"></span><span class="donut-legend-name">${escapeCancelReason(name)}</span><span class="donut-legend-value">${pct}%</span><span class="donut-legend-count">(${count})</span></div>`;
+            }).join('');
+        }
+
+        function setTrendPill(elId, current, previous, label) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            if (!previous && !current) { el.innerHTML = ''; return; }
+            if (!previous) { el.innerHTML = `<span class="trend-pill up"><i class="fas fa-arrow-up" aria-hidden="true"></i> novo <span class="label">${label}</span></span>`; return; }
+            const diff = ((current - previous) / previous) * 100;
+            const dir = diff > 0.5 ? 'up' : diff < -0.5 ? 'down' : 'flat';
+            const icon = dir === 'up' ? 'fa-arrow-up' : dir === 'down' ? 'fa-arrow-down' : 'fa-minus';
+            const text = dir === 'flat' ? 'estável' : `${diff > 0 ? '+' : ''}${diff.toFixed(0)}%`;
+            el.innerHTML = `<span class="trend-pill ${dir}"><i class="fas ${icon}" aria-hidden="true"></i> ${text} <span class="label">${label}</span></span>`;
+        }
+
+        // ==================== Agenda em calendário ====================
         // ==================== Agenda em calendário ====================
         // Mês inteiro com a quantidade de agendamentos em cada dia + lista do dia escolhido,
         // e a visão "Próximos" com todos os agendamentos dos próximos 30 dias agrupados por dia.
@@ -1360,9 +1416,15 @@
             view: 'calendar',          // 'calendar' | 'upcoming'
             month: null,               // 'YYYY-MM'
             selected: null,            // 'YYYY-MM-DD'
-            showCancelled: false,
+            statusFilter: 'all',       // 'all' | 'confirmed' | 'completed' | 'cancelled'
             monthData: []
         };
+        const AGENDA_STATUS_CHIPS = [
+            { id: 'all', label: 'Todos' },
+            { id: 'confirmed', label: 'Confirmados', color: 'var(--ok)' },
+            { id: 'completed', label: 'Concluídos', color: 'var(--info)' },
+            { id: 'cancelled', label: 'Cancelados', color: 'var(--bad)' }
+        ];
         const AGENDA_WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
         const AGENDA_MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -1374,8 +1436,25 @@
 
         function agendaVisible(list) {
             return list
-                .filter(b => agenda.showCancelled || b.status !== 'cancelled')
+                .filter(b => agenda.statusFilter === 'all' ? b.status !== 'cancelled' : b.status === agenda.statusFilter)
                 .sort((a, b) => (a.booking_date + a.booking_time).localeCompare(b.booking_date + b.booking_time));
+        }
+
+        function renderAgendaStatusFilter() {
+            const box = document.getElementById('agendaStatusFilter');
+            if (!box) return;
+            box.innerHTML = AGENDA_STATUS_CHIPS.map(c => `
+                <button type="button" class="agenda-status-chip ${agenda.statusFilter === c.id ? 'active' : ''}" onclick="agendaSetStatusFilter('${c.id}')">
+                    ${c.color ? `<span class="dot" style="color:${c.color}"></span>` : ''}${c.label}
+                </button>`).join('');
+        }
+
+        function agendaSetStatusFilter(id) {
+            agenda.statusFilter = id;
+            renderAgendaStatusFilter();
+            if (agenda.view === 'upcoming') { loadBookings(); return; }
+            renderAgendaCalendar();
+            renderAgendaDay();
         }
 
         function bookingCardHtml(booking) {
@@ -1491,11 +1570,6 @@
             renderAgendaDay();
         }
 
-        function agendaToggleCancelled(checked) {
-            agenda.showCancelled = checked;
-            loadBookings();
-        }
-
         async function loadBookings() {
             const container = document.getElementById('bookingsTable');
             const today = todayBR();
@@ -1505,6 +1579,7 @@
             document.querySelectorAll('[data-agenda-view]').forEach(btn =>
                 btn.classList.toggle('active', btn.dataset.agendaView === agenda.view));
             document.getElementById('agendaCalendar').classList.toggle('hidden', agenda.view !== 'calendar');
+            renderAgendaStatusFilter();
 
             try {
                 if (agenda.view === 'upcoming') {
@@ -1541,7 +1616,8 @@
             for (const b of agenda.monthData) {
                 const d = b.booking_date;
                 byDay[d] = byDay[d] || { count: 0, cancelRequest: false };
-                if (b.status !== 'cancelled') byDay[d].count++;
+                const matches = agenda.statusFilter === 'all' ? b.status !== 'cancelled' : b.status === agenda.statusFilter;
+                if (matches) byDay[d].count++;
                 if (b.cancel_requested_at && b.status === 'confirmed') byDay[d].cancelRequest = true;
             }
             const totalMonth = Object.values(byDay).reduce((sum, d) => sum + d.count, 0);
