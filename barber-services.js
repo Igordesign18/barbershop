@@ -33,9 +33,51 @@ function barberDoesAll(barberId, serviceIds) {
   return (serviceIds || []).every(id => allowed.includes(Number(id)));
 }
 
-// Anexa service_ids (null = todos) a uma lista de barbeiros
+// ==================== Tempo proprio do barbeiro em cada servico ====================
+// Mapa { service_id: minutos } so com os servicos em que o barbeiro tem tempo diferente do padrao
+function getDurations(barberId) {
+  const rows = db.prepare(`
+    SELECT d.service_id, d.duration FROM barber_service_durations d JOIN services s ON s.id = d.service_id WHERE d.barber_id = ?
+  `).all(barberId);
+  const map = {};
+  for (const r of rows) map[r.service_id] = r.duration;
+  return map;
+}
+
+// map = { service_id: minutos }. Valor vazio/invalido ou < 5 = volta ao padrao do servico.
+function setDurations(tenantId, barberId, map) {
+  const clean = [];
+  for (const [sid, raw] of Object.entries(map && typeof map === 'object' ? map : {})) {
+    const minutes = Math.round(Number(raw));
+    if (!Number.isFinite(minutes) || minutes < 5 || minutes > 720) continue;
+    if (!db.prepare('SELECT 1 FROM services WHERE id = ? AND tenant_id = ?').get(Number(sid), tenantId)) continue;
+    clean.push([Number(sid), minutes]);
+  }
+  db.transaction(() => {
+    db.prepare('DELETE FROM barber_service_durations WHERE barber_id = ?').run(barberId);
+    const ins = db.prepare('INSERT INTO barber_service_durations (barber_id, service_id, duration) VALUES (?, ?, ?)');
+    for (const [sid, minutes] of clean) ins.run(barberId, sid, minutes);
+  })();
+  return getDurations(barberId);
+}
+
+// Duracao de um servico para este barbeiro (barberId pode ser null = padrao do servico)
+function durationFor(barberId, serviceId, defaultDuration) {
+  if (barberId) {
+    const row = db.prepare('SELECT duration FROM barber_service_durations WHERE barber_id = ? AND service_id = ?').get(barberId, serviceId);
+    if (row) return row.duration;
+  }
+  return defaultDuration;
+}
+
+// Soma das duracoes de varios servicos ({ id, duration }) para este barbeiro
+function totalDuration(barberId, services) {
+  return (services || []).reduce((sum, s) => sum + durationFor(barberId, s.id, s.duration), 0);
+}
+
+// Anexa service_ids (null = todos) e service_durations a uma lista de barbeiros
 function withServiceIds(barbers) {
-  return barbers.map(b => ({ ...b, service_ids: getServiceIds(b.id) }));
+  return barbers.map(b => ({ ...b, service_ids: getServiceIds(b.id), service_durations: getDurations(b.id) }));
 }
 
 // Converte o que vem do formulario (JSON em texto no multipart, ou array)
@@ -50,4 +92,16 @@ function parseIds(raw) {
   }
 }
 
-module.exports = { getServiceIds, setServiceIds, barberDoesAll, withServiceIds, parseIds };
+// Converte o JSON do formulario em objeto (undefined = campo nao enviado)
+function parseDurations(raw) {
+  if (raw === undefined) return undefined;
+  if (raw && typeof raw === 'object') return raw;
+  try {
+    const v = JSON.parse(raw);
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
+}
+
+module.exports = { getServiceIds, setServiceIds, barberDoesAll, withServiceIds, parseIds, getDurations, setDurations, durationFor, totalDuration, parseDurations };

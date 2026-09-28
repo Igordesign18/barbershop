@@ -33,7 +33,7 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   const barber = db.prepare('SELECT * FROM barbers WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
   if (!barber) return res.status(404).json({ error: 'Barbeiro nao encontrado' });
-  res.json({ ...barber, service_ids: barberServices.getServiceIds(barber.id) });
+  res.json({ ...barber, service_ids: barberServices.getServiceIds(barber.id), service_durations: barberServices.getDurations(barber.id) });
 });
 
 router.post('/', upload.single('photo'), (req, res) => {
@@ -48,8 +48,9 @@ router.post('/', upload.single('photo'), (req, res) => {
     .run(req.tenantId, name, specialty, photoUrl);
   // Servicos que o barbeiro faz (vazio = todos)
   const serviceIds = barberServices.setServiceIds(req.tenantId, result.lastInsertRowid, barberServices.parseIds(req.body.service_ids));
+  const durations = barberServices.setDurations(req.tenantId, result.lastInsertRowid, barberServices.parseDurations(req.body.service_durations));
   const barber = db.prepare('SELECT * FROM barbers WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json({ ...barber, service_ids: serviceIds });
+  res.status(201).json({ ...barber, service_ids: serviceIds, service_durations: durations });
 });
 
 router.put('/:id', upload.single('photo'), (req, res) => {
@@ -73,8 +74,12 @@ router.put('/:id', upload.single('photo'), (req, res) => {
   const ids = barberServices.parseIds(req.body.service_ids);
   if (ids !== undefined) barberServices.setServiceIds(req.tenantId, req.params.id, ids);
 
+  // Tempo proprio por servico: so mexe se o formulario mandou o campo
+  const durs = barberServices.parseDurations(req.body.service_durations);
+  if (durs !== undefined) barberServices.setDurations(req.tenantId, req.params.id, durs);
+
   const barber = db.prepare('SELECT * FROM barbers WHERE id = ?').get(req.params.id);
-  res.json({ ...barber, service_ids: barberServices.getServiceIds(barber.id) });
+  res.json({ ...barber, service_ids: barberServices.getServiceIds(barber.id), service_durations: barberServices.getDurations(barber.id) });
 });
 
 router.delete('/:id', (req, res) => {

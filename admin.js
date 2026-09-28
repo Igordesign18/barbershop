@@ -1795,7 +1795,7 @@
         let barberServiceOptions = [];
         let barbersLoadedOnce = false;
 
-        function renderBarberServicesBox(boxId, selectedIds) {
+        function renderBarberServicesBox(boxId, selectedIds, durations) {
             const box = document.getElementById(boxId);
             if (!box) return;
             if (!barberServiceOptions.length) {
@@ -1803,15 +1803,23 @@
                 return;
             }
             const all = !Array.isArray(selectedIds) || !selectedIds.length;
+            const durs = durations && typeof durations === 'object' ? durations : {};
             box.innerHTML = `
                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
                     <input type="checkbox" class="bs-all" style="width:auto;" ${all ? 'checked' : ''} onchange="toggleBarberServicesAll('${boxId}', this.checked)"> Todos os serviços
                 </label>
+                <div style="display:flex; justify-content:flex-end; font-size:11.5px; color:var(--text-muted); padding-right:4px;">Tempo deste profissional (min)</div>
                 ${barberServiceOptions.map(sv => `
-                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px; padding-left:22px;">
-                        <input type="checkbox" class="bs-item" style="width:auto;" value="${sv.id}"
-                            ${all || selectedIds.includes(sv.id) ? 'checked' : ''} ${all ? 'disabled' : ''}> ${sv.name}
-                    </label>`).join('')}`;
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding-left:22px;">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px; flex:1; min-width:0;">
+                            <input type="checkbox" class="bs-item" style="width:auto;" value="${sv.id}"
+                                ${all || selectedIds.includes(sv.id) ? 'checked' : ''} ${all ? 'disabled' : ''}> ${sv.name}
+                        </label>
+                        <input type="number" class="bs-duration" data-service-id="${sv.id}" min="5" max="720" step="5" inputmode="numeric"
+                            value="${durs[sv.id] || ''}" placeholder="${sv.duration || ''}" title="Deixe em branco para usar o tempo padrão (${sv.duration} min)"
+                            style="width:78px; flex:none; padding:6px 8px; text-align:center;">
+                    </div>`).join('')}
+                <span style="font-size:11.5px; color:var(--text-muted);">Em branco = tempo padrão do serviço (mostrado em cinza).</span>`;
         }
 
         function toggleBarberServicesAll(boxId, checked) {
@@ -1829,6 +1837,16 @@
             return ids.length ? ids : null;
         }
 
+        // { service_id: minutos } so dos campos preenchidos (vazio = usa o padrao)
+        function collectBarberDurations(boxId) {
+            const out = {};
+            document.querySelectorAll(`#${boxId} .bs-duration`).forEach(inp => {
+                const v = parseInt(inp.value, 10);
+                if (Number.isFinite(v) && v >= 5) out[inp.dataset.serviceId] = v;
+            });
+            return out;
+        }
+
         function barberServicesLabel(ids) {
             if (!Array.isArray(ids) || !ids.length) return 'Todos os serviços';
             const names = barberServiceOptions.filter(sv => ids.includes(sv.id)).map(sv => sv.name);
@@ -1836,7 +1854,7 @@
         }
 
         function renderPackageServiceChecklist(services) {
-            barberServiceOptions = services.map(sv => ({ id: sv.id, name: sv.name }));
+            barberServiceOptions = services.map(sv => ({ id: sv.id, name: sv.name, duration: sv.duration }));
             renderBarberServicesBox('barberServicesBox', null);
             // Barbeiros carregaram antes dos servicos: refaz a lista para mostrar os nomes certos
             if (barbersLoadedOnce) loadBarbers();
@@ -2293,6 +2311,7 @@
                 formData.append('name', name);
                 formData.append('specialty', specialty || '');
                 formData.append('service_ids', JSON.stringify(serviceIds));
+                formData.append('service_durations', JSON.stringify(collectBarberDurations('barberServicesBox')));
                 if (photoFile) formData.append('photo', photoFile);
 
                 await apiFetch('/barbers', { method: 'POST', body: formData });
@@ -2315,7 +2334,7 @@
                 document.getElementById('editBarberId').value = barber.id;
                 document.getElementById('editBarberName').value = barber.name || '';
                 document.getElementById('editBarberSpecialty').value = barber.specialty || '';
-                renderBarberServicesBox('editBarberServicesBox', barber.service_ids);
+                renderBarberServicesBox('editBarberServicesBox', barber.service_ids, barber.service_durations);
                 
                 const modal = document.getElementById('editBarberModal');
                 modal.classList.remove('hidden');
@@ -2360,6 +2379,7 @@
                 formData.append('name', name);
                 formData.append('specialty', specialty || '');
                 formData.append('service_ids', JSON.stringify(serviceIds));
+                formData.append('service_durations', JSON.stringify(collectBarberDurations('editBarberServicesBox')));
                 if (photoFile) formData.append('photo', photoFile);
 
                 await apiFetch(`/barbers/${barberId}`, { method: 'PUT', body: formData });

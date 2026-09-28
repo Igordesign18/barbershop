@@ -821,6 +821,16 @@
             return allowed ? packages.filter(pkg => (pkg.services || []).every(sv => allowed.includes(Number(sv.id)))) : packages;
         }
 
+        // Tempo do servico/pacote para o profissional escolhido (cada barbeiro pode ter tempo proprio)
+        function durationForBarber(item) {
+            if (!item) return 30;
+            const custom = selectedBarber && selectedBarber.service_durations ? selectedBarber.service_durations : {};
+            if (item.isPackage || item.total_duration != null && Array.isArray(item.services)) {
+                return (item.services || []).reduce((sum, sv) => sum + (Number(custom[sv.id]) || Number(sv.duration) || 0), 0) || item.total_duration || 30;
+            }
+            return Number(custom[item.id]) || Number(item.duration) || 30;
+        }
+
         function renderServicesWizard() {
             const container = document.getElementById('servicesList');
             if (!container) return;
@@ -840,7 +850,7 @@
                 <div class="service-item ${isSelected(pkg.id, true) ? 'selected' : ''}" onclick="selectPackage(${pkg.id})" style="border-color: rgba(198,161,91,0.35);">
                     <div class="service-info">
                         <h4><i class="fas fa-box-open"></i> ${pkg.name} <span style="font-size:10px; background:var(--brass); color:var(--ebony); padding:2px 8px; border-radius:100px; font-weight:700; margin-left:6px;">PACOTE</span></h4>
-                        <p><i class="fas fa-clock"></i> ${pkg.total_duration} minutos • ${pkg.services.map(s => s.name).join(' + ')}</p>
+                        <p><i class="fas fa-clock"></i> ${durationForBarber(pkg)} minutos • ${pkg.services.map(s => s.name).join(' + ')}</p>
                     </div>
                     <div class="service-price">R$ ${pkg.price.toFixed(2)}</div>
                 </div>
@@ -853,7 +863,7 @@
                         ${service.photo_url ? `<img src="${service.photo_url}" alt="${service.name}">` : '<i class="fas fa-scissors"></i>'}
                     </div>
                     <div class="barber-name">${service.name}</div>
-                    <div class="barber-specialty">R$ ${service.price.toFixed(2)} · ${service.duration}min</div>
+                    <div class="barber-specialty">R$ ${service.price.toFixed(2)} · ${durationForBarber(service)}min</div>
                 </div>
             `).join('') + `</div>` : '';
 
@@ -890,7 +900,7 @@
                     <div class="service-row-photo"><i class="fas fa-box-open"></i></div>
                     <div class="service-row-content">
                         <h4>${pkg.name} <span class="pkg-badge">PACOTE</span></h4>
-                        <p>${pkg.services.map(s => s.name).join(' + ')} · ${pkg.total_duration}min</p>
+                        <p>${pkg.services.map(s => s.name).join(' + ')} · ${durationForBarber(pkg)}min</p>
                         <div class="price">A partir de R$ ${pkg.price.toFixed(2)}</div>
                     </div>
                     <i class="fas fa-chevron-right"></i>
@@ -904,7 +914,7 @@
                     </div>
                     <div class="service-row-content">
                         <h4>${service.name}</h4>
-                        <p>${service.duration} minutos</p>
+                        <p>${durationForBarber(service)} minutos</p>
                         <div class="price">A partir de R$ ${service.price.toFixed(2)}</div>
                     </div>
                     <i class="fas fa-chevron-right"></i>
@@ -1240,7 +1250,7 @@
             if (!dayConfig || !dayConfig.active) return slots;
             if (dateBlocks && dateBlocks.has('')) return slots;
 
-            const serviceDuration = selectedService ? selectedService.duration : 30;
+            const serviceDuration = selectedService ? durationForBarber(selectedService) : 30;
 
             for (let period of dayConfig.periods) {
                 const [openHour, openMin] = period.start.split(':').map(Number);
@@ -1318,7 +1328,7 @@
                 <p><strong><i class="fas fa-calendar"></i> Data:</strong> ${dateFormatted}</p>
                 <p><strong><i class="fas fa-clock"></i> Horário:</strong> ${selectedTime}</p>
                 <p><strong><i class="fas fa-money-bill-wave"></i> Valor:</strong> R$ ${selectedService.price.toFixed(2)}</p>
-                <p><strong><i class="fas fa-hourglass-half"></i> Duração:</strong> ${selectedService.duration} minutos</p>
+                <p><strong><i class="fas fa-hourglass-half"></i> Duração:</strong> ${durationForBarber(selectedService)} minutos</p>
             `;
             
             document.getElementById('unverifiedUserFields').classList.remove('hidden'); 

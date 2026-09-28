@@ -204,6 +204,16 @@ db.exec(`
   );
 `);
 
+// Tempo proprio de cada barbeiro em cada servico (opcional). Sem linha = usa a duracao padrao do servico.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS barber_service_durations (
+    barber_id INTEGER NOT NULL REFERENCES barbers(id) ON DELETE CASCADE,
+    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    duration INTEGER NOT NULL,
+    PRIMARY KEY (barber_id, service_id)
+  );
+`);
+
 // Automacoes PRO: pos-atendimento (retorno e avaliacao) e aniversario do cliente
 ensureColumn('bookings', 'completed_at', 'TEXT');
 ensureColumn('bookings', 'followup_sent', 'INTEGER NOT NULL DEFAULT 0');

@@ -819,7 +819,7 @@ async function runTool(name, args, ctx) {
       }
       const flagsS = interactiveFlags(ctx);
       const hintS = flagsS.cards ? `Agora mostre com enviar_cards tipo "servicos"${args.profissional_id ? ` e profissional_id ${args.profissional_id}` : ''}.` : flagsS.poll ? 'Agora mostre com enviar_enquete (multipla=true, ids "servico_<id>").' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>", descrição com preço e duração).' : flagsS.list ? 'Agora mostre com enviar_lista (ids "servico_<id>").' : null;
-      return { servicos: services.map(s => ({ id: s.id, nome: s.name, preco: `R$ ${formatCurrencyBRL(s.price)}`, duracao_min: s.duration })), ...(hintS ? { proximo_passo: hintS } : {}) };
+      return { servicos: services.map(s => ({ id: s.id, nome: s.name, preco: `R$ ${formatCurrencyBRL(s.price)}`, duracao_min: barberServices.durationFor(args.profissional_id ? Number(args.profissional_id) : null, s.id, s.duration) })), ...(hintS ? { proximo_passo: hintS } : {}) };
     }
 
     case 'horarios_disponiveis': {
@@ -832,7 +832,7 @@ async function runTool(name, args, ctx) {
       }
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(args.data))) return { erro: 'Data inválida, use AAAA-MM-DD.' };
 
-      const duration = loaded.services.reduce((sum, s) => sum + s.duration, 0);
+      const duration = barberServices.totalDuration(barber.id, loaded.services);
       const ignoreId = args.ignorar_agendamento_id && ownBooking(ctx, args.ignorar_agendamento_id) ? Number(args.ignorar_agendamento_id) : null;
       const slots = computeFreeSlots(tenantId, barber.id, args.data, duration, ignoreId);
       const result = { profissional: barber.name, data: args.data, duracao_total_min: duration, horarios_livres: slots };
@@ -866,7 +866,7 @@ async function runTool(name, args, ctx) {
 
       const date = String(args.data);
       const time = String(args.hora).slice(0, 5);
-      const duration = loaded.services.reduce((sum, s) => sum + s.duration, 0);
+      const duration = barberServices.totalDuration(barber.id, loaded.services);
       const price = loaded.services.reduce((sum, s) => sum + Number(s.price), 0);
       const itemName = loaded.services.map(s => s.name).join(' + ');
 
@@ -919,7 +919,7 @@ async function runTool(name, args, ctx) {
       if (!barberServices.barberDoesAll(barber.id, loaded.services.map(sv => sv.id))) {
         return { erro: `${barber.name} não faz todos esses serviços. Chame listar_servicos com profissional_id=${barber.id} e ofereça só os que ele faz, ou sugira outro profissional.` };
       }
-      const duration = loaded.services.reduce((sum, s) => sum + s.duration, 0);
+      const duration = barberServices.totalDuration(barber.id, loaded.services);
       const ignoreId = args.ignorar_agendamento_id && ownBooking(ctx, args.ignorar_agendamento_id) ? Number(args.ignorar_agendamento_id) : null;
       const today = nowBR().date;
       const dias = [];

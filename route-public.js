@@ -296,7 +296,7 @@ router.post('/:slug/bookings', async (req, res) => {
 
     itemName = pkg.name;
     itemPrice = pkg.price;
-    itemDuration = pkgServices.reduce((sum, s) => sum + s.duration, 0);
+    itemDuration = require('./barber-services').totalDuration(barber_id ? Number(barber_id) : null, pkgServices);
     effectiveServiceId = pkgServices[0].id; // mantem a FK valida; o nome/preco reais vem de item_name/item_price
   } else {
     service = db.prepare('SELECT * FROM services WHERE id = ? AND tenant_id = ?').get(service_id, req.tenantId);
@@ -304,7 +304,7 @@ router.post('/:slug/bookings', async (req, res) => {
 
     itemName = service.name;
     itemPrice = service.price;
-    itemDuration = service.duration;
+    itemDuration = require('./barber-services').durationFor(barber_id ? Number(barber_id) : null, service.id, service.duration);
     effectiveServiceId = service.id;
   }
 
