@@ -10,6 +10,10 @@ const { getSystemSetting, setSystemSetting } = require('./system-settings');
 const USER_NAME = 'barbersync-notificacoes';
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+function isUnauthorized(e) {
+  return e && (e.status === 401 || /unauthorized/i.test(e.message || ''));
+}
+
 function token() {
   return getSystemSetting('notify_wuz_token');
 }
@@ -20,7 +24,11 @@ async function status() {
   const t = token();
   let state = 'disconnected';
   if (t) {
-    try { state = await wuzapi.getStatus(t); } catch (e) { state = 'erro: ' + e.message; }
+    try { state = await wuzapi.getStatus(t); }
+    catch (e) {
+      if (isUnauthorized(e)) { setSystemSetting('notify_wuz_token', ''); state = 'disconnected'; }
+      else state = 'erro: ' + e.message;
+    }
   }
   return { wuzapi_configured: wuzapi.isConfigured(), has_user: !!t, status: state };
 }
@@ -67,9 +75,17 @@ async function currentQr() {
   return { status: st, qr: await wuzapi.getQr(t).catch(() => null) };
 }
 
+// Desconecta e APAGA o usuario na WuzAPI + o token salvo: reconectar cria tudo do zero.
 async function disconnect() {
   const t = token();
   if (t) await wuzapi.logout(t).catch(() => {});
+  try {
+    await wuzapi.deleteUserBy({ token: t, name: USER_NAME });
+  } catch (err) {
+    console.error('[gestor-notify] não consegui apagar o usuário na WuzAPI:', err.message);
+    return; // mantem o token salvo para poder tentar de novo
+  }
+  setSystemSetting('notify_wuz_token', '');
 }
 
 // ==================== Envio ====================
@@ -96,6 +112,15 @@ async function sendTo(phone, text) {
   const n = digits55(phone);
   if (n.length < 12) throw new Error('Telefone do gestor inválido');
 
+  try { return await sendToInner(t, n, text); }
+  catch (err) {
+    if (!isUnauthorized(err)) throw err;
+    setSystemSetting('notify_wuz_token', '');
+    throw new Error('O WhatsApp de avisos do sistema está desconectado (sessão inválida). No Super Admin, clique em Conectar e escaneie o QR Code de novo.');
+  }
+}
+
+async function sendToInner(t, n, text) {
   const known = resolved.get(n);
   const first = known && Date.now() - known.at < 24 * 3600 * 1000 && known.to ? known.to : n;
   try {

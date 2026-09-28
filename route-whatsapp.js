@@ -83,17 +83,13 @@ router.get('/qr', async (req, res) => {
   }
 });
 
+// Desconectar apaga a instancia no motor e no banco: conectar de novo comeca do zero (sem conflito)
 router.delete('/disconnect', async (req, res) => {
   const instance = waProvider.getInstance(req.tenantId);
   if (!instance) return res.json({ ok: true });
 
-  try {
-    await waProvider.disconnect(instance).catch(() => {});
-  } finally {
-    db.prepare('UPDATE whatsapp_instances SET status = ?, updated_at = datetime(\'now\') WHERE tenant_id = ?').run('disconnected', req.tenantId);
-  }
-
-  res.json({ ok: true });
+  const result = await waProvider.removeInstance(instance);
+  res.json(result.ok ? { ok: true } : { ok: true, warning: `Desconectado, mas não consegui apagar a instância no servidor: ${result.warning}` });
 });
 
 router.get('/template', (req, res) => {

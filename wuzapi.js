@@ -76,6 +76,24 @@ async function deleteUser(id) {
   return wzFetch(`/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE', admin: true });
 }
 
+// Apaga o usuario da WuzAPI achando-o por id, token ou nome (o id pode nao estar salvo no banco).
+// Nao dar erro se ele ja nao existe mais.
+async function deleteUserBy({ id, token, name } = {}) {
+  let targetId = id;
+  if (targetId === null || targetId === undefined || targetId === '') {
+    const users = await listUsers();
+    const found = users.find(u => (token && u.token === token) || (name && u.name === name));
+    targetId = found?.id;
+  }
+  if (targetId === null || targetId === undefined || targetId === '') return null;
+  try {
+    return await deleteUser(targetId);
+  } catch (err) {
+    if (err.status === 404 || /not found/i.test(err.message)) return null;
+    throw err;
+  }
+}
+
 // ==================== Sessao ====================
 
 // Define o webhook e conecta (gera QR se ainda nao estiver pareado)
@@ -200,6 +218,7 @@ module.exports = {
   isConfigured,
   createUser,
   deleteUser,
+  deleteUserBy,
   connect,
   setWebhook,
   getQr,

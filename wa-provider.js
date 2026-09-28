@@ -98,7 +98,7 @@ async function connectTenant(tenant, webhookUrl) {
 
   // Barbearia trocou de motor no super admin: desliga a instancia antiga e comeca do zero
   if (instance && normalizeProvider(instance.provider) !== provider) {
-    await disconnect(instance).catch(() => {});
+    await removeInstance(instance).catch(() => {});
     db.prepare('DELETE FROM whatsapp_instances WHERE tenant_id = ?').run(tenant.id);
     instance = null;
   }
@@ -283,6 +283,38 @@ async function disconnect(instance) {
   } else {
     await evolution.logoutInstance(instance.instance_name);
   }
+}
+
+// Desconecta E APAGA a instancia no motor (WuzAPI / Evolution GO / Evolution v2) e o registro no banco,
+// para uma nova conexao comecar do zero, sem conflito de nome/token/sessao travada.
+// Se o motor recusar a exclusao (fora do ar, etc.), o registro fica como 'disconnected' e o erro e retornado.
+async function removeInstance(instance) {
+  const provider = normalizeProvider(instance.provider);
+  let warning = null;
+  if (isConfigured(provider)) {
+    try {
+      if (provider === 'wuzapi') {
+        if (instance.instance_token) await wuzapi.logout(instance.instance_token).catch(() => {});
+        await wuzapi.deleteUserBy({ id: instance.external_id, token: instance.instance_token, name: instance.instance_name });
+      } else if (provider === 'evogo') {
+        if (instance.instance_token) await evogo.logout(instance.instance_token).catch(() => {});
+        const id = instance.external_id || (await evogo.findByName(instance.instance_name).catch(() => null))?.id;
+        await evogo.deleteInstance(id);
+      } else {
+        await evolution.logoutInstance(instance.instance_name).catch(() => {});
+        await evolution.deleteInstance(instance.instance_name);
+      }
+    } catch (err) {
+      if (!(err.status === 404 || /not found|does not exist|n[aã]o encontrad/i.test(err.message))) warning = err.message;
+    }
+  }
+  if (warning) {
+    console.error(`[whatsapp] não consegui apagar a instância ${instance.instance_name} (${provider}):`, warning);
+    setStatus(instance.tenant_id, 'disconnected');
+    return { ok: false, warning };
+  }
+  db.prepare('DELETE FROM whatsapp_instances WHERE tenant_id = ?').run(instance.tenant_id);
+  return { ok: true };
 }
 
 // Reaponta o webhook (usado quando o gestor liga a IA)
@@ -583,6 +615,7 @@ module.exports = {
   refreshStatus,
   currentQr,
   disconnect,
+  removeInstance,
   setWebhook,
   sendText,
   supports,
