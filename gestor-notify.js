@@ -28,6 +28,13 @@ async function status() {
 async function connect() {
   if (!wuzapi.isConfigured()) throw new Error('WuzAPI não configurada no servidor (WUZAPI_URL / WUZAPI_ADMIN_TOKEN)');
   let t = token();
+  // Token salvo mas recusado pela WuzAPI (ex: WuzAPI reinstalada/resetada): descarta e recria o usuario
+  if (t) {
+    try { await wuzapi.getStatus(t); }
+    catch (e) {
+      if (e.status === 401 || /unauthorized/i.test(e.message)) { setSystemSetting('notify_wuz_token', ''); t = null; }
+    }
+  }
   if (!t) {
     const created = await wuzapi.createUser(USER_NAME);
     t = created.token;
