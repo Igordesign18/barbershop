@@ -61,6 +61,32 @@ function setDurations(tenantId, barberId, map) {
   return getDurations(barberId);
 }
 
+// Barbeiros da barbearia que fazem este servico, com o tempo proprio de cada um (duration = null -> usa o padrao)
+function getBarberTimesForService(tenantId, serviceId) {
+  const barbers = db.prepare('SELECT id, name FROM barbers WHERE tenant_id = ? ORDER BY id').all(tenantId);
+  const custom = {};
+  for (const r of db.prepare('SELECT barber_id, duration FROM barber_service_durations WHERE service_id = ?').all(serviceId)) custom[r.barber_id] = r.duration;
+  return barbers
+    .filter(b => { const ids = getServiceIds(b.id); return !ids || ids.includes(Number(serviceId)); })
+    .map(b => ({ id: b.id, name: b.name, duration: custom[b.id] ?? null }));
+}
+
+// map = { barber_id: minutos } para UM servico. Vazio/invalido = volta ao padrao do servico.
+function setBarberTimesForService(tenantId, serviceId, map) {
+  const barberIds = new Set(db.prepare('SELECT id FROM barbers WHERE tenant_id = ?').all(tenantId).map(b => b.id));
+  const clean = [];
+  for (const [bid, raw] of Object.entries(map && typeof map === 'object' ? map : {})) {
+    const minutes = Math.round(Number(raw));
+    if (!barberIds.has(Number(bid)) || !Number.isFinite(minutes) || minutes < 5 || minutes > 720) continue;
+    clean.push([Number(bid), minutes]);
+  }
+  db.transaction(() => {
+    for (const bid of barberIds) db.prepare('DELETE FROM barber_service_durations WHERE barber_id = ? AND service_id = ?').run(bid, serviceId);
+    const ins = db.prepare('INSERT INTO barber_service_durations (barber_id, service_id, duration) VALUES (?, ?, ?)');
+    for (const [bid, minutes] of clean) ins.run(bid, serviceId, minutes);
+  })();
+}
+
 // Duracao de um servico para este barbeiro (barberId pode ser null = padrao do servico)
 function durationFor(barberId, serviceId, defaultDuration) {
   if (barberId) {
@@ -104,4 +130,4 @@ function parseDurations(raw) {
   }
 }
 
-module.exports = { getServiceIds, setServiceIds, barberDoesAll, withServiceIds, parseIds, getDurations, setDurations, durationFor, totalDuration, parseDurations };
+module.exports = { getServiceIds, setServiceIds, barberDoesAll, withServiceIds, parseIds, getDurations, setDurations, getBarberTimesForService, setBarberTimesForService, durationFor, totalDuration, parseDurations };

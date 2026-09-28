@@ -5,6 +5,7 @@ const { db } = require('./db');
 const { requireManager } = require('./auth');
 const { requireActiveTenant } = require('./tenant');
 const { makeUpload } = require('./image-upload');
+const barberServices = require('./barber-services');
 
 const router = express.Router();
 router.use(requireManager, requireActiveTenant);
@@ -22,7 +23,8 @@ router.get('/', (req, res) => {
 router.get('/:id', (req, res) => {
   const service = db.prepare('SELECT * FROM services WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
   if (!service) return res.status(404).json({ error: 'Servico nao encontrado' });
-  res.json(service);
+  // Barbeiros que fazem este servico e o tempo proprio de cada um (null = usa o padrao)
+  res.json({ ...service, barbers: barberServices.getBarberTimesForService(req.tenantId, service.id) });
 });
 
 router.post('/', (req, res) => {
@@ -46,6 +48,9 @@ router.put('/:id', (req, res) => {
   const info = db.prepare('UPDATE services SET name = ?, price = ?, duration = ? WHERE id = ? AND tenant_id = ?')
     .run(name.trim(), price, duration, req.params.id, req.tenantId);
   if (info.changes === 0) return res.status(404).json({ error: 'Servico nao encontrado' });
+
+  // Tempo proprio de cada barbeiro neste servico: so mexe se o painel mandou o campo
+  if (req.body.barber_durations !== undefined) barberServices.setBarberTimesForService(req.tenantId, Number(req.params.id), req.body.barber_durations);
 
   const service = db.prepare('SELECT * FROM services WHERE id = ?').get(req.params.id);
   res.json(service);

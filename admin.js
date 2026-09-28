@@ -1795,7 +1795,7 @@
         let barberServiceOptions = [];
         let barbersLoadedOnce = false;
 
-        function renderBarberServicesBox(boxId, selectedIds, durations) {
+        function renderBarberServicesBox(boxId, selectedIds) {
             const box = document.getElementById(boxId);
             if (!box) return;
             if (!barberServiceOptions.length) {
@@ -1803,23 +1803,15 @@
                 return;
             }
             const all = !Array.isArray(selectedIds) || !selectedIds.length;
-            const durs = durations && typeof durations === 'object' ? durations : {};
             box.innerHTML = `
                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600;">
                     <input type="checkbox" class="bs-all" style="width:auto;" ${all ? 'checked' : ''} onchange="toggleBarberServicesAll('${boxId}', this.checked)"> Todos os serviços
                 </label>
-                <div style="display:flex; justify-content:flex-end; font-size:11.5px; color:var(--text-muted); padding-right:4px;">Tempo deste profissional (min)</div>
                 ${barberServiceOptions.map(sv => `
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding-left:22px;">
-                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px; flex:1; min-width:0;">
-                            <input type="checkbox" class="bs-item" style="width:auto;" value="${sv.id}"
-                                ${all || selectedIds.includes(sv.id) ? 'checked' : ''} ${all ? 'disabled' : ''}> ${sv.name}
-                        </label>
-                        <input type="number" class="bs-duration" data-service-id="${sv.id}" min="5" max="720" step="5" inputmode="numeric"
-                            value="${durs[sv.id] || ''}" placeholder="${sv.duration || ''}" title="Deixe em branco para usar o tempo padrão (${sv.duration} min)"
-                            style="width:78px; flex:none; padding:6px 8px; text-align:center;">
-                    </div>`).join('')}
-                <span style="font-size:11.5px; color:var(--text-muted);">Em branco = tempo padrão do serviço (mostrado em cinza).</span>`;
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px; padding-left:22px;">
+                        <input type="checkbox" class="bs-item" style="width:auto;" value="${sv.id}"
+                            ${all || selectedIds.includes(sv.id) ? 'checked' : ''} ${all ? 'disabled' : ''}> ${sv.name}
+                    </label>`).join('')}`;
         }
 
         function toggleBarberServicesAll(boxId, checked) {
@@ -1835,16 +1827,6 @@
             if (!box || box.querySelector('.bs-all')?.checked) return [];
             const ids = [...box.querySelectorAll('.bs-item:checked')].map(cb => Number(cb.value));
             return ids.length ? ids : null;
-        }
-
-        // { service_id: minutos } so dos campos preenchidos (vazio = usa o padrao)
-        function collectBarberDurations(boxId) {
-            const out = {};
-            document.querySelectorAll(`#${boxId} .bs-duration`).forEach(inp => {
-                const v = parseInt(inp.value, 10);
-                if (Number.isFinite(v) && v >= 5) out[inp.dataset.serviceId] = v;
-            });
-            return out;
         }
 
         function barberServicesLabel(ids) {
@@ -2123,6 +2105,7 @@
                 document.getElementById('editServiceName').value = data.name;
                 document.getElementById('editServicePrice').value = data.price;
                 document.getElementById('editServiceDuration').value = data.duration;
+                renderServiceBarberTimes(data.barbers, data.duration);
 
                 const preview = document.getElementById('editServicePhotoPreview');
                 const removeBtn = document.getElementById('removeServicePhotoBtn');
@@ -2140,6 +2123,31 @@
             } catch (error) {
                 showNotification('Erro ao carregar serviço: ' + error.message, 'error');
             }
+        }
+
+        // Lista os profissionais que fazem o servico, cada um com o seu tempo (em branco = tempo padrao acima)
+        function renderServiceBarberTimes(barbersList, defaultDuration) {
+            const group = document.getElementById('editServiceBarberTimesGroup');
+            const box = document.getElementById('editServiceBarberTimes');
+            if (!group || !box) return;
+            if (!Array.isArray(barbersList) || !barbersList.length) { group.style.display = 'none'; box.innerHTML = ''; return; }
+            group.style.display = '';
+            box.innerHTML = barbersList.map(b => `
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <span style="font-size:13.5px; flex:1; min-width:0;">${b.name}</span>
+                    <input type="number" class="svc-barber-time" data-barber-id="${b.id}" min="5" max="720" step="5" inputmode="numeric"
+                        value="${b.duration || ''}" placeholder="${defaultDuration || ''}" title="Em branco = tempo padrão do serviço"
+                        style="width:84px; flex:none; padding:6px 8px; text-align:center;">
+                </div>`).join('') + '<span style="font-size:11.5px; color:var(--text-muted);">Em branco = usa o tempo padrão do serviço (em cinza).</span>';
+        }
+
+        function collectServiceBarberTimes() {
+            const out = {};
+            document.querySelectorAll('#editServiceBarberTimes .svc-barber-time').forEach(inp => {
+                const v = parseInt(inp.value, 10);
+                if (Number.isFinite(v) && v >= 5) out[inp.dataset.barberId] = v;
+            });
+            return out;
         }
 
         function closeEditServiceModal() {
@@ -2217,7 +2225,8 @@
                     body: JSON.stringify({
                         name: newName.trim(),
                         price: parseFloat(newPrice),
-                        duration: parseInt(newDuration)
+                        duration: parseInt(newDuration),
+                        barber_durations: collectServiceBarberTimes()
                     })
                 });
 
@@ -2311,7 +2320,6 @@
                 formData.append('name', name);
                 formData.append('specialty', specialty || '');
                 formData.append('service_ids', JSON.stringify(serviceIds));
-                formData.append('service_durations', JSON.stringify(collectBarberDurations('barberServicesBox')));
                 if (photoFile) formData.append('photo', photoFile);
 
                 await apiFetch('/barbers', { method: 'POST', body: formData });
@@ -2334,7 +2342,7 @@
                 document.getElementById('editBarberId').value = barber.id;
                 document.getElementById('editBarberName').value = barber.name || '';
                 document.getElementById('editBarberSpecialty').value = barber.specialty || '';
-                renderBarberServicesBox('editBarberServicesBox', barber.service_ids, barber.service_durations);
+                renderBarberServicesBox('editBarberServicesBox', barber.service_ids);
                 
                 const modal = document.getElementById('editBarberModal');
                 modal.classList.remove('hidden');
@@ -2379,7 +2387,6 @@
                 formData.append('name', name);
                 formData.append('specialty', specialty || '');
                 formData.append('service_ids', JSON.stringify(serviceIds));
-                formData.append('service_durations', JSON.stringify(collectBarberDurations('editBarberServicesBox')));
                 if (photoFile) formData.append('photo', photoFile);
 
                 await apiFetch(`/barbers/${barberId}`, { method: 'PUT', body: formData });
