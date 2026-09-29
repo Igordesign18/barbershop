@@ -2298,6 +2298,7 @@
             const name = document.getElementById('barberName').value.trim();
             const specialty = document.getElementById('barberSpecialty').value.trim();
             const photoFile = document.getElementById('barberPhoto').files[0];
+            const notifyPhone = document.getElementById('barberNotifyPhone').value.trim();
             
             if (!name || name.length < 3) { 
                 showNotification('Nome deve ter pelo menos 3 caracteres!', 'error'); 
@@ -2320,6 +2321,7 @@
                 formData.append('name', name);
                 formData.append('specialty', specialty || '');
                 formData.append('service_ids', JSON.stringify(serviceIds));
+                formData.append('notify_phone', notifyPhone);
                 if (photoFile) formData.append('photo', photoFile);
 
                 await apiFetch('/barbers', { method: 'POST', body: formData });
@@ -2327,6 +2329,7 @@
                 showNotification('Barbeiro adicionado com sucesso!', 'success');
                 document.getElementById('barberName').value = '';
                 document.getElementById('barberSpecialty').value = '';
+                document.getElementById('barberNotifyPhone').value = '';
                 document.getElementById('barberPhoto').value = '';
                 renderBarberServicesBox('barberServicesBox', null);
                 loadBarbers();
@@ -2342,6 +2345,7 @@
                 document.getElementById('editBarberId').value = barber.id;
                 document.getElementById('editBarberName').value = barber.name || '';
                 document.getElementById('editBarberSpecialty').value = barber.specialty || '';
+                document.getElementById('editBarberNotifyPhone').value = barber.notify_phone ? String(barber.notify_phone).replace(/^55/, '') : '';
                 renderBarberServicesBox('editBarberServicesBox', barber.service_ids);
                 
                 const modal = document.getElementById('editBarberModal');
@@ -2365,6 +2369,7 @@
             const name = document.getElementById('editBarberName').value.trim();
             const specialty = document.getElementById('editBarberSpecialty').value.trim();
             const photoFile = document.getElementById('editBarberPhoto').files[0];
+            const notifyPhone = document.getElementById('editBarberNotifyPhone').value.trim();
             
             if (!name || name.length < 3) { 
                 showNotification('Nome deve ter pelo menos 3 caracteres!', 'error'); 
@@ -2387,6 +2392,7 @@
                 formData.append('name', name);
                 formData.append('specialty', specialty || '');
                 formData.append('service_ids', JSON.stringify(serviceIds));
+                formData.append('notify_phone', notifyPhone);
                 if (photoFile) formData.append('photo', photoFile);
 
                 await apiFetch(`/barbers/${barberId}`, { method: 'PUT', body: formData });

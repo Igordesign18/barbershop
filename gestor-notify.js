@@ -213,19 +213,42 @@ function buildMessage(tenant, b, kind, extra = {}) {
   return lines.join('\n');
 }
 
+// Quem recebe o aviso: o gestor (se ligado) e o barbeiro do agendamento (se tiver WhatsApp cadastrado).
+// Avaliacao baixa e so para o gestor. extra.onlyBarber = agendamento criado pelo proprio gestor (so avisa o barbeiro).
+function recipientsFor(tenant, b, kind, extra = {}) {
+  const list = [];
+  if (!extra.onlyBarber && tenant.notify_phone && tenant.notify_enabled !== 0) list.push({ phone: tenant.notify_phone, who: 'gestor' });
+  if (kind !== 'avaliacao_baixa' && b.barber_id) {
+    const barber = db.prepare('SELECT name, notify_phone FROM barbers WHERE id = ?').get(b.barber_id);
+    if (barber && barber.notify_phone) list.push({ phone: barber.notify_phone, who: `barbeiro ${barber.name}` });
+  }
+  // sem duplicar quando o gestor e o barbeiro sao a mesma pessoa/numero
+  const seen = new Set();
+  return list.filter(r => { const k = digits55(r.phone); if (seen.has(k)) return false; seen.add(k); return true; });
+}
+
 // Dispara o aviso em segundo plano. kind: 'novo' | 'cancelado' | 'reagendado' | 'confirmado'
 function notifyBooking(tenantId, bookingId, kind = 'novo', extra = {}) {
   setImmediate(async () => {
     try {
       if (!token()) return;
       const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId);
-      if (!tenant || !tenant.notify_phone || tenant.notify_enabled === 0) return;
+      if (!tenant) return;
       const b = bookingDetails(bookingId);
       if (!b) return;
-      await sendTo(tenant.notify_phone, buildMessage(tenant, b, kind, extra));
-      console.log(`[aviso-gestor] ${kind} enviado para ${tenant.name} (agendamento ${bookingId})`);
+      const recipients = recipientsFor(tenant, b, kind, extra);
+      if (!recipients.length) return;
+      const text = buildMessage(tenant, b, kind, extra);
+      for (const r of recipients) {
+        try {
+          await sendTo(r.phone, text);
+          console.log(`[aviso] ${kind} enviado para ${r.who} de ${tenant.name} (agendamento ${bookingId})`);
+        } catch (err) {
+          console.error(`[aviso] falhou para ${r.who} (tenant ${tenantId}, agendamento ${bookingId}):`, err.message);
+        }
+      }
     } catch (err) {
-      console.error(`[aviso-gestor] falhou (tenant ${tenantId}, agendamento ${bookingId}):`, err.message);
+      console.error(`[aviso] falhou (tenant ${tenantId}, agendamento ${bookingId}):`, err.message);
     }
   });
 }
@@ -239,4 +262,4 @@ async function sendTest(phone, tenantName) {
   ].filter(Boolean).join('\n'));
 }
 
-module.exports = { status, connect, currentQr, disconnect, notifyBooking, sendTest, buildMessage };
+module.exports = { status, connect, currentQr, disconnect, notifyBooking, sendTest, buildMessage, recipientsFor };

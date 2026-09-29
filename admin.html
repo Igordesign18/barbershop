@@ -322,6 +322,11 @@
                     <input type="text" id="barberSpecialty" placeholder="Ex: Cortes modernos, Barbas">
                 </div>
                 <div class="form-group">
+                    <label for="barberNotifyPhone">WhatsApp do barbeiro (recebe os agendamentos dele)</label>
+                    <input type="tel" id="barberNotifyPhone" inputmode="numeric" placeholder="DDD + número. Ex: 21999998888">
+                    <small style="color: var(--text-muted); display:block; margin-top:6px;">Opcional. Quando um cliente agendar com este barbeiro, ele recebe o aviso no WhatsApp.</small>
+                </div>
+                <div class="form-group">
                     <label>Serviços que este profissional faz</label>
                     <div id="barberServicesBox" class="barber-services-box" style="display:flex; flex-direction:column; gap:6px; padding:10px 12px; border:1px solid var(--hairline); border-radius:10px;"></div>
                     <small style="color: var(--text-muted); display:block; margin-top:6px;">Na página de agendamento e no WhatsApp, o cliente só vê este profissional nos serviços marcados.</small>
@@ -974,6 +979,11 @@
                 <div class="form-group">
                     <label for="editBarberSpecialty">Especialidade</label>
                     <input type="text" id="editBarberSpecialty" required>
+                </div>
+                <div class="form-group">
+                    <label for="editBarberNotifyPhone">WhatsApp do barbeiro (recebe os agendamentos dele)</label>
+                    <input type="tel" id="editBarberNotifyPhone" inputmode="numeric" placeholder="DDD + número. Ex: 21999998888">
+                    <small style="color: var(--text-muted); display:block; margin-top:6px;">Opcional. Quando um cliente agendar com este barbeiro, ele recebe o aviso no WhatsApp.</small>
                 </div>
                 <div class="form-group">
                     <label>Serviços que este profissional faz</label>

@@ -180,6 +180,9 @@ router.post('/', (req, res) => {
 
   res.status(201).json(booking);
 
+  // Agendamento criado pelo gestor no painel: avisa so o barbeiro escolhido (o gestor ja sabe)
+  require('./gestor-notify').notifyBooking(req.tenantId, result.lastInsertRowid, 'novo', { onlyBarber: true });
+
   // Confirmacao por WhatsApp em segundo plano (nunca atrasa nem quebra a resposta)
   sendBookingConfirmation({
     tenant: req.tenant,

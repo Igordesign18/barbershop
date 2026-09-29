@@ -36,6 +36,14 @@ router.get('/:id', (req, res) => {
   res.json({ ...barber, service_ids: barberServices.getServiceIds(barber.id), service_durations: barberServices.getDurations(barber.id) });
 });
 
+// WhatsApp do barbeiro para avisos: so digitos, com DDD (10 ou 11) ou ja com 55. Invalido/vazio = sem aviso.
+function cleanPhone(value) {
+  const n = String(value || '').replace(/\D/g, '');
+  if (n.length === 10 || n.length === 11) return '55' + n;
+  if (n.startsWith('55') && (n.length === 12 || n.length === 13)) return n;
+  return null;
+}
+
 router.post('/', upload.single('photo'), (req, res) => {
   const name = (req.body.name || '').trim();
   const specialty = (req.body.specialty || '').trim() || null;
@@ -44,8 +52,11 @@ router.post('/', upload.single('photo'), (req, res) => {
 
   const photoUrl = req.file ? `/uploads/barbers/${req.file.filename}` : null;
 
-  const result = db.prepare('INSERT INTO barbers (tenant_id, name, specialty, photo_url) VALUES (?, ?, ?, ?)')
-    .run(req.tenantId, name, specialty, photoUrl);
+  const notifyPhone = cleanPhone(req.body.notify_phone);
+  if (String(req.body.notify_phone || '').replace(/\D/g, '') && !notifyPhone) return res.status(400).json({ error: 'WhatsApp do barbeiro inválido. Use DDD + número.' });
+
+  const result = db.prepare('INSERT INTO barbers (tenant_id, name, specialty, photo_url, notify_phone) VALUES (?, ?, ?, ?, ?)')
+    .run(req.tenantId, name, specialty, photoUrl, notifyPhone);
   // Servicos que o barbeiro faz (vazio = todos)
   const serviceIds = barberServices.setServiceIds(req.tenantId, result.lastInsertRowid, barberServices.parseIds(req.body.service_ids));
   const durations = barberServices.setDurations(req.tenantId, result.lastInsertRowid, barberServices.parseDurations(req.body.service_durations));
@@ -67,8 +78,15 @@ router.put('/:id', upload.single('photo'), (req, res) => {
     photoUrl = `/uploads/barbers/${req.file.filename}`;
   }
 
-  db.prepare('UPDATE barbers SET name = ?, specialty = ?, photo_url = ? WHERE id = ? AND tenant_id = ?')
-    .run(name, specialty, photoUrl, req.params.id, req.tenantId);
+  // WhatsApp para avisos: so mexe se o formulario mandou o campo (vazio = remove)
+  let notifyPhone = existing.notify_phone;
+  if (req.body.notify_phone !== undefined) {
+    notifyPhone = cleanPhone(req.body.notify_phone);
+    if (String(req.body.notify_phone || '').replace(/\D/g, '') && !notifyPhone) return res.status(400).json({ error: 'WhatsApp do barbeiro inválido. Use DDD + número.' });
+  }
+
+  db.prepare('UPDATE barbers SET name = ?, specialty = ?, photo_url = ?, notify_phone = ? WHERE id = ? AND tenant_id = ?')
+    .run(name, specialty, photoUrl, notifyPhone, req.params.id, req.tenantId);
 
   // So mexe nos servicos se o formulario mandou o campo
   const ids = barberServices.parseIds(req.body.service_ids);

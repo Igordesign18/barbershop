@@ -262,6 +262,8 @@ db.exec(`
 
 // Aviso de agendamento no WhatsApp do gestor (enviado pelo numero central do sistema, via WuzAPI)
 ensureColumn('tenants', 'notify_phone', 'TEXT');
+// WhatsApp do proprio barbeiro: recebe os avisos dos agendamentos dele
+ensureColumn('barbers', 'notify_phone', 'TEXT');
 ensureColumn('tenants', 'notify_enabled', 'INTEGER NOT NULL DEFAULT 1');
 
 // Motor do WhatsApp de cada barbearia: 'evolution' (Evolution API v2) ou 'evogo' (Evolution GO)

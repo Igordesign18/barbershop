@@ -64,7 +64,8 @@ router.get('/:slug/customer', (req, res) => {
 router.get('/:slug/barbers', (req, res) => {
   const barbers = db.prepare('SELECT * FROM barbers WHERE tenant_id = ? ORDER BY id ASC').all(req.tenantId);
   // service_ids: servicos que cada um faz (null = todos) — a pagina mostra so quem faz o servico escolhido
-  res.json(require('./barber-services').withServiceIds(barbers));
+  // notify_phone e privado do gestor/barbeiro: nunca vai para a pagina publica
+  res.json(require('./barber-services').withServiceIds(barbers).map(({ notify_phone, ...pub }) => pub));
 });
 
 router.get('/:slug/settings', (req, res) => {
