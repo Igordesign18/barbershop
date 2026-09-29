@@ -217,11 +217,11 @@ function buildMessage(tenant, b, kind, extra = {}) {
 // Avaliacao baixa e so para o gestor. extra.onlyBarber = agendamento criado pelo proprio gestor (so avisa o barbeiro).
 function recipientsFor(tenant, b, kind, extra = {}) {
   const list = [];
-  if (!extra.onlyBarber && tenant.notify_phone && tenant.notify_enabled !== 0) list.push({ phone: tenant.notify_phone, who: 'gestor' });
-  if (kind !== 'avaliacao_baixa' && b.barber_id) {
-    const barber = db.prepare('SELECT name, notify_phone FROM barbers WHERE id = ?').get(b.barber_id);
-    if (barber && barber.notify_phone) list.push({ phone: barber.notify_phone, who: `barbeiro ${barber.name}` });
-  }
+  const barber = b.barber_id ? db.prepare('SELECT name, notify_phone FROM barbers WHERE id = ?').get(b.barber_id) : null;
+  // Toggle "receber de todos os barbeiros": desligado = nao recebe os de barbeiros que ja avisam no proprio WhatsApp
+  const skipGestor = kind !== 'avaliacao_baixa' && tenant.notify_all_barbers === 0 && barber && barber.notify_phone;
+  if (!extra.onlyBarber && !skipGestor && tenant.notify_phone && tenant.notify_enabled !== 0) list.push({ phone: tenant.notify_phone, who: 'gestor' });
+  if (kind !== 'avaliacao_baixa' && barber && barber.notify_phone) list.push({ phone: barber.notify_phone, who: `barbeiro ${barber.name}` });
   // sem duplicar quando o gestor e o barbeiro sao a mesma pessoa/numero
   const seen = new Set();
   return list.filter(r => { const k = digits55(r.phone); if (seen.has(k)) return false; seen.add(k); return true; });

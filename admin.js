@@ -2347,6 +2347,7 @@
                 document.getElementById('editBarberSpecialty').value = barber.specialty || '';
                 document.getElementById('editBarberNotifyPhone').value = barber.notify_phone ? String(barber.notify_phone).replace(/^55/, '') : '';
                 renderBarberServicesBox('editBarberServicesBox', barber.service_ids);
+                loadBarberBlocks(barber.id);
                 
                 const modal = document.getElementById('editBarberModal');
                 modal.classList.remove('hidden');
@@ -2355,6 +2356,57 @@
                 firstInput.focus();
             } catch (error) {
                 showNotification('Erro ao carregar dados do barbeiro: ' + error.message, 'error');
+            }
+        }
+
+        // ==================== Folgas do barbeiro ====================
+        const BLOCK_PERIOD_LABELS = { '': 'Dia inteiro', manha: 'Manhã', tarde: 'Tarde', noite: 'Noite' };
+
+        async function loadBarberBlocks(barberId) {
+            const box = document.getElementById('barberBlocksList');
+            if (!box) return;
+            try {
+                const blocks = await apiFetch(`/barbers/${barberId}/blocks`);
+                box.innerHTML = blocks.length ? blocks.map(b => {
+                    const [y, m, d] = b.date.split('-');
+                    return `<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:13.5px;">
+                        <span>${d}/${m}/${y} · ${BLOCK_PERIOD_LABELS[b.period || '']}${b.reason ? ' · ' + b.reason : ''}</span>
+                        <button type="button" class="btn-secondary btn" style="padding:4px 10px;" onclick="removeBarberBlock(${barberId}, ${b.id})" aria-label="Remover bloqueio"><i class="fas fa-trash" aria-hidden="true"></i></button>
+                    </div>`;
+                }).join('') : '<span style="color:var(--text-muted); font-size:13px;">Nenhuma folga marcada.</span>';
+            } catch (e) { box.innerHTML = ''; }
+        }
+
+        async function addBarberBlock() {
+            const barberId = document.getElementById('editBarberId').value;
+            const date = document.getElementById('barberBlockDate').value;
+            if (!date) { showNotification('Escolha a data da folga.', 'error'); return; }
+            try {
+                await apiFetch(`/barbers/${barberId}/blocks`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        date,
+                        end_date: document.getElementById('barberBlockEndDate').value || null,
+                        period: document.getElementById('barberBlockPeriod').value,
+                        reason: document.getElementById('barberBlockReason').value
+                    })
+                });
+                document.getElementById('barberBlockDate').value = '';
+                document.getElementById('barberBlockEndDate').value = '';
+                document.getElementById('barberBlockReason').value = '';
+                showNotification('Agenda bloqueada para este profissional.', 'success');
+                loadBarberBlocks(barberId);
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+
+        async function removeBarberBlock(barberId, blockId) {
+            try {
+                await apiFetch(`/barbers/${barberId}/blocks/${blockId}`, { method: 'DELETE' });
+                loadBarberBlocks(barberId);
+            } catch (error) {
+                showNotification(error.message, 'error');
             }
         }
 
@@ -2988,6 +3040,7 @@
                 const d = await apiFetch('/whatsapp/gestor-notify');
                 document.getElementById('gestorNotifyPhone').value = d.notify_phone ? String(d.notify_phone).replace(/^55/, '') : '';
                 document.getElementById('gestorNotifyEnabled').checked = d.notify_enabled !== false;
+                document.getElementById('gestorNotifyAllBarbers').checked = d.notify_all_barbers !== false;
                 document.getElementById('gestorNotifyWarn').classList.toggle('hidden', !!d.sistema_conectado);
             } catch (_) { /* card opcional */ }
         }
@@ -2998,7 +3051,8 @@
                     method: 'PUT',
                     body: JSON.stringify({
                         notify_phone: document.getElementById('gestorNotifyPhone').value,
-                        notify_enabled: document.getElementById('gestorNotifyEnabled').checked
+                        notify_enabled: document.getElementById('gestorNotifyEnabled').checked,
+                        notify_all_barbers: document.getElementById('gestorNotifyAllBarbers').checked
                     })
                 });
                 showNotification('Avisos salvos!', 'success');

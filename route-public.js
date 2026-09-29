@@ -77,6 +77,8 @@ router.get('/:slug/settings', (req, res) => {
   // So envia as de hoje em diante - datas passadas nao interessam pro calendario do cliente.
   const today = new Date().toISOString().slice(0, 10);
   result.blocked_dates = db.prepare('SELECT date, period, reason FROM blocked_dates WHERE tenant_id = ? AND date >= ? ORDER BY date ASC').all(req.tenantId, today);
+  // Folgas de cada barbeiro (sem o motivo, que e privado)
+  result.barber_blocked_dates = db.prepare('SELECT barber_id, date, period FROM barber_blocked_dates WHERE tenant_id = ? AND date >= ? ORDER BY date ASC').all(req.tenantId, today);
 
   res.json(result);
 });
@@ -279,6 +281,11 @@ router.post('/:slug/bookings', async (req, res) => {
     if (isBlocked) {
       return res.status(400).json({ error: 'A barbearia não vai abrir nesse horário. Escolha outro dia ou turno.' });
     }
+  }
+
+  // Barbeiro de folga nesse dia/turno
+  if (barber_id && require('./barber-services').isBlockedAt(Number(barber_id), booking_date, booking_time)) {
+    return res.status(400).json({ error: 'Este profissional não atende nesse dia/horário. Escolha outro horário ou outro profissional.' });
   }
 
   // Um agendamento e ou um servico avulso, ou um pacote - nunca os dois

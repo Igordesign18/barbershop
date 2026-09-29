@@ -265,6 +265,8 @@ ensureColumn('tenants', 'notify_phone', 'TEXT');
 // WhatsApp do proprio barbeiro: recebe os avisos dos agendamentos dele
 ensureColumn('barbers', 'notify_phone', 'TEXT');
 ensureColumn('tenants', 'notify_enabled', 'INTEGER NOT NULL DEFAULT 1');
+// 1 = gestor recebe o aviso de TODOS os barbeiros; 0 = nao recebe os de barbeiros que ja tem WhatsApp proprio
+ensureColumn('tenants', 'notify_all_barbers', 'INTEGER NOT NULL DEFAULT 1');
 
 // Motor do WhatsApp de cada barbearia: 'evolution' (Evolution API v2) ou 'evogo' (Evolution GO)
 ensureColumn('tenants', 'whatsapp_provider', "TEXT NOT NULL DEFAULT 'evolution'");
@@ -311,6 +313,22 @@ db.exec(`
     DROP TABLE blocked_dates_old;
   `);
 })();
+
+// Folgas/indisponibilidade de UM barbeiro (o resto da barbearia continua aberto).
+// period = '' bloqueia o dia inteiro dele; 'manha'/'tarde'/'noite' so aquele turno.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS barber_blocked_dates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    barber_id INTEGER NOT NULL REFERENCES barbers(id) ON DELETE CASCADE,
+    date TEXT NOT NULL,
+    period TEXT NOT NULL DEFAULT '',
+    reason TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(barber_id, date, period)
+  );
+  CREATE INDEX IF NOT EXISTS idx_barber_blocked_barber_date ON barber_blocked_dates(barber_id, date);
+`);
 
 const DEFAULT_SCHEDULE = {
   0: { active: true, periods: [{ start: '08:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },

@@ -30,6 +30,51 @@ router.get('/', (req, res) => {
   res.json(barberServices.withServiceIds(barbers));
 });
 
+// ==================== Bloqueio de agenda (folgas) do barbeiro ====================
+const BLOCK_PERIODS = ['', 'manha', 'tarde', 'noite'];
+const BLOCK_LABELS = { '': 'Dia inteiro', manha: 'Manhã', tarde: 'Tarde', noite: 'Noite' };
+
+function ownBarber(req) {
+  return db.prepare('SELECT id FROM barbers WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
+}
+
+router.get('/:id/blocks', (req, res) => {
+  if (!ownBarber(req)) return res.status(404).json({ error: 'Barbeiro nao encontrado' });
+  const today = new Date().toISOString().slice(0, 10);
+  res.json(db.prepare('SELECT id, date, period, reason FROM barber_blocked_dates WHERE barber_id = ? AND date >= ? ORDER BY date ASC, period ASC').all(req.params.id, today));
+});
+
+// Bloqueia um dia (ou um periodo de dias, com end_date) e opcionalmente so um turno
+router.post('/:id/blocks', (req, res) => {
+  if (!ownBarber(req)) return res.status(404).json({ error: 'Barbeiro nao encontrado' });
+  const { date, end_date, reason } = req.body || {};
+  const period = BLOCK_PERIODS.includes(req.body?.period) ? req.body.period : '';
+  const isDate = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '') && !isNaN(new Date(v + 'T12:00:00Z'));
+  if (!isDate(date)) return res.status(400).json({ error: 'Informe uma data válida' });
+  const last = end_date ? end_date : date;
+  if (!isDate(last) || last < date) return res.status(400).json({ error: 'A data final deve ser igual ou depois da inicial' });
+
+  const days = [];
+  for (let d = new Date(date + 'T12:00:00Z'); d.toISOString().slice(0, 10) <= last && days.length < 91; d.setUTCDate(d.getUTCDate() + 1)) {
+    days.push(d.toISOString().slice(0, 10));
+  }
+  if (days.length > 90) return res.status(400).json({ error: 'Máximo de 90 dias de uma vez' });
+
+  const cleanReason = String(reason || '').trim().slice(0, 120) || null;
+  const ins = db.prepare('INSERT OR IGNORE INTO barber_blocked_dates (tenant_id, barber_id, date, period, reason) VALUES (?, ?, ?, ?, ?)');
+  let added = 0;
+  db.transaction(() => { for (const day of days) added += ins.run(req.tenantId, req.params.id, day, period, cleanReason).changes; })();
+  if (!added) return res.status(400).json({ error: `${BLOCK_LABELS[period]} já estava bloqueado nesse(s) dia(s)` });
+  res.status(201).json({ ok: true, added });
+});
+
+router.delete('/:id/blocks/:blockId', (req, res) => {
+  if (!ownBarber(req)) return res.status(404).json({ error: 'Barbeiro nao encontrado' });
+  const info = db.prepare('DELETE FROM barber_blocked_dates WHERE id = ? AND barber_id = ? AND tenant_id = ?').run(req.params.blockId, req.params.id, req.tenantId);
+  if (info.changes === 0) return res.status(404).json({ error: 'Bloqueio não encontrado' });
+  res.json({ ok: true });
+});
+
 router.get('/:id', (req, res) => {
   const barber = db.prepare('SELECT * FROM barbers WHERE id = ? AND tenant_id = ?').get(req.params.id, req.tenantId);
   if (!barber) return res.status(404).json({ error: 'Barbeiro nao encontrado' });

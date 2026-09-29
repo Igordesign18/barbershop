@@ -42,7 +42,16 @@
         let bookedSlots = {}; 
         let scheduleConfig = {};
         let intervalTime = 30;
+        let barberBlockedDates = new Map(); // 'idDoBarbeiro|AAAA-MM-DD' -> Set de turnos em que o barbeiro esta de folga
         let blockedDates = new Map(); // data (YYYY-MM-DD) -> Set de turnos bloqueados ('' = dia inteiro, 'manha'|'tarde'|'noite')
+
+        // Turnos bloqueados numa data: os da barbearia + as folgas do barbeiro escolhido (null = nada bloqueado)
+        function effectiveBlocks(dateStr) {
+            const shop = blockedDates.get(dateStr);
+            const mine = selectedBarber ? barberBlockedDates.get(`${selectedBarber.id}|${dateStr}`) : null;
+            if (!shop && !mine) return null;
+            return new Set([...(shop || []), ...(mine || [])]);
+        }
 
         function getPeriodKey(hour) {
             if (hour < 12) return 'manha';
@@ -378,6 +387,14 @@
 
                 if (data.schedule_config) scheduleConfig = JSON.parse(data.schedule_config);
                 if (data.interval_time) intervalTime = parseInt(data.interval_time);
+                if (Array.isArray(data.barber_blocked_dates)) {
+                    barberBlockedDates = new Map();
+                    data.barber_blocked_dates.forEach(b => {
+                        const key = `${b.barber_id}|${b.date}`;
+                        if (!barberBlockedDates.has(key)) barberBlockedDates.set(key, new Set());
+                        barberBlockedDates.get(key).add(b.period || '');
+                    });
+                }
                 if (Array.isArray(data.blocked_dates)) {
                     blockedDates = new Map();
                     data.blocked_dates.forEach(b => {
@@ -1096,8 +1113,9 @@
                 const isPast = cmpDate < today;
                 const isWorkingDay = scheduleConfig[dayOfWeek]?.active || false;
                 const cmpDateStr = formatDateToYYYYMMDD(cmpDate);
-                const dateBlocks = blockedDates.get(cmpDateStr);
+                const dateBlocks = effectiveBlocks(cmpDateStr);
                 const isFullyBlocked = dateBlocks ? dateBlocks.has('') : false;
+                const barberOff = selectedBarber && (barberBlockedDates.get(`${selectedBarber.id}|${cmpDateStr}`) || new Set()).has('');
                 const isToday = cmpDate.getTime() === today.getTime();
 
                 const isSelected = selectedDate &&
@@ -1109,7 +1127,7 @@
 
                 html += `
                     <div class="calendar-day ${isDisabled ? 'disabled' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}"
-                         title="${isFullyBlocked ? 'Fechado nesse dia' : ''}"
+                         title="${isFullyBlocked ? (barberOff ? 'Profissional indisponível nesse dia' : 'Fechado nesse dia') : ''}"
                          onclick="${!isDisabled ? `selectDate(${year}, ${month}, ${d})` : ''}">
                         ${d}
                     </div>
@@ -1245,7 +1263,7 @@
             const dayOfWeek = selectedDate.getDay();
             const dayConfig = scheduleConfig[dayOfWeek];
             const selectedDateStr = formatDateToYYYYMMDD(selectedDate);
-            const dateBlocks = blockedDates.get(selectedDateStr);
+            const dateBlocks = effectiveBlocks(selectedDateStr);
 
             if (!dayConfig || !dayConfig.active) return slots;
             if (dateBlocks && dateBlocks.has('')) return slots;

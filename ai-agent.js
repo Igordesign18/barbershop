@@ -159,6 +159,7 @@ function computeFreeSlots(tenantId, barberId, date, duration, ignoreBookingId = 
   if (!dayConfig || !dayConfig.active) return [];
 
   const blocked = getBlockedPeriods(tenantId, date);
+  for (const p of barberServices.blockedPeriods(barberId, date)) blocked.add(p); // folga do barbeiro
   if (blocked.has('')) return [];
 
   const now = nowBR();

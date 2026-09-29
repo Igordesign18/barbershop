@@ -87,6 +87,22 @@ function setBarberTimesForService(tenantId, serviceId, map) {
   })();
 }
 
+// ==================== Bloqueio de agenda do barbeiro ====================
+// Turnos bloqueados do barbeiro numa data: Set com '' (dia inteiro) e/ou 'manha' | 'tarde' | 'noite'
+function blockedPeriods(barberId, date) {
+  if (!barberId) return new Set();
+  return new Set(db.prepare('SELECT period FROM barber_blocked_dates WHERE barber_id = ? AND date = ?').all(barberId, date).map(r => r.period));
+}
+
+// O barbeiro esta indisponivel nesse dia/horario ("HH:MM")?
+function isBlockedAt(barberId, date, time) {
+  const set = blockedPeriods(barberId, date);
+  if (!set.size) return false;
+  if (set.has('')) return true;
+  const hour = parseInt(String(time).split(':')[0], 10);
+  return set.has(hour < 12 ? 'manha' : hour < 18 ? 'tarde' : 'noite');
+}
+
 // Duracao de um servico para este barbeiro (barberId pode ser null = padrao do servico)
 function durationFor(barberId, serviceId, defaultDuration) {
   if (barberId) {
@@ -130,4 +146,4 @@ function parseDurations(raw) {
   }
 }
 
-module.exports = { getServiceIds, setServiceIds, barberDoesAll, withServiceIds, parseIds, getDurations, setDurations, getBarberTimesForService, setBarberTimesForService, durationFor, totalDuration, parseDurations };
+module.exports = { getServiceIds, setServiceIds, barberDoesAll, withServiceIds, parseIds, getDurations, setDurations, getBarberTimesForService, setBarberTimesForService, blockedPeriods, isBlockedAt, durationFor, totalDuration, parseDurations };
