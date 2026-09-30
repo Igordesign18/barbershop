@@ -70,6 +70,8 @@ async function checkAndSendReminders() {
       db.prepare('UPDATE bookings SET reminder_sent = 1 WHERE id = ?').run(row.id);
     } catch (err) {
       console.error(`[reminders] Falha ao enviar lembrete (agendamento ${row.id}):`, err.message);
+      // Numero que nao existe no WhatsApp: nao adianta tentar de novo a cada minuto
+      if (/não tem WhatsApp/.test(err.message)) db.prepare('UPDATE bookings SET reminder_sent = 1 WHERE id = ?').run(row.id);
     }
   }
 }

@@ -81,6 +81,34 @@ async function goSend(number, fn, retryOnAnyError = false) {
   }
 }
 
+
+// WuzAPI: numero brasileiro pode estar registrado com ou sem o 9 depois do DDD.
+// Se o envio falha por "no LID found"/nao registrado, confere qual formato existe no WhatsApp e reenvia nele.
+const wuzResolved = new Map(); // numero -> { to, at }
+function brVariants(n) {
+  const list = [n];
+  if (n.startsWith('55') && n.length === 13 && n[4] === '9') list.push(n.slice(0, 4) + n.slice(5));
+  if (n.startsWith('55') && n.length === 12 && /[6-9]/.test(n[4])) list.push(n.slice(0, 4) + '9' + n.slice(4));
+  return list;
+}
+async function wuzSend(instance, number, fn) {
+  const digits = onlyDigits(number);
+  const known = wuzResolved.get(digits);
+  const first = known && Date.now() - known.at < 24 * 3600 * 1000 ? known.to : number;
+  try {
+    return await goSend(first, fn, true);
+  } catch (err) {
+    if (!/no LID found|not (registered|on whatsapp)|not found|invalid/i.test(err.message) || String(number).includes('@')) throw err;
+    const users = await wuzapi.checkUsers(instance.instance_token, brVariants(digits)).catch(() => []);
+    const found = users.find(u => u.IsInWhatsapp || u.isInWhatsapp);
+    if (!found) throw new Error(`o número ${digits} não tem WhatsApp`);
+    const to = String(found.JID || found.jid || found.Query).split('@')[0];
+    wuzResolved.set(digits, { to, at: Date.now() });
+    console.log(`[whatsapp] ${digits} reenviado como ${to} (formato registrado no WhatsApp)`);
+    return goSend(to, fn, true);
+  }
+}
+
 function getInstance(tenantId) {
   return db.prepare('SELECT * FROM whatsapp_instances WHERE tenant_id = ?').get(tenantId);
 }
@@ -333,7 +361,7 @@ async function sendText(instance, number, text) {
     return id;
   }
   if (provider === 'wuzapi') {
-    const id = await goSend(number, to => wuzapi.sendText(instance.instance_token, to, text), true);
+    const id = await wuzSend(instance, number, to => wuzapi.sendText(instance.instance_token, to, text));
     rememberSentId(id);
     return id;
   }
@@ -409,9 +437,9 @@ async function sendInteractive(instance, number, kind, payload, fallbackText) {
         ? evogo.sendButtons(instance.instance_token, to, payload)
         : evogo.sendList(instance.instance_token, to, payload));
     } else if (provider === 'wuzapi') {
-      id = await goSend(number, to => kind === 'buttons'
+      id = await wuzSend(instance, number, to => kind === 'buttons'
         ? wuzapi.sendButtons(instance.instance_token, to, payload)
-        : wuzapi.sendList(instance.instance_token, to, payload), true);
+        : wuzapi.sendList(instance.instance_token, to, payload));
     } else {
       const data = kind === 'buttons'
         ? await evolution.sendButtons(instance.instance_name, number, payload)
