@@ -48,4 +48,21 @@ function requireSuperAdmin(req, res, next) {
   });
 }
 
-module.exports = { signToken, requireAuth, requireManager, requireSuperAdmin, JWT_SECRET };
+// So revendedor. Confere no banco a cada chamada: revendedor suspenso/excluido perde o acesso na hora
+// (nao espera o token de 7 dias vencer). Preenche req.resellerId e req.reseller.
+function requireReseller(req, res, next) {
+  requireAuth(req, res, () => {
+    if (req.auth.role !== 'reseller' || !req.auth.reseller_id) {
+      return res.status(403).json({ error: 'Acesso restrito ao revendedor' });
+    }
+    const { db } = require('./db');
+    const reseller = db.prepare('SELECT * FROM resellers WHERE id = ?').get(req.auth.reseller_id);
+    if (!reseller) return res.status(401).json({ error: 'Conta de revendedor não encontrada' });
+    if (reseller.status !== 'active') return res.status(403).json({ error: 'Conta suspensa. Fale com o suporte.' });
+    req.resellerId = reseller.id;
+    req.reseller = reseller;
+    next();
+  });
+}
+
+module.exports = { signToken, requireAuth, requireManager, requireSuperAdmin, requireReseller, JWT_SECRET };

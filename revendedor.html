@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel do Revendedor</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+        --ebony: #0e0c0a; --surface: #18140f; --surface-raised: #211b14;
+        --hairline: rgba(198, 161, 91, 0.16);
+        --brass: #c6a15b; --brass-light: #e8c978; --oxblood: #7a2f3f;
+        --ivory: #f2ede3; --ivory-muted: #a69c8c;
+        --green: #6fae7a; --red: #c15c5c; --blue: #8db8ea;
+        --radius: 14px;
+    }
+    body {
+        font-family: 'Manrope', sans-serif;
+        background: radial-gradient(ellipse 1400px 700px at 50% -15%, rgba(198,161,91,0.06), transparent), var(--ebony);
+        color: var(--ivory); min-height: 100vh; line-height: 1.55; -webkit-font-smoothing: antialiased;
+    }
+    .hidden { display: none !important; }
+    .container { max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
+    header {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+        padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--hairline);
+    }
+    header h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    header h1 i { color: var(--brass); }
+    header h1 .badge { font-family: 'Manrope', sans-serif; font-size: 10.5px; font-weight: 700; color: var(--brass-light); border: 1px solid var(--hairline); padding: 3px 10px; border-radius: 100px; }
+    .btn {
+        background: linear-gradient(135deg, var(--brass-light), var(--brass)); color: var(--ebony); border: none;
+        padding: 12px 20px; border-radius: 9px; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
+        display: inline-flex; align-items: center; gap: 8px; transition: filter 0.2s;
+    }
+    .btn:hover { filter: brightness(1.08); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-secondary { background: transparent; color: var(--ivory); border: 1px solid var(--hairline); }
+    .btn-secondary:hover { border-color: var(--brass); filter: none; }
+    .btn-sm { padding: 8px 14px; font-size: 12px; }
+    .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .login-box { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 44px 38px; width: 100%; max-width: 380px; }
+    .login-box .crest { width: 56px; height: 56px; margin: 0 auto 20px; border: 1px solid var(--brass); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--brass); font-size: 20px; }
+    .login-box h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 22px; text-align: center; margin-bottom: 6px; }
+    .login-box p.sub { text-align: center; color: var(--ivory-muted); font-size: 13px; margin-bottom: 26px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 7px; font-size: 12.5px; color: var(--ivory-muted); }
+    .form-group input, .form-group select { width: 100%; padding: 12px 14px; border-radius: 8px; background: var(--ebony); color: var(--ivory); border: 1px solid var(--hairline); font-size: 14px; font-family: inherit; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--brass); }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0 16px; }
+    .hint { color: var(--ivory-muted); font-size: 12px; margin-top: 6px; line-height: 1.5; }
+    .card { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 26px; margin-bottom: 22px; }
+    .card h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+    .card h2 i { color: var(--brass); font-size: 16px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
+    .tab { background: var(--surface); color: var(--ivory); border: 1px solid var(--hairline); border-radius: 100px; padding: 11px 20px; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 8px; }
+    .tab:hover { border-color: var(--brass); }
+    .tab.active { background: linear-gradient(135deg, var(--brass-light), var(--brass)); color: var(--ebony); border-color: var(--brass); }
+    .tab .badge { background: var(--red); color: #fff; border-radius: 100px; font-size: 10.5px; padding: 1px 7px; font-weight: 800; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin-bottom: 22px; }
+    .stat { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 16px 18px; position: relative; }
+    .stat > i { position: absolute; top: 16px; right: 16px; color: var(--brass); opacity: 0.55; }
+    .stat-label { font-size: 11.5px; color: var(--ivory-muted); margin-bottom: 6px; padding-right: 26px; }
+    .stat-value { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; }
+    .stat-hint { font-size: 11px; color: var(--ivory-muted); margin-top: 4px; line-height: 1.4; }
+    .stat.hl { border-color: rgba(198,161,91,0.55); background: rgba(198,161,91,0.07); }
+    .stat.warn { border-color: rgba(193,92,92,0.5); }
+    .stat.warn .stat-value { color: var(--red); }
+    .info-box { background: rgba(198,161,91,0.07); border: 1px solid rgba(198,161,91,0.3); border-radius: 12px; padding: 16px 18px; font-size: 13px; color: var(--ivory-muted); line-height: 1.7; margin-bottom: 22px; }
+    .info-box b { color: var(--ivory); }
+    .client { background: var(--surface-raised); border-radius: 10px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; border-left: 3px solid var(--green); margin-bottom: 12px; }
+    .client.suspended { border-left-color: var(--red); }
+    .client .name { font-family: 'Fraunces', serif; font-weight: 600; font-size: 16px; margin-bottom: 6px; }
+    .client .meta { font-size: 12px; color: var(--ivory-muted); display: flex; gap: 8px 12px; flex-wrap: wrap; align-items: center; }
+    .client .nums { font-size: 12.5px; color: var(--ivory-muted); margin-top: 8px; display: flex; gap: 6px 16px; flex-wrap: wrap; }
+    .client .nums b { color: var(--ivory); }
+    .client .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill { padding: 4px 11px; border-radius: 100px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.02em; }
+    .pill.active { background: rgba(111,174,122,0.14); color: var(--green); }
+    .pill.suspended { background: rgba(193,92,92,0.14); color: var(--red); }
+    .pill.plan-pro { background: linear-gradient(135deg, #c6a15b, #e7cf93); color: #1a140c; }
+    .pill.plan-basic { background: rgba(255,255,255,0.06); color: var(--brass-light); }
+    .pill.st-wait { background: rgba(198,161,91,0.14); color: var(--brass-light); }
+    .pill.st-repass { background: rgba(111,160,220,0.16); color: var(--blue); }
+    .pill.st-done { background: rgba(111,174,122,0.14); color: var(--green); }
+    .pill.st-late { background: rgba(193,92,92,0.16); color: var(--red); }
+    a.link { color: var(--brass-light); text-decoration: none; font-size: 12px; }
+    a.link:hover { text-decoration: underline; }
+    .money-warn { color: var(--red); font-weight: 700; font-size: 12px; }
+    .empty-state { text-align: center; padding: 36px; color: var(--ivory-muted); font-size: 14px; }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .chip { background: var(--surface-raised); color: var(--ivory); border: 1px solid var(--hairline); border-radius: 100px; padding: 8px 14px; font-size: 12px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .chip.active { background: var(--brass); color: var(--ebony); border-color: var(--brass); font-weight: 700; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--hairline); border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    th { text-align: left; padding: 10px 12px; color: var(--ivory-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; background: var(--surface-raised); white-space: nowrap; }
+    td { padding: 11px 12px; border-top: 1px solid var(--hairline); vertical-align: top; }
+    td small { color: var(--ivory-muted); font-size: 11px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(6,5,4,0.78); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+    .modal-content { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 30px; width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; }
+    .modal-content h3 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; margin-bottom: 18px; }
+    .confirm-msg { font-size: 14px; text-align: center; margin-bottom: 22px; line-height: 1.6; }
+    .confirm-actions { display: flex; gap: 10px; }
+    .confirm-actions button { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit; }
+    .cm-cancel { background: transparent; border: 1px solid var(--hairline) !important; color: var(--ivory); }
+    .cm-confirm { background: linear-gradient(135deg, var(--brass-light), var(--brass)); color: var(--ebony); }
+    .creds { background: var(--ebony); border: 1px dashed var(--brass); border-radius: 10px; padding: 14px 16px; font-size: 13px; line-height: 1.8; margin-bottom: 16px; word-break: break-all; }
+    .notification { position: fixed; top: 20px; right: 20px; left: 20px; max-width: 420px; margin-left: auto; padding: 14px 20px; border-radius: 9px; font-weight: 600; font-size: 13.5px; z-index: 999; box-shadow: 0 8px 24px rgba(0,0,0,0.4); border: 1px solid var(--hairline); background: var(--surface-raised); }
+    .notification.success { color: var(--green); border-color: rgba(111,174,122,0.3); }
+    .notification.error { color: var(--red); border-color: rgba(193,92,92,0.3); }
+    .notification.info { color: var(--brass-light); }
+
+    /* ===== Tutoriais ===== */
+    .tut-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .tut h3 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px; margin: 4px 0 10px; }
+    .tut h4 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 15px; margin: 26px 0 10px; color: var(--brass-light); }
+    .tut p { color: var(--ivory-muted); font-size: 14px; line-height: 1.75; margin-bottom: 12px; }
+    .tut p b, .tut li b { color: var(--ivory); }
+    .tut ul.check { list-style: none; margin: 0 0 12px; }
+    .tut ul.check li { position: relative; padding: 5px 0 5px 26px; font-size: 13.5px; color: var(--ivory-muted); line-height: 1.55; }
+    .tut ul.check li::before { content: '✓'; position: absolute; left: 0; color: var(--green); font-weight: 800; }
+    .tut ul.check li.no::before { content: '✕'; color: var(--red); }
+    .tut ul.check li.no { opacity: 0.6; }
+    .tut-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 14px 0 6px; }
+    .step-card { background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 12px; padding: 18px; position: relative; }
+    .step-num { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--brass-light), var(--brass)); color: var(--ebony); font-weight: 800; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; font-size: 14px; }
+    .step-card b { display: block; margin-bottom: 4px; font-size: 14px; }
+    .step-card span { font-size: 12.5px; color: var(--ivory-muted); line-height: 1.6; display: block; }
+    .step-emoji { position: absolute; top: 14px; right: 16px; font-size: 24px; opacity: 0.9; }
+
+    /* ilustracoes (feitas no proprio sistema) */
+    .illus { background: var(--ebony); border: 1px solid var(--hairline); border-radius: 14px; padding: 22px; margin: 16px 0 18px; }
+    .illus-cap { font-size: 11.5px; color: var(--ivory-muted); text-align: center; margin-top: 12px; }
+    .flow { display: flex; align-items: stretch; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    .flow-box { flex: 1 1 170px; max-width: 240px; border-radius: 12px; padding: 16px; text-align: center; border: 1px solid var(--hairline); background: var(--surface); }
+    .flow-box .emoji { font-size: 28px; margin-bottom: 4px; }
+    .flow-box .lbl { font-size: 11.5px; color: var(--ivory-muted); }
+    .flow-box .val { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; margin-top: 2px; }
+    .flow-box.you { border-color: rgba(111,174,122,0.5); } .flow-box.you .val { color: var(--green); }
+    .flow-box.owner { border-color: rgba(141,184,234,0.45); } .flow-box.owner .val { color: var(--blue); }
+    .flow-arrow { align-self: center; font-size: 22px; color: var(--brass); }
+    .splitbar { display: flex; height: 16px; border-radius: 100px; overflow: hidden; margin: 18px auto 6px; max-width: 560px; border: 1px solid var(--hairline); }
+    .splitbar div { display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #10120f; }
+    .plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .plan { background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px; padding: 22px; position: relative; }
+    .plan.pro { border-color: rgba(198,161,91,0.7); background: linear-gradient(180deg, rgba(198,161,91,0.10), var(--surface) 60%); }
+    .plan .tag { position: absolute; top: -11px; right: 16px; background: linear-gradient(135deg, #c6a15b, #e7cf93); color: #1a140c; font-size: 10.5px; font-weight: 800; padding: 4px 12px; border-radius: 100px; }
+    .plan h5 { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; margin-bottom: 2px; }
+    .plan .sub { font-size: 12.5px; color: var(--ivory-muted); margin-bottom: 12px; }
+    .plan .price { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 600; color: var(--brass-light); }
+    .plan .price small { font-family: 'Manrope', sans-serif; font-size: 12px; color: var(--ivory-muted); font-weight: 500; }
+    .plan .earn { margin: 10px 0 14px; padding: 10px 12px; border-radius: 10px; background: rgba(111,174,122,0.10); border: 1px solid rgba(111,174,122,0.3); font-size: 12.5px; color: var(--ivory-muted); }
+    .plan .earn b { color: var(--green); }
+    .plan .who { font-size: 12.5px; color: var(--ivory-muted); margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hairline); }
+    /* mock do formulario */
+    .mock-form { display: grid; grid-template-columns: minmax(260px, 1.1fr) minmax(220px, 1fr); gap: 24px; align-items: start; }
+    @media (max-width: 720px) { .mock-form { grid-template-columns: 1fr; } }
+    .mock-card { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 18px; }
+    .mock-title { font-family: 'Fraunces', serif; font-size: 15px; margin-bottom: 12px; }
+    .mock-field { position: relative; margin-bottom: 11px; }
+    .mock-field .l { font-size: 10.5px; color: var(--ivory-muted); margin-bottom: 4px; }
+    .mock-field .i { background: var(--ebony); border: 1px solid var(--hairline); border-radius: 7px; padding: 8px 10px; font-size: 12px; color: var(--ivory); min-height: 33px; }
+    .mock-field .i.ph { color: #6f675b; }
+    .mock-btn { background: linear-gradient(135deg, var(--brass-light), var(--brass)); color: var(--ebony); border-radius: 8px; padding: 9px 14px; font-weight: 800; font-size: 12px; display: inline-block; }
+    .badge-n { position: absolute; right: -10px; top: 14px; width: 22px; height: 22px; border-radius: 50%; background: var(--red); color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px var(--ebony); }
+    .legend { list-style: none; counter-reset: lg; }
+    .legend li { counter-increment: lg; position: relative; padding: 0 0 12px 34px; font-size: 13px; color: var(--ivory-muted); line-height: 1.6; }
+    .legend li::before { content: counter(lg); position: absolute; left: 0; top: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--red); color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+    .legend li b { color: var(--ivory); }
+    /* celular */
+    .phones { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; }
+    .phone { width: 230px; border: 3px solid #3a3128; border-radius: 26px; background: var(--ebony); padding: 14px 12px 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+    .phone .notch { width: 60px; height: 5px; background: #3a3128; border-radius: 10px; margin: 0 auto 12px; }
+    .phone .ph-title { font-family: 'Fraunces', serif; font-size: 13px; text-align: center; margin-bottom: 4px; }
+    .phone .ph-sub { font-size: 9.5px; color: var(--ivory-muted); text-align: center; margin-bottom: 10px; }
+    .ph-step { background: var(--surface); border: 1px solid var(--hairline); border-radius: 9px; padding: 8px 10px; margin-bottom: 7px; font-size: 10.5px; display: flex; align-items: center; gap: 8px; }
+    .ph-step .n { width: 18px; height: 18px; border-radius: 50%; background: var(--brass); color: var(--ebony); font-weight: 800; font-size: 10px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+    .ph-step.done .n { background: var(--green); }
+    .ph-step .sm { color: var(--ivory-muted); font-size: 9.5px; display: block; }
+    .ph-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 4px 0 6px; }
+    .ph-slots span { text-align: center; font-size: 10px; padding: 5px 0; border-radius: 6px; border: 1px solid var(--hairline); background: var(--surface); }
+    .ph-slots span.on { background: var(--brass); color: var(--ebony); font-weight: 800; border-color: var(--brass); }
+    .ph-slots span.off { opacity: 0.35; text-decoration: line-through; }
+    .wa { background: #0b141a; }
+    .wa .bar { background: #1f2c34; border-radius: 10px; padding: 7px 10px; font-size: 11px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .bubble { max-width: 88%; padding: 7px 10px; border-radius: 10px; font-size: 10.5px; line-height: 1.5; margin-bottom: 7px; }
+    .bubble.me { background: #005c4b; margin-left: auto; border-top-right-radius: 2px; }
+    .bubble.bot { background: #1f2c34; border-top-left-radius: 2px; }
+    .wa-list { background: #1f2c34; border-radius: 10px; overflow: hidden; margin-bottom: 7px; max-width: 92%; }
+    .wa-list .row { padding: 6px 10px; font-size: 10.5px; border-top: 1px solid rgba(255,255,255,0.07); display: flex; justify-content: space-between; }
+    .wa-list .row:first-child { border-top: none; }
+    .wa-list .btnrow { text-align: center; color: #53bdeb; font-size: 10.5px; padding: 7px; border-top: 1px solid rgba(255,255,255,0.07); font-weight: 700; }
+    .life { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; justify-content: center; }
+    .life-step { flex: 1 1 180px; max-width: 250px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 14px; text-align: center; }
+    .life-step .pill { display: inline-block; margin-bottom: 8px; }
+    .life-step .d { font-size: 12px; color: var(--ivory-muted); line-height: 1.55; }
+    .life-step .who-do { margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--brass-light); }
+    .life-arrow { align-self: center; color: var(--brass); font-size: 20px; }
+    .tut details { background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 10px; margin-bottom: 8px; }
+    .tut summary { cursor: pointer; padding: 13px 16px; font-weight: 700; font-size: 13.5px; list-style: none; display: flex; justify-content: space-between; gap: 10px; }
+    .tut summary::-webkit-details-marker { display: none; }
+    .tut summary::after { content: '+'; color: var(--brass); font-size: 18px; line-height: 1; }
+    .tut details[open] summary::after { content: '–'; }
+    .tut details .ans { padding: 0 16px 14px; font-size: 13px; color: var(--ivory-muted); line-height: 1.7; }
+    .tip { background: rgba(198,161,91,0.08); border-left: 3px solid var(--brass); border-radius: 8px; padding: 12px 14px; font-size: 13px; color: var(--ivory-muted); line-height: 1.65; margin: 14px 0; }
+    .tip b { color: var(--ivory); }
+    @media (max-width: 560px) { .container { padding: 20px 14px 60px; } .card { padding: 20px 16px; } }
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+    <div class="login-box">
+        <div class="crest"><i class="fas fa-handshake" aria-hidden="true"></i></div>
+        <h2>Painel do Revendedor</h2>
+        <p class="sub">Entre com o login que você recebeu.</p>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="rEmail">Email</label>
+                <input type="email" id="rEmail" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="rPassword">Senha</label>
+                <input type="password" id="rPassword" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn" style="width:100%; justify-content:center; margin-top:6px;">
+                <i class="fas fa-sign-in-alt" aria-hidden="true"></i> Entrar
+            </button>
+        </form>
+    </div>
+</div>
+
+<div id="mainContent" class="hidden">
+    <header>
+        <h1><i class="fas fa-handshake" aria-hidden="true"></i> BarberSync <span class="badge">REVENDEDOR</span> <span id="hdrName" style="font-family:'Manrope',sans-serif; font-size:13px; font-weight:600; color:var(--ivory-muted);"></span></h1>
+        <button class="btn btn-secondary btn-sm" onclick="logout()"><i class="fas fa-sign-out-alt" aria-hidden="true"></i> Sair</button>
+    </header>
+
+    <div class="container">
+        <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="resumo" onclick="switchTab('resumo')"><i class="fas fa-chart-pie" aria-hidden="true"></i> Resumo</button>
+            <button class="tab" data-tab="clientes" onclick="switchTab('clientes')"><i class="fas fa-store" aria-hidden="true"></i> Meus clientes</button>
+            <button class="tab" data-tab="cobrancas" onclick="switchTab('cobrancas')"><i class="fas fa-file-invoice-dollar" aria-hidden="true"></i> Cobranças <span class="badge hidden" id="chargesBadge">0</span></button>
+            <button class="tab" data-tab="tutoriais" onclick="switchTab('tutoriais')"><i class="fas fa-graduation-cap" aria-hidden="true"></i> Tutoriais</button>
+        </div>
+
+        <!-- ============ RESUMO ============ -->
+        <div id="tab-resumo">
+            <div class="info-box" id="howItWorks"></div>
+            <div class="stat-grid" id="stats"></div>
+        </div>
+
+        <!-- ============ CLIENTES ============ -->
+        <div id="tab-clientes" class="hidden">
+            <div class="card">
+                <h2><i class="fas fa-plus-circle" aria-hidden="true"></i> Novo cliente</h2>
+                <form id="newClientForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cName">Nome da barbearia</label>
+                            <input type="text" id="cName" placeholder="Ex: Barbearia do João" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="cSlug">Link (opcional)</label>
+                            <input type="text" id="cSlug" placeholder="gerado pelo nome">
+                        </div>
+                        <div class="form-group">
+                            <label for="cEmail">Email do gestor (login dele)</label>
+                            <input type="email" id="cEmail" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="cPassword">Senha do gestor</label>
+                            <input type="text" id="cPassword" placeholder="mínimo 6 caracteres" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="cPlan">Plano</label>
+                            <select id="cPlan"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="cPhone">WhatsApp do gestor (avisos de agendamento)</label>
+                            <input type="tel" id="cPhone" placeholder="Ex: (88) 99999-0000" inputmode="numeric">
+                        </div>
+                    </div>
+                    <div class="hint" id="planHint" style="margin: -4px 0 16px;"></div>
+                    <button type="submit" class="btn"><i class="fas fa-store" aria-hidden="true"></i> Criar cliente</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-store-alt" aria-hidden="true"></i> Meus clientes</h2>
+                <div id="clientsList"><div class="empty-state">Carregando...</div></div>
+            </div>
+        </div>
+
+        <!-- ============ COBRANCAS ============ -->
+        <div id="tab-cobrancas" class="hidden">
+            <div class="info-box">
+                <b>Como funciona:</b> todo mês cada cliente gera uma cobrança. Quando o cliente te pagar, clique em <b>“Cliente pagou”</b>: o acesso dele é renovado por mais um mês e o valor do repasse aparece como pendente. Depois de transferir o repasse para o dono do sistema, ele confirma o recebimento e a cobrança fica como <b>Repassada</b>. Se o cliente não pagar até o vencimento, o acesso dele é bloqueado automaticamente.
+            </div>
+            <div class="card">
+                <h2><i class="fas fa-file-invoice-dollar" aria-hidden="true"></i> Cobranças</h2>
+                <div class="filters" id="chargeFilters"></div>
+                <div id="chargesList"><div class="empty-state">Carregando...</div></div>
+            </div>
+        </div>
+
+        <!-- ============ TUTORIAIS ============ -->
+        <div id="tab-tutoriais" class="hidden">
+            <div class="card tut">
+                <div class="tut-nav" id="tutNav"></div>
+                <div id="tutBody"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay hidden" id="confirmOverlay">
+    <div class="modal-content" style="max-width:400px; text-align:center;">
+        <p class="confirm-msg" id="confirmMsg"></p>
+        <div class="confirm-actions">
+            <button class="cm-cancel" id="confirmCancel">Cancelar</button>
+            <button class="cm-confirm" id="confirmOk">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay hidden" id="credsOverlay">
+    <div class="modal-content">
+        <h3><i class="fas fa-circle-check" style="color:var(--green); margin-right:8px;" aria-hidden="true"></i> Cliente criado!</h3>
+        <p class="hint" style="margin:-6px 0 14px;">Passe estes dados para o cliente:</p>
+        <div class="creds" id="credsText"></div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn" onclick="copyCreds()"><i class="fas fa-copy" aria-hidden="true"></i> Copiar dados</button>
+            <button class="btn btn-secondary" onclick="closeCreds()">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay hidden" id="editClientOverlay">
+    <div class="modal-content">
+        <h3>Editar cliente</h3>
+        <p class="hint" style="margin:-6px 0 14px;" id="editClientName"></p>
+        <form id="editClientForm">
+            <input type="hidden" id="ecId">
+            <div class="form-group">
+                <label for="ecPassword">Nova senha do gestor (deixe em branco para não trocar)</label>
+                <input type="text" id="ecPassword" placeholder="mínimo 6 caracteres" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="ecPhone">WhatsApp do gestor (avisos de agendamento)</label>
+                <input type="tel" id="ecPhone" inputmode="numeric" placeholder="Ex: (88) 99999-0000">
+            </div>
+            <div style="display:flex; gap:10px; margin-top:16px;">
+                <button type="submit" class="btn" style="flex:1; justify-content:center;">Salvar</button>
+                <button type="button" class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="closeEditClient()">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    const API = '/api/reseller';
+    const $ = id => document.getElementById(id);
+    let me = null;           // { reseller, prices, lead_days }
+    let clients = [];
+    let charges = [];
+    let chargeFilter = 'abertas';
+    let lastCreds = '';
+
+    function getToken() { try { return localStorage.getItem('resellerToken'); } catch (_) { return null; } }
+    function setToken(t) { try { localStorage.setItem('resellerToken', t); } catch (_) {} }
+    function clearToken() { try { localStorage.removeItem('resellerToken'); } catch (_) {} }
+
+    function esc(v) { return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function brl(c) { return 'R$ ' + ((Number(c) || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function pct(n) { return (Number(n) || 0).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '%'; }
+    function fmtDate(iso) { if (!iso) return '—'; const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
+    function fmtDateTime(sql) {
+        if (!sql) return '—';
+        const d = new Date(String(sql).replace(' ', 'T') + 'Z');
+        return isNaN(d) ? sql : d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+    function fmtPhone(p) {
+        const n = String(p || '').replace(/\D/g, ''); const l = n.startsWith('55') ? n.slice(2) : n;
+        if (l.length === 11) return `(${l.slice(0, 2)}) ${l.slice(2, 7)}-${l.slice(7)}`;
+        if (l.length === 10) return `(${l.slice(0, 2)}) ${l.slice(2, 6)}-${l.slice(6)}`;
+        return n || '';
+    }
+
+    function notify(message, type = 'info') {
+        const el = document.createElement('div');
+        el.className = `notification ${type}`;
+        el.textContent = message;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 4500);
+    }
+
+    function askConfirm(message) {
+        return new Promise(resolve => {
+            $('confirmMsg').innerHTML = message;
+            $('confirmOverlay').classList.remove('hidden');
+            const done = r => { $('confirmOverlay').classList.add('hidden'); $('confirmOk').onclick = null; $('confirmCancel').onclick = null; resolve(r); };
+            $('confirmOk').onclick = () => done(true);
+            $('confirmCancel').onclick = () => done(false);
+        });
+    }
+
+    async function api(path, options = {}) {
+        const headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers);
+        const token = getToken();
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch(API + path, Object.assign({}, options, { headers }));
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401 || (res.status === 403 && /suspensa/i.test(data.error || ''))) {
+            clearToken(); showLogin();
+            throw new Error(data.error || 'Sessão expirada, faça login novamente.');
+        }
+        if (!res.ok) throw new Error(data.error || 'Erro na requisição');
+        return data;
+    }
+
+    function showLogin() { $('loginScreen').classList.remove('hidden'); $('mainContent').classList.add('hidden'); }
+    async function showPanel() {
+        $('loginScreen').classList.add('hidden');
+        $('mainContent').classList.remove('hidden');
+        await refreshAll();
+    }
+    function logout() { clearToken(); showLogin(); }
+
+    $('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        try {
+            const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: $('rEmail').value, password: $('rPassword').value }) });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao entrar');
+            if (data.role !== 'reseller') throw new Error('Este login não é de revendedor. Gestores entram em /admin.');
+            setToken(data.token);
+            $('rPassword').value = '';
+            await showPanel();
+        } catch (err) { notify(err.message, 'error'); }
+        finally { btn.disabled = false; }
+    });
+
+    function switchTab(name) {
+        ['resumo', 'clientes', 'cobrancas', 'tutoriais'].forEach(t => $('tab-' + t).classList.toggle('hidden', t !== name));
+        if (name === 'tutoriais') renderTutorials();
+        document.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    }
+
+    async function refreshAll() {
+        try {
+            me = await api('/me');
+            $('hdrName').textContent = me.reseller.name;
+            renderPlanSelect();
+            await Promise.all([loadSummary(), loadClients(), loadCharges()]);
+        } catch (e) { notify(e.message, 'error'); }
+    }
+
+    function renderPlanSelect() {
+        const p = me.prices;
+        const cur = $('cPlan').value || 'basic';
+        $('cPlan').innerHTML = `<option value="basic">Básico — ${brl(p.basic_cents)}/mês (site e sistema)</option><option value="pro">PRO — ${brl(p.pro_cents)}/mês (com atendente IA no WhatsApp)</option>`;
+        $('cPlan').value = cur;
+        updatePlanHint();
+    }
+    function updatePlanHint() {
+        const p = me.prices, plan = $('cPlan').value;
+        const price = plan === 'pro' ? p.pro_cents : p.basic_cents;
+        const commission = Math.round(price * me.reseller.commission_percent / 100);
+        $('planHint').innerHTML = `Você ganha <b>${pct(me.reseller.commission_percent)}</b> (${brl(commission)} por mês) e repassa <b>${brl(price - commission)}</b>. ${plan === 'pro' ? 'O PRO já vem com o atendente IA pronto: o cliente só precisa conectar o WhatsApp.' : ''}`;
+    }
+    $('cPlan').addEventListener('change', updatePlanHint);
+
+    // ==================== Resumo ====================
+    function stat(icon, label, value, hint, cls) {
+        return `<div class="stat ${cls || ''}"><i class="fas ${icon}" aria-hidden="true"></i><div class="stat-label">${label}</div><div class="stat-value">${value}</div>${hint ? `<div class="stat-hint">${hint}</div>` : ''}</div>`;
+    }
+
+    async function loadSummary() {
+        const s = await api('/summary');
+        $('howItWorks').innerHTML = `<b>Como funciona:</b> você cadastra o cliente, cobra a mensalidade dele e fica com <b>${pct(me.reseller.commission_percent)}</b> de cada pagamento, todo mês, enquanto ele continuar cliente. O restante você repassa ao dono do sistema.`;
+        $('stats').innerHTML = [
+            stat('fa-store', 'Clientes ativos', s.clients_active, `${s.clients_pro} PRO · ${s.clients_basic} Básico`),
+            stat('fa-coins', 'Faturamento mensal dos clientes', brl(s.mrr_cents), 'soma do que seus clientes pagam por mês'),
+            stat('fa-percent', 'Sua comissão por mês', brl(s.commission_month_cents), 'o que fica com você'),
+            stat('fa-wallet', 'Repasse mensal', brl(s.owner_month_cents), 'o que você passa para o dono por mês'),
+            stat('fa-hourglass-half', 'A cobrar dos clientes', brl(s.to_collect_cents), `${s.to_collect_count} cobrança${s.to_collect_count === 1 ? '' : 's'} em aberto`),
+            stat('fa-triangle-exclamation', 'Cobranças atrasadas', s.overdue_count, 'ciclo acabou e o cliente não pagou', s.overdue_count > 0 ? 'warn' : ''),
+            stat('fa-hand-holding-dollar', 'Você precisa repassar', brl(s.to_repass_cents), `${s.to_repass_count} pagamento${s.to_repass_count === 1 ? '' : 's'} de cliente já recebido${s.to_repass_count === 1 ? '' : 's'}`, s.to_repass_cents > 0 ? 'hl' : ''),
+            stat('fa-circle-check', 'Já repassado', brl(s.repassed_cents), 'confirmado pelo dono'),
+            stat('fa-sack-dollar', 'Comissão recebida (total)', brl(s.commission_earned_cents), 'de todos os pagamentos de clientes')
+        ].join('');
+        const open = s.to_collect_count;
+        $('chargesBadge').textContent = open; $('chargesBadge').classList.toggle('hidden', !open);
+    }
+
+    // ==================== Clientes ====================
+    async function loadClients() {
+        clients = await api('/clients');
+        const box = $('clientsList');
+        if (!clients.length) { box.innerHTML = '<div class="empty-state">Você ainda não tem clientes. Cadastre o primeiro acima.</div>'; return; }
+        box.innerHTML = clients.map(c => `
+            <div class="client ${c.status === 'suspended' ? 'suspended' : ''}">
+                <div style="flex:1; min-width:240px;">
+                    <div class="name">${esc(c.name)}</div>
+                    <div class="meta">
+                        <span class="pill ${c.status === 'active' ? 'active' : 'suspended'}">${c.status === 'active' ? 'Ativo' : 'Suspenso'}</span>
+                        <span class="pill ${c.plan === 'pro' ? 'plan-pro' : 'plan-basic'}">${c.plan === 'pro' ? 'PRO' : 'Básico'}</span>
+                        <span>acesso até ${fmtDate(c.subscription_expires_at)}</span>
+                        ${c.overdue_charges ? '<span class="money-warn">pagamento atrasado</span>' : (c.open_charges ? '<span class="pill st-wait">cobrança em aberto</span>' : '<span class="pill st-done">em dia</span>')}
+                    </div>
+                    <div class="nums">
+                        <span>Cliente paga: <b>${brl(c.monthly_price_cents)}</b>/mês</span>
+                        <span>Sua comissão: <b>${brl(c.commission_cents)}</b> (${pct(c.commission_percent)})</span>
+                        <span>Você repassa: <b>${brl(c.owner_cents)}</b></span>
+                    </div>
+                    <div class="nums">
+                        <span>Login: <b>${esc(c.manager_email || '—')}</b></span>
+                        <a class="link" href="/${esc(c.slug)}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt" aria-hidden="true"></i> /${esc(c.slug)}</a>
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-secondary btn-sm" onclick="copyClientAccess(${c.id})"><i class="fas fa-copy" aria-hidden="true"></i> Copiar acesso</button>
+                    <button class="btn btn-secondary btn-sm" onclick="openEditClient(${c.id})"><i class="fas fa-key" aria-hidden="true"></i> Senha / WhatsApp</button>
+                </div>
+            </div>`).join('');
+    }
+
+    function accessText(slug, email, password) {
+        const base = location.origin;
+        return `Seu sistema de agendamento:\n\n` +
+            `Link para seus clientes agendarem: ${base}/${slug}\n` +
+            `Painel para você gerenciar: ${base}/admin\n` +
+            `Login: ${email}\n` + (password ? `Senha: ${password}\n` : '');
+    }
+
+    $('newClientForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        const password = $('cPassword').value;
+        try {
+            const c = await api('/clients', {
+                method: 'POST',
+                body: JSON.stringify({ name: $('cName').value, slug: $('cSlug').value, manager_email: $('cEmail').value, manager_password: password, plan: $('cPlan').value, notify_phone: $('cPhone').value })
+            });
+            e.target.reset();
+            renderPlanSelect();
+            lastCreds = accessText(c.slug, c.manager_email, password);
+            $('credsText').innerHTML = esc(lastCreds).replace(/\n/g, '<br>');
+            $('credsOverlay').classList.remove('hidden');
+            await Promise.all([loadClients(), loadSummary(), loadCharges()]);
+        } catch (err) { notify(err.message, 'error'); }
+        finally { btn.disabled = false; }
+    });
+
+    async function copyText(text) {
+        try { await navigator.clipboard.writeText(text); notify('Copiado!', 'success'); }
+        catch (_) {
+            const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); notify('Copiado!', 'success'); } catch (__) { notify('Não consegui copiar. Selecione e copie manualmente.', 'error'); }
+            ta.remove();
+        }
+    }
+    function copyCreds() { copyText(lastCreds); }
+    function closeCreds() { $('credsOverlay').classList.add('hidden'); }
+    // A senha atual nao fica guardada em lugar nenhum (so o hash), entao o acesso copiado nao a inclui
+    function copyClientAccess(id) {
+        const c = clients.find(x => x.id === id);
+        if (c) copyText(accessText(c.slug, c.manager_email, null) + '\n(a senha é a que você cadastrou; se ele esqueceu, troque em “Senha / WhatsApp”)');
+    }
+
+    function openEditClient(id) {
+        const c = clients.find(x => x.id === id);
+        if (!c) return;
+        $('ecId').value = c.id;
+        $('editClientName').textContent = c.name;
+        $('ecPassword').value = '';
+        $('ecPhone').value = c.notify_phone ? fmtPhone(c.notify_phone) : '';
+        $('editClientOverlay').classList.remove('hidden');
+    }
+    function closeEditClient() { $('editClientOverlay').classList.add('hidden'); }
+    $('editClientForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const body = { notify_phone: $('ecPhone').value };
+        if ($('ecPassword').value) body.manager_password = $('ecPassword').value;
+        try {
+            await api(`/clients/${$('ecId').value}`, { method: 'PUT', body: JSON.stringify(body) });
+            notify('Cliente atualizado!', 'success');
+            closeEditClient();
+            loadClients();
+        } catch (err) { notify(err.message, 'error'); }
+    });
+
+    // ==================== Cobrancas ====================
+    async function loadCharges() {
+        charges = await api('/charges');
+        renderCharges();
+    }
+
+    function stagePill(c) {
+        if (c.stage === 'cobrar') return c.overdue ? '<span class="pill st-late">Atrasada · cliente não pagou</span>' : '<span class="pill st-wait">A cobrar do cliente</span>';
+        if (c.stage === 'repassar') return '<span class="pill st-repass">Cliente pagou · você deve repassar</span>';
+        return '<span class="pill st-done">Repassada ✓</span>';
+    }
+
+    function renderCharges() {
+        const counts = { abertas: 0, repassar: 0, repassado: 0, todas: charges.length };
+        charges.forEach(c => { if (c.stage === 'cobrar') counts.abertas++; else if (c.stage === 'repassar') counts.repassar++; else counts.repassado++; });
+        $('chargeFilters').innerHTML = [['abertas', 'A cobrar do cliente'], ['repassar', 'Você deve repassar'], ['repassado', 'Repassadas'], ['todas', 'Todas']]
+            .map(([k, l]) => `<button class="chip ${chargeFilter === k ? 'active' : ''}" onclick="setChargeFilter('${k}')">${l} (${counts[k]})</button>`).join('');
+        const map = { abertas: 'cobrar', repassar: 'repassar', repassado: 'repassado' };
+        const shown = chargeFilter === 'todas' ? charges : charges.filter(c => c.stage === map[chargeFilter]);
+        const box = $('chargesList');
+        if (!shown.length) { box.innerHTML = '<div class="empty-state">Nenhuma cobrança aqui.</div>'; return; }
+        box.innerHTML = `<div class="table-wrap"><table>
+            <thead><tr><th>Ciclo</th><th>Barbearia</th><th>Cliente paga</th><th>Sua comissão</th><th>Você repassa</th><th>Situação</th><th></th></tr></thead>
+            <tbody>${shown.map(c => `
+                <tr>
+                    <td>${fmtDate(c.cycle_start)}<br><small>até ${fmtDate(c.cycle_end)}</small></td>
+                    <td>${esc(c.tenant_name)}${c.deleted_tenant ? '<br><small>(barbearia excluída)</small>' : ''}</td>
+                    <td>${brl(c.amount_cents)}</td>
+                    <td>${brl(c.commission_cents)}<br><small>${pct(c.commission_percent)}</small></td>
+                    <td><b>${brl(c.owner_cents)}</b></td>
+                    <td>${stagePill(c)}${c.client_paid_at ? `<br><small>cliente pagou em ${esc(fmtDateTime(c.client_paid_at))}</small>` : ''}${c.repassed_at ? `<br><small>repasse confirmado em ${esc(fmtDateTime(c.repassed_at))}</small>` : ''}</td>
+                    <td style="text-align:right; white-space:nowrap;">${c.stage === 'cobrar' ? `<button class="btn btn-sm" onclick="clientPaid(${c.id})"><i class="fas fa-check" aria-hidden="true"></i> Cliente pagou</button>` : ''}</td>
+                </tr>`).join('')}
+            </tbody></table></div>`;
+    }
+    function setChargeFilter(f) { chargeFilter = f; renderCharges(); }
+
+    async function clientPaid(id) {
+        const c = charges.find(x => x.id === id);
+        if (!c) return;
+        const ok = await askConfirm(`Confirmar que <b>${esc(c.tenant_name)}</b> te pagou <b>${brl(c.amount_cents)}</b>?<br><br>Você fica com <b>${brl(c.commission_cents)}</b> e deve repassar <b>${brl(c.owner_cents)}</b>. O acesso do cliente é renovado até ${fmtDate(c.cycle_end)}.`);
+        if (!ok) return;
+        try {
+            await api(`/charges/${id}/client-paid`, { method: 'POST' });
+            notify('Pagamento registrado! Não esqueça de repassar ' + brl(c.owner_cents) + '.', 'success');
+            await Promise.all([loadCharges(), loadSummary(), loadClients()]);
+        } catch (err) { notify(err.message, 'error'); await loadCharges(); }
+    }
+
+
+    // ==================== Tutoriais ====================
+    // Todas as imagens abaixo sao desenhadas pelo proprio sistema (HTML/CSS), com os valores reais do seu plano.
+    let tutSection = 'comece';
+    const TUT_SECTIONS = [
+        ['comece', '🚀 Comece por aqui'],
+        ['planos', '📦 Os planos'],
+        ['cadastrar', '📝 Como cadastrar um cliente'],
+        ['cobrar', '💰 Cobrar e repassar'],
+        ['duvidas', '❓ Dúvidas']
+    ];
+
+    function tutNumbers() {
+        const p = me.prices, c = me.reseller.commission_percent;
+        const calc = cents => { const com = Math.round(cents * c / 100); return { com, own: cents - com }; };
+        return { p, c, basic: calc(p.basic_cents), pro: calc(p.pro_cents) };
+    }
+
+    function moneyFlow(cents, label) {
+        const { c } = tutNumbers();
+        const com = Math.round(cents * c / 100), own = cents - com;
+        return `
+        <div class="illus">
+            <div class="flow">
+                <div class="flow-box"><div class="emoji">💈</div><div class="lbl">Seu cliente (${label}) paga a você</div><div class="val">${brl(cents)}</div><div class="lbl">por mês</div></div>
+                <div class="flow-arrow">➜</div>
+                <div>
+                    <div class="flow-box you" style="margin-bottom:10px;"><div class="emoji">🙋</div><div class="lbl">Fica com você (${pct(c)})</div><div class="val">${brl(com)}</div></div>
+                    <div class="flow-box owner"><div class="emoji">🤝</div><div class="lbl">Você repassa ao dono do sistema</div><div class="val">${brl(own)}</div></div>
+                </div>
+            </div>
+            <div class="splitbar"><div style="width:${Math.max(c, 8)}%; background:var(--green);">VOCÊ ${pct(c)}</div><div style="width:${Math.max(100 - c, 8)}%; background:var(--blue);">REPASSE ${pct(100 - c)}</div></div>
+            <div class="illus-cap">Assim funciona todo mês, para cada cliente seu, enquanto ele continuar usando o sistema.</div>
+        </div>`;
+    }
+
+    function phoneBooking() {
+        return `
+        <div class="phones">
+            <div class="phone">
+                <div class="notch"></div>
+                <div class="ph-title">Barbearia do João</div>
+                <div class="ph-sub">Agende seu horário</div>
+                <div class="ph-step done"><span class="n">✓</span><div>Profissional<span class="sm">Carlos</span></div></div>
+                <div class="ph-step done"><span class="n">✓</span><div>Serviço<span class="sm">Corte + Barba · 40 min</span></div></div>
+                <div class="ph-step"><span class="n">3</span><div>Escolha a data<span class="sm">quinta, 02/10</span></div></div>
+                <div style="font-size:9.5px; color:var(--ivory-muted); margin:8px 0 4px;">Tarde · 4 horários</div>
+                <div class="ph-slots"><span class="off">14:00</span><span>14:40</span><span class="on">15:20</span><span>16:00</span><span class="off">16:40</span><span>17:20</span></div>
+                <div class="mock-btn" style="display:block; text-align:center; font-size:10.5px; padding:8px;">Confirmar agendamento</div>
+            </div>
+            <div class="phone" style="align-self:center;">
+                <div class="notch"></div>
+                <div class="ph-title">O cliente final</div>
+                <div class="ph-sub">só precisa do link</div>
+                <div class="ph-step"><span class="n">1</span><div>Abre o link da barbearia<span class="sm">seudominio.com/barbearia-do-joao</span></div></div>
+                <div class="ph-step"><span class="n">2</span><div>Escolhe profissional, serviço, data e horário</div></div>
+                <div class="ph-step"><span class="n">3</span><div>Recebe a confirmação no WhatsApp</div></div>
+                <div class="ph-step"><span class="n">4</span><div>O barbeiro é avisado na hora</div></div>
+            </div>
+        </div>
+        <div class="illus-cap">Esta é a página de agendamento que seu cliente (a barbearia) entrega para os clientes dele.</div>`;
+    }
+
+    function phoneWhatsapp() {
+        return `
+        <div class="phones">
+            <div class="phone wa">
+                <div class="notch"></div>
+                <div class="bar">💈 <b>Barbearia do João</b></div>
+                <div class="bubble me">Oi, quero cortar o cabelo amanhã à tarde 🎤</div>
+                <div class="bubble bot">Claro! 😊 Com quem você prefere cortar?</div>
+                <div class="wa-list">
+                    <div class="row"><span>✂️ Carlos</span><span>›</span></div>
+                    <div class="row"><span>✂️ Pedro</span><span>›</span></div>
+                    <div class="btnrow">☰ Ver profissionais</div>
+                </div>
+                <div class="bubble me">Carlos</div>
+                <div class="bubble bot">Amanhã tenho estes horários 👇</div>
+                <div class="wa-list">
+                    <div class="row"><span>14:00</span><span>livre</span></div>
+                    <div class="row"><span>15:20</span><span>livre</span></div>
+                    <div class="btnrow">☰ Ver horários</div>
+                </div>
+            </div>
+            <div class="phone" style="align-self:center;">
+                <div class="notch"></div>
+                <div class="ph-title">Atendente com IA</div>
+                <div class="ph-sub">exclusivo do plano PRO</div>
+                <div class="ph-step"><span class="n">🎤</span><div>Entende texto e <b>áudio</b></div></div>
+                <div class="ph-step"><span class="n">☰</span><div>Mostra as opções em <b>lista</b>: fácil de tocar</div></div>
+                <div class="ph-step"><span class="n">📅</span><div>Agenda sozinho, sem o dono digitar nada</div></div>
+                <div class="ph-step"><span class="n">⚡</span><div>Já vem <b>pronto</b>: o cliente só conecta o WhatsApp</div></div>
+            </div>
+        </div>
+        <div class="illus-cap">O atendente responde os clientes da barbearia no WhatsApp e marca o horário. É o grande diferencial do PRO.</div>`;
+    }
+
+    function formMock() {
+        const { p } = tutNumbers();
+        const f = (n, l, v, ph) => `<div class="mock-field"><div class="l">${l}</div><div class="i ${ph ? 'ph' : ''}">${v}</div><span class="badge-n">${n}</span></div>`;
+        return `
+        <div class="illus">
+            <div class="mock-form">
+                <div class="mock-card">
+                    <div class="mock-title">➕ Novo cliente</div>
+                    ${f(1, 'Nome da barbearia', 'Barbearia do João')}
+                    ${f(2, 'Link (opcional)', 'gerado pelo nome', true)}
+                    ${f(3, 'Email do gestor (login dele)', 'joao@email.com')}
+                    ${f(4, 'Senha do gestor', 'minhasenha123')}
+                    ${f(5, 'Plano', 'PRO — ' + brl(p.pro_cents) + '/mês ▾')}
+                    ${f(6, 'WhatsApp do gestor (avisos)', '(88) 99999-0000')}
+                    <div class="mock-btn">🏪 Criar cliente</div>
+                </div>
+                <ul class="legend">
+                    <li><b>Nome da barbearia.</b> Aparece no topo da página de agendamento do cliente.</li>
+                    <li><b>Link.</b> Deixe em branco: o sistema cria a partir do nome (ex: <i>/barbearia-do-joao</i>). É o endereço que o dono divulga para os clientes dele.</li>
+                    <li><b>Email do gestor.</b> É o login do dono da barbearia no painel <i>/admin</i>. Não pode ser um email já usado no sistema.</li>
+                    <li><b>Senha.</b> Mínimo de 6 caracteres. O dono pode usar essa senha no primeiro acesso.</li>
+                    <li><b>Plano.</b> Básico ou PRO (veja a aba “Os planos”). O valor mensal já aparece na lista.</li>
+                    <li><b>WhatsApp do gestor.</b> Opcional, mas recomendado: é o número que recebe o aviso de cada agendamento, com os botões “Falar com o cliente” e “Meus agendamentos”.</li>
+                </ul>
+            </div>
+            <div class="illus-cap">Formulário da aba “Meus clientes”. Os números vermelhos mostram o que preencher em cada campo.</div>
+        </div>`;
+    }
+
+    function cobrancaLife() {
+        return `
+        <div class="illus">
+            <div class="life">
+                <div class="life-step"><span class="pill st-wait">A cobrar do cliente</span><div class="d">A cobrança do mês aparece 5 dias antes do vencimento. Cobre o cliente (Pix, dinheiro, o que combinarem).</div><div class="who-do">👉 Você cobra</div></div>
+                <div class="life-arrow">➜</div>
+                <div class="life-step"><span class="pill st-repass">Cliente pagou · repassar</span><div class="d">Você clicou em <b>“Cliente pagou”</b>. O acesso dele é renovado por mais um mês e o repasse fica pendente.</div><div class="who-do">👉 Você repassa ao dono</div></div>
+                <div class="life-arrow">➜</div>
+                <div class="life-step"><span class="pill st-done">Repassada ✓</span><div class="d">O dono conferiu que recebeu o repasse e confirmou. Tudo certo com este mês.</div><div class="who-do">👉 O dono confirma</div></div>
+            </div>
+            <div class="illus-cap">O caminho de cada cobrança mensal.</div>
+        </div>`;
+    }
+
+    function renderTutorials() {
+        if (!me) return;
+        $('tutNav').innerHTML = TUT_SECTIONS.map(([k, l]) => `<button class="chip ${tutSection === k ? 'active' : ''}" onclick="setTut('${k}')">${l}</button>`).join('');
+        $('tutBody').innerHTML = `<div class="tut">${TUT_BUILDERS[tutSection]()}</div>`;
+    }
+    function setTut(k) { tutSection = k; renderTutorials(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+    const TUT_BUILDERS = {
+        comece() {
+            const { p, c } = tutNumbers();
+            return `
+            <h3>Bem-vindo(a), ${esc(me.reseller.name)}! 👋</h3>
+            <p>O <b>BarberSync</b> é um sistema de <b>agendamento online para barbearias</b>. O cliente marca o horário sozinho por um link, o dono acompanha tudo em um painel e é avisado no WhatsApp a cada agendamento. Você vende o acesso para barbearias e ganha <b>${pct(c)} de cada mensalidade</b>, todo mês, enquanto o cliente continuar usando.</p>
+            <p>Você não precisa entender de tecnologia: aqui neste painel você <b>cadastra o cliente em 1 minuto</b>, entrega o acesso e acompanha o que tem para receber e repassar.</p>
+
+            <h4>💸 Como você ganha</h4>
+            ${moneyFlow(p.pro_cents, 'plano PRO')}
+
+            <h4>🧭 O caminho em 4 passos</h4>
+            <div class="tut-grid">
+                <div class="step-card"><span class="step-emoji">📝</span><div class="step-num">1</div><b>Cadastre o cliente</b><span>Na aba <b>Meus clientes</b>, preencha o formulário e escolha o plano.</span></div>
+                <div class="step-card"><span class="step-emoji">📲</span><div class="step-num">2</div><b>Envie o acesso</b><span>O sistema mostra o link e o login prontos. Toque em “Copiar dados” e mande no WhatsApp do cliente.</span></div>
+                <div class="step-card"><span class="step-emoji">💵</span><div class="step-num">3</div><b>Cobre a mensalidade</b><span>Você combina a forma de pagamento com o cliente. O valor do plano já está definido.</span></div>
+                <div class="step-card"><span class="step-emoji">✅</span><div class="step-num">4</div><b>Registre e repasse</b><span>Na aba <b>Cobranças</b>, clique em “Cliente pagou” e repasse a parte do dono.</span></div>
+            </div>
+
+            <h4>👀 O que o cliente recebe</h4>
+            <ul class="check">
+                <li><b>Uma página de agendamento</b> com o nome e o link da barbearia, para os clientes dele marcarem horário pelo celular.</li>
+                <li><b>Um painel de gestão</b> para cadastrar serviços, barbeiros e horários, ver a agenda do dia, controlar clientes e o financeiro.</li>
+                <li><b>Avisos no WhatsApp</b> do dono e dos barbeiros a cada novo agendamento, com botões para falar com o cliente e ver a agenda.</li>
+            </ul>
+            ${phoneBooking()}`;
+        },
+        planos() {
+            const { p, c, basic, pro } = tutNumbers();
+            return `
+            <h3>Qual plano oferecer?</h3>
+            <p>Existem dois planos. A diferença principal é o <b>atendente com inteligência artificial</b> no WhatsApp. Os valores abaixo já mostram o que <b>você</b> ganha em cada um.</p>
+            <div class="plans">
+                <div class="plan">
+                    <h5>Básico</h5><div class="sub">Site e sistema de agendamento</div>
+                    <div class="price">${brl(p.basic_cents)} <small>/ mês</small></div>
+                    <div class="earn">Você ganha <b>${brl(basic.com)}</b> por mês (${pct(c)}) e repassa ${brl(basic.own)}.</div>
+                    <ul class="check">
+                        <li>Página de agendamento online com o link da barbearia</li>
+                        <li>Cliente escolhe profissional, serviço, data e horário</li>
+                        <li>Painel do gestor: agenda, serviços, pacotes, barbeiros, clientes e financeiro</li>
+                        <li>Horários de funcionamento, folgas e bloqueios por barbeiro</li>
+                        <li>Avisos de agendamento no WhatsApp do dono e do barbeiro</li>
+                        <li>Programa de fidelidade e visual personalizável</li>
+                        <li class="no">Atendente com IA no WhatsApp</li>
+                        <li class="no">Agendamento por áudio</li>
+                        <li class="no">Automações (retorno, avaliação, aniversário)</li>
+                    </ul>
+                    <div class="who"><b>Indique para:</b> barbearias que já têm quem atenda o WhatsApp e só querem organizar a agenda e ter um link profissional.</div>
+                </div>
+                <div class="plan pro">
+                    <span class="tag">MAIS COMPLETO</span>
+                    <h5>PRO</h5><div class="sub">Tudo do Básico + inteligência artificial</div>
+                    <div class="price">${brl(p.pro_cents)} <small>/ mês</small></div>
+                    <div class="earn">Você ganha <b>${brl(pro.com)}</b> por mês (${pct(c)}) e repassa ${brl(pro.own)}.</div>
+                    <ul class="check">
+                        <li><b>Tudo do plano Básico</b></li>
+                        <li><b>Atendente com IA</b> que responde os clientes no WhatsApp e agenda sozinho</li>
+                        <li><b>Agendamento por áudio:</b> o cliente manda um áudio e a IA entende</li>
+                        <li>Opções em <b>lista</b> dentro do WhatsApp (profissional, serviço, horário)</li>
+                        <li>Automações: chamar o cliente de volta, pedir avaliação e parabenizar no aniversário</li>
+                        <li><b>Já vem configurado:</b> o dono só conecta o WhatsApp</li>
+                    </ul>
+                    <div class="who"><b>Indique para:</b> barbearias que perdem cliente por demorar a responder no WhatsApp ou que querem atendimento 24 horas.</div>
+                </div>
+            </div>
+            <div class="tip">💡 <b>Dica de venda:</b> comece mostrando o PRO. Quando o dono vê o atendente marcando horário sozinho, inclusive por áudio, a diferença de ${brl(p.pro_cents - p.basic_cents)} por mês costuma se pagar em poucos agendamentos. E a sua comissão também é maior.</div>
+
+            <h4>📱 Veja o atendente em ação (plano PRO)</h4>
+            ${phoneWhatsapp()}`;
+        },
+        cadastrar() {
+            return `
+            <h3>Como cadastrar um cliente</h3>
+            <p>Vá na aba <b>Meus clientes</b>, preencha o formulário <b>Novo cliente</b> e clique em <b>Criar cliente</b>. Leva menos de um minuto. Veja o que colocar em cada campo:</p>
+            ${formMock()}
+            <h4>✅ Depois de criar</h4>
+            <p>O sistema mostra uma janela com o <b>link</b>, o <b>login</b> e a <b>senha</b> do cliente. Toque em <b>Copiar dados</b> e envie pelo WhatsApp. Essa é a única hora em que a senha aparece, então copie antes de fechar (se esquecer, você pode trocar a senha depois em “Senha / WhatsApp”).</p>
+            <div class="tip">🔐 <b>Cada cliente é separado.</b> Ele só vê os próprios dados. E você só enxerga os clientes que cadastrou.</div>
+
+            <h4>👣 Primeiros passos do cliente (mande para ele)</h4>
+            <div class="tut-grid">
+                <div class="step-card"><span class="step-emoji">🔑</span><div class="step-num">1</div><b>Entrar no painel</b><span>Acessar <b>/admin</b> com o email e a senha recebidos.</span></div>
+                <div class="step-card"><span class="step-emoji">✂️</span><div class="step-num">2</div><b>Cadastrar serviços e barbeiros</b><span>Aba <b>Catálogo</b> → “Gerenciar Serviços” e “Gerenciar Barbeiros”, com preço, duração e foto.</span></div>
+                <div class="step-card"><span class="step-emoji">🕐</span><div class="step-num">3</div><b>Definir os horários</b><span>Aba <b>Horários</b>: dias e horas de funcionamento. Folgas de cada barbeiro ficam no cadastro dele.</span></div>
+                <div class="step-card"><span class="step-emoji">🟢</span><div class="step-num">4</div><b>Conectar o WhatsApp</b><span>Aba <b>Marketing</b> → WhatsApp: ler o QR Code com o celular. No PRO, o atendente IA já fica pronto.</span></div>
+                <div class="step-card"><span class="step-emoji">🔗</span><div class="step-num">5</div><b>Divulgar o link</b><span>Colocar o link de agendamento no Instagram, no WhatsApp e no cartão da barbearia.</span></div>
+            </div>
+            <div class="tip">🤝 <b>Ajude no começo.</b> Clientes que cadastram serviços e conectam o WhatsApp na primeira semana costumam continuar. Vale acompanhar o primeiro acesso.</div>`;
+        },
+        cobrar() {
+            const { c } = tutNumbers();
+            return `
+            <h3>Cobrar os clientes e repassar</h3>
+            <p>Você cobra a mensalidade direto do seu cliente, fica com <b>${pct(c)}</b> e repassa o restante ao dono do sistema. A aba <b>Cobranças</b> mostra tudo, sem você precisar anotar em caderno ou planilha.</p>
+            ${cobrancaLife()}
+            <h4>📋 Passo a passo no dia a dia</h4>
+            <ul class="check">
+                <li>Abra a aba <b>Cobranças</b>. Em <b>“A cobrar do cliente”</b> estão os clientes com mensalidade em aberto.</li>
+                <li>Quando o cliente pagar, clique em <b>“Cliente pagou”</b> e confirme. O sistema mostra quanto fica com você e quanto repassar.</li>
+                <li>Transfira a parte do dono. Em <b>“Você deve repassar”</b> fica a lista do que ainda falta passar.</li>
+                <li>Quando o dono confirmar que recebeu, a cobrança vira <b>Repassada</b>.</li>
+                <li>No <b>Resumo</b> você acompanha a sua comissão, o que tem para cobrar e o que precisa repassar.</li>
+            </ul>
+            <div class="tip">⚠️ <b>Atenção ao vencimento.</b> O acesso do cliente é liberado até o fim do mês pago. Se ele não pagar até o vencimento, o sistema <b>bloqueia o acesso automaticamente</b> e volta assim que você registrar o pagamento. Por isso, registre o “Cliente pagou” no mesmo dia em que receber.</div>`;
+        },
+        duvidas() {
+            const { p, c } = tutNumbers();
+            const q = (t, a) => `<details><summary>${t}</summary><div class="ans">${a}</div></details>`;
+            return `
+            <h3>Perguntas frequentes</h3>
+            ${q('Quanto eu ganho por cliente?', `Você ganha <b>${pct(c)}</b> de cada mensalidade: ${brl(Math.round(p.basic_cents * c / 100))} no Básico e ${brl(Math.round(p.pro_cents * c / 100))} no PRO. É todo mês, enquanto o cliente continuar ativo.`)}
+            ${q('Posso mudar o preço do plano?', 'Não. Os valores dos planos são definidos pelo dono do sistema e valem igual para todos os revendedores. O cliente que já entrou mantém o valor de quando entrou.')}
+            ${q('O que acontece quando clico em “Cliente pagou”?', 'O sistema registra o pagamento, renova o acesso do cliente até o fim do mês pago e coloca o valor do repasse na lista do que você precisa passar. O dono também é avisado.')}
+            ${q('E se o cliente não pagar?', 'Quando o vencimento passa sem o pagamento registrado, o acesso do painel e da página de agendamento dele é bloqueado automaticamente. Quando você registrar o pagamento, volta ao normal. Você não perde o cliente nem os dados dele.')}
+            ${q('O cliente esqueceu a senha. E agora?', 'Na aba <b>Meus clientes</b>, clique em <b>“Senha / WhatsApp”</b> no cliente e defina uma senha nova. Depois é só enviar para ele.')}
+            ${q('O cliente quer trocar de plano (Básico ↔ PRO).', 'Fale com o dono do sistema: ele faz a troca e o valor do cliente é ajustado. No PRO, o atendente IA já é ligado automaticamente.')}
+            ${q('O que o cliente precisa fazer para o PRO funcionar?', 'Só conectar o WhatsApp dele (ler o QR Code em Marketing → WhatsApp). A IA, o modo lista e o restante já vêm configurados.')}
+            ${q('Consigo ver os clientes de outros revendedores?', 'Não. Você só vê os clientes que cadastrou, e cada revendedor só vê os próprios números.')}
+            ${q('Como o dono sabe que cadastrei um cliente ou recebi um pagamento?', 'Ele recebe um aviso automático no painel e no WhatsApp sempre que você cria um cliente ou registra um pagamento.')}
+            <div class="tip">Ficou com alguma dúvida que não está aqui? Fale com o dono do sistema.</div>`;
+        }
+    };
+
+    // ==================== Inicio ====================
+    if (getToken()) {
+        showPanel().catch(() => { clearToken(); showLogin(); });
+    } else {
+        showLogin();
+    }
+</script>
+</body>
+</html>

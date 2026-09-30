@@ -1077,6 +1077,7 @@
             }
 
             renderCalendar();
+            refreshBlocks().then(renderCalendar);
             document.getElementById('confirmBooking').classList.add('hidden');
         }
 
@@ -1123,11 +1124,14 @@
                                  selectedDate.getMonth() === month &&
                                  selectedDate.getFullYear() === year;
 
-                const isDisabled = isPast || !isWorkingDay || isFullyBlocked;
+                const shopClosed = (blockedDates.get(cmpDateStr) || new Set()).has('');
+                const isDisabled = isPast || !isWorkingDay || shopClosed;
+                // Folga do profissional no dia todo: o dia continua clicavel so para avisar que ele nao esta disponivel
+                const isBarberOff = !isDisabled && barberOff;
 
                 html += `
-                    <div class="calendar-day ${isDisabled ? 'disabled' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}"
-                         title="${isFullyBlocked ? (barberOff ? 'Profissional indisponível nesse dia' : 'Fechado nesse dia') : ''}"
+                    <div class="calendar-day ${isDisabled ? 'disabled' : ''} ${isBarberOff ? 'barber-off' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}"
+                         title="${shopClosed ? 'Fechado nesse dia' : (isBarberOff ? 'Profissional indisponível nesse dia' : '')}"
                          onclick="${!isDisabled ? `selectDate(${year}, ${month}, ${d})` : ''}">
                         ${d}
                     </div>
@@ -1148,12 +1152,51 @@
                 return;
             }
             
+            await refreshBlocks(); // pega folgas marcadas depois que a pagina abriu
+
             selectedDate = new Date(year, month, day, 12, 0, 0);
             selectedTime = null;
             updateStepProgress('time');
             renderCalendar();
+
+            // Profissional de folga o dia todo: avisa em vez de mostrar horarios
+            const dayStr = formatDateToYYYYMMDD(selectedDate);
+            if ((barberBlockedDates.get(`${selectedBarber.id}|${dayStr}`) || new Set()).has('')) {
+                document.getElementById('confirmBooking').classList.add('hidden');
+                document.getElementById('timeSlotsContainer').innerHTML = availabilityNotice(`<strong>${selectedBarber.name}</strong> não está disponível neste dia. Escolha outra data ou outro profissional.`);
+                return;
+            }
+
             await loadBookedSlots();
             renderTimeSlots();
+        }
+
+        // Recarrega so as folgas (barbearia e barbeiros), sem mexer no resto da tela
+        async function refreshBlocks() {
+            try {
+                const response = await fetch(`${API_URL}/settings`, { cache: 'no-store' });
+                if (!response.ok) return;
+                const data = await response.json();
+                if (Array.isArray(data.barber_blocked_dates)) {
+                    barberBlockedDates = new Map();
+                    data.barber_blocked_dates.forEach(b => {
+                        const key = `${b.barber_id}|${b.date}`;
+                        if (!barberBlockedDates.has(key)) barberBlockedDates.set(key, new Set());
+                        barberBlockedDates.get(key).add(b.period || '');
+                    });
+                }
+                if (Array.isArray(data.blocked_dates)) {
+                    blockedDates = new Map();
+                    data.blocked_dates.forEach(b => {
+                        if (!blockedDates.has(b.date)) blockedDates.set(b.date, new Set());
+                        blockedDates.get(b.date).add(b.period || '');
+                    });
+                }
+            } catch (_) { /* segue com o que ja tinha */ }
+        }
+
+        function availabilityNotice(html) {
+            return `<div class="availability-notice"><i class="fas fa-info-circle" aria-hidden="true"></i><span>${html}</span></div>`;
         }
 
         async function loadBookedSlots() {
@@ -1215,12 +1258,17 @@
 
             const slots = generateTimeSlots();
 
+            // Turnos em que ESTE profissional esta de folga nesse dia (o dia inteiro e tratado em selectDate)
+            const myOff = [...((selectedBarber && barberBlockedDates.get(`${selectedBarber.id}|${formatDateToYYYYMMDD(selectedDate)}`)) || [])].filter(Boolean);
+            const OFF_PHRASE = { manha: 'pela manhã', tarde: 'à tarde', noite: 'à noite' };
+            const PERIOD_NAME = { manha: 'manhã', tarde: 'tarde', noite: 'noite' };
+
             if (!slots.length) {
                 container.innerHTML = `
                     <div class="time-period-header" style="margin-top: 20px;">
                         <h5><i class="fas fa-clock"></i> Horários</h5>
                     </div>
-                    <p style="color: var(--ivory-muted); font-size: 13px;">Nenhum horário disponível neste dia.</p>
+                    ${myOff.length ? availabilityNotice(`<strong>${selectedBarber.name}</strong> não está disponível neste dia. Escolha outra data ou outro profissional.`) : '<p style="color: var(--ivory-muted); font-size: 13px;">Nenhum horário disponível neste dia.</p>'}
                 `;
                 return;
             }
@@ -1233,6 +1281,10 @@
             ];
 
             let html = '';
+            if (myOff.length) {
+                const open = periods.filter(pd => slots.some(sl => pd.test(parseInt(sl.time.split(':')[0])) && !sl.isBooked)).map(pd => OFF_PHRASE[pd.key]);
+                html += availabilityNotice(`<strong>${selectedBarber.name}</strong> não atende ${myOff.map(k => OFF_PHRASE[k]).join(' e ')} neste dia.${open.length ? ` Só há horários ${open.join(' e ')}.` : ''}`);
+            }
             periods.forEach(period => {
                 const periodSlots = slots.filter(s => period.test(parseInt(s.time.split(':')[0])));
                 if (!periodSlots.length) return;

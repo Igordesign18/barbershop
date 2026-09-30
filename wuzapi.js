@@ -156,7 +156,10 @@ async function sendButtons(token, phone, { text, footer, buttons, image }) {
       Body: text,
       Footer: footer && footer.trim() ? footer : undefined,
       Image: image || undefined,
-      Buttons: buttons.map(b => ({ type: 'reply', title: b.text, id: b.id }))
+      // b.url => botao de link (abre o navegador/WhatsApp); sem url => botao de resposta rapida
+      Buttons: buttons.map(b => b.url
+        ? { type: 'cta_url', title: b.text, url: b.url }
+        : { type: 'reply', title: b.text, id: b.id })
     }
   });
   return data?.Id || null;

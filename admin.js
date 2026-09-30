@@ -315,7 +315,7 @@
                 });
 
                 if (data.role !== 'manager') {
-                    showNotification('Este login não é de gestor de barbearia. Use o painel de super admin.', 'error');
+                    showNotification(data.role === 'reseller' ? 'Este login é de revendedor. Entre em /revendedor.' : 'Este login não é de gestor de barbearia. Use o painel de super admin.', 'error');
                     return;
                 }
                 if (data.tenant && data.tenant.status === 'suspended') {
@@ -2979,6 +2979,12 @@
         function setMarketingSubtab(name) {
             document.querySelectorAll('[data-subtab]').forEach(el => el.classList.toggle('subtab-on', el.dataset.subtab === name));
             document.querySelectorAll('.marketing-chip').forEach(btn => btn.classList.toggle('active', btn.dataset.subtabTarget === name));
+        }
+
+        // ==================== Catálogo organizado em seções (Serviços / Barbeiros / Pacotes) ====================
+        function setCatalogSubtab(name) {
+            document.querySelectorAll('[data-catsub]').forEach(el => el.classList.toggle('catsub-on', el.dataset.catsub === name));
+            document.querySelectorAll('[data-cat-target]').forEach(btn => btn.classList.toggle('active', btn.dataset.catTarget === name));
         }
 
         // ==================== Automações PRO: retorno, avaliação e aniversário ====================

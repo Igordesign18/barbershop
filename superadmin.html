@@ -131,6 +131,73 @@
 
     a.tenant-link { color: var(--brass-light); text-decoration: none; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; }
     a.tenant-link:hover { text-decoration: underline; }
+
+    /* ===== Abas principais e Revendedores ===== */
+    .main-tabs { display: flex; gap: 8px; margin-bottom: 22px; flex-wrap: wrap; }
+    .main-tab {
+        background: var(--surface); color: var(--ivory); border: 1px solid var(--hairline); border-radius: 100px;
+        padding: 11px 20px; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+        display: inline-flex; align-items: center; gap: 8px; transition: border-color 0.2s;
+    }
+    .main-tab:hover { border-color: var(--brass); }
+    .main-tab.active { background: linear-gradient(135deg, var(--brass-light), var(--brass)); color: var(--ebony); border-color: var(--brass); }
+    .tab-badge { background: var(--red); color: #fff; border-radius: 100px; font-size: 10.5px; padding: 1px 7px; font-weight: 800; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin-bottom: 22px; }
+    .stat-grid.small { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); margin: 18px 0 8px; }
+    .stat { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 16px 18px; position: relative; }
+    .stat > i { position: absolute; top: 16px; right: 16px; color: var(--brass); opacity: 0.55; }
+    .stat-label { font-size: 11.5px; color: var(--ivory-muted); margin-bottom: 6px; padding-right: 26px; }
+    .stat-value { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 600; }
+    .stat-hint { font-size: 11px; color: var(--ivory-muted); margin-top: 4px; line-height: 1.4; }
+    .stat.hl { border-color: rgba(198,161,91,0.55); background: rgba(198,161,91,0.07); }
+    .stat.warn { border-color: rgba(193,92,92,0.5); }
+    .stat.warn .stat-value { color: var(--red); }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0 16px; }
+    .res-numbers { display: flex; gap: 6px 18px; flex-wrap: wrap; margin-top: 10px; font-size: 12.5px; color: var(--ivory-muted); }
+    .res-numbers b { color: var(--ivory); font-weight: 700; }
+    .res-numbers small { opacity: 0.8; }
+    .money-hl b { color: var(--brass-light); }
+    .money-warn { color: var(--red); font-weight: 700; font-size: 12px; }
+    .notif { background: var(--surface-raised); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; border-left: 3px solid transparent; }
+    .notif.unread { border-left-color: var(--brass); }
+    .notif-head { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; margin-bottom: 4px; }
+    .notif-head small { color: var(--ivory-muted); font-size: 11px; white-space: nowrap; }
+    .notif-msg { font-size: 12.5px; color: var(--ivory-muted); line-height: 1.6; }
+    .pill.st-wait { background: rgba(198,161,91,0.14); color: var(--brass-light); }
+    .pill.st-repass { background: rgba(111,160,220,0.16); color: #8db8ea; }
+    .pill.st-done { background: rgba(111,174,122,0.14); color: var(--green); }
+    .pill.st-late { background: rgba(193,92,92,0.16); color: var(--red); }
+    .modal-content.wide { max-width: 980px; }
+    .detail-head { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+    .sec-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 15px; margin: 24px 0 12px; display: flex; align-items: center; gap: 8px; }
+    .sec-title i { color: var(--brass); font-size: 14px; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--hairline); border-radius: 10px; }
+    .table-wrap table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .table-wrap th { text-align: left; padding: 10px 12px; color: var(--ivory-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; background: var(--surface-raised); white-space: nowrap; }
+    .table-wrap td { padding: 11px 12px; border-top: 1px solid var(--hairline); vertical-align: top; }
+    .table-wrap small { color: var(--ivory-muted); font-size: 11px; }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+    .marketing-chip { background: var(--surface-raised); color: var(--ivory); border: 1px solid var(--hairline); border-radius: 100px; padding: 8px 14px; font-size: 12px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+    .marketing-chip.active { background: var(--brass); color: var(--ebony); border-color: var(--brass); font-weight: 700; }
+    .hint { color: var(--ivory-muted); font-size: 12px; margin-top: 6px; line-height: 1.5; }
+
+    /* ===== Cards que abrem/fecham ===== */
+    .collapsible { padding: 0; overflow: hidden; }
+    .collapse-head {
+        width: 100%; background: transparent; border: none; color: var(--ivory); cursor: pointer; font-family: inherit;
+        padding: 22px 28px; display: flex; align-items: center; justify-content: space-between; gap: 14px; text-align: left;
+    }
+    .collapse-head:hover { background: rgba(198,161,91,0.05); }
+    .collapse-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .collapse-title i { color: var(--brass); font-size: 16px; }
+    .collapse-title small { font-family: 'Manrope', sans-serif; font-weight: 500; font-size: 12px; color: var(--ivory-muted); }
+    .collapse-action { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--brass-light); border: 1px solid var(--hairline); border-radius: 100px; padding: 7px 14px; white-space: nowrap; }
+    .collapse-action .chev { transition: transform 0.2s; }
+    .collapsible.open .collapse-action .chev { transform: rotate(180deg); }
+    .collapsible .collapse-body { display: none; padding: 0 28px 28px; }
+    .collapsible.open .collapse-body { display: block; }
+    .collapsible.open .collapse-head { border-bottom: 1px solid var(--hairline); margin-bottom: 22px; }
+    @media (max-width: 520px) { .collapse-head { padding: 18px 16px; } .collapsible .collapse-body { padding: 0 16px 22px; } }
 </style>
 </head>
 <body>
@@ -162,8 +229,18 @@
     </header>
 
     <div class="container">
-        <div class="card">
-            <h2><i class="fas fa-plus-circle" aria-hidden="true"></i> Nova Barbearia</h2>
+        <div class="main-tabs" role="tablist">
+            <button class="main-tab active" data-tab="tenants" onclick="switchMainTab('tenants')"><i class="fas fa-store-alt" aria-hidden="true"></i> Barbearias</button>
+            <button class="main-tab" data-tab="resellers" onclick="switchMainTab('resellers')"><i class="fas fa-handshake" aria-hidden="true"></i> Revendedores <span class="tab-badge hidden" id="resTabBadge">0</span></button>
+        </div>
+
+        <div id="tabTenants">
+        <div class="card collapsible" id="cardNewTenant">
+            <button type="button" class="collapse-head" onclick="toggleCollapse('cardNewTenant')" aria-expanded="false">
+                <span class="collapse-title"><i class="fas fa-plus-circle" aria-hidden="true"></i> Cadastrar Cliente <small>a barbearia que vai usar o sistema</small></span>
+                <span class="collapse-action"><span class="collapse-label">Abrir cadastro</span> <i class="fas fa-chevron-down chev" aria-hidden="true"></i></span>
+            </button>
+            <div class="collapse-body">
             <form id="newTenantForm">
                 <div class="form-group">
                     <label for="tenantName">Nome da barbearia</label>
@@ -183,10 +260,17 @@
                 </div>
                 <div class="form-group">
                     <label for="tenantPlan">Plano</label>
-                    <select id="tenantPlan">
+                    <select id="tenantPlan" onchange="if(this.value==='pro') document.getElementById('tenantProvider').value='wuzapi'">
                         <option value="basic">Básico</option>
                         <option value="pro">PRO (com atendente IA no WhatsApp)</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label for="tenantReseller">Vendida por um revendedor?</label>
+                    <select id="tenantReseller">
+                        <option value="">Nenhum (cliente direto meu)</option>
+                    </select>
+                    <div class="hint">Se escolher um revendedor, a barbearia entra na conta dele: valor do plano e comissão ficam registrados e as cobranças mensais são geradas.</div>
                 </div>
                 <div class="form-group">
                     <label for="tenantProvider">Motor do WhatsApp</label>
@@ -205,9 +289,10 @@
                     <input type="date" id="subscriptionExpires">
                 </div>
                 <button type="submit" class="btn">
-                    <i class="fas fa-store" aria-hidden="true"></i> Criar Barbearia
+                    <i class="fas fa-store" aria-hidden="true"></i> Cadastrar Cliente
                 </button>
             </form>
+            </div>
         </div>
 
         <div class="card">
@@ -264,6 +349,113 @@
                 <div class="empty-state">Carregando...</div>
             </div>
         </div>
+        </div><!-- /tabTenants -->
+
+        <div id="tabResellers" class="hidden">
+            <div class="stat-grid" id="resStats"></div>
+
+            <div class="card collapsible" id="cardNewReseller">
+                <button type="button" class="collapse-head" onclick="toggleCollapse('cardNewReseller')" aria-expanded="false">
+                    <span class="collapse-title"><i class="fas fa-user-plus" aria-hidden="true"></i> Cadastrar Revendedor <small>quem vende o sistema e ganha comissão</small></span>
+                    <span class="collapse-action"><span class="collapse-label">Abrir cadastro</span> <i class="fas fa-chevron-down chev" aria-hidden="true"></i></span>
+                </button>
+                <div class="collapse-body">
+                <p class="hint" style="margin:0 0 16px;">O revendedor entra em <b>/revendedor</b> com o email e a senha abaixo, cadastra os clientes dele e acompanha as cobranças. Ele recebe a comissão combinada sobre cada cliente, todo mês.</p>
+                <form id="newResellerForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="resName">Nome</label>
+                            <input type="text" id="resName" placeholder="Ex: Elane" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="resEmail">Email (login)</label>
+                            <input type="email" id="resEmail" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="resPassword">Senha</label>
+                            <input type="text" id="resPassword" placeholder="mínimo 6 caracteres" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label for="resPhone">WhatsApp (opcional)</label>
+                            <input type="tel" id="resPhone" placeholder="Ex: (88) 99999-0000" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
+                            <label for="resCommission">Quanto ele ganha por cliente (%)</label>
+                            <input type="number" id="resCommission" placeholder="Ex: 40" min="0" max="100" step="0.5" required>
+                            <div class="hint">Você escolhe para cada revendedor. Ex: 40 = ele fica com 40% de toda mensalidade dos clientes dele.</div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn"><i class="fas fa-user-plus" aria-hidden="true"></i> Cadastrar Revendedor</button>
+                </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-handshake" aria-hidden="true"></i> Revendedores</h2>
+                <div class="tenant-grid" id="resellersList"><div class="empty-state">Carregando...</div></div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-bell" aria-hidden="true"></i> Avisos para você</h2>
+                <div style="display:flex; justify-content:flex-end; margin:-6px 0 12px;">
+                    <button class="btn btn-secondary btn-sm" onclick="markNotifsRead()"><i class="fas fa-check-double" aria-hidden="true"></i> Marcar como lidos</button>
+                </div>
+                <div id="resNotifs"></div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fas fa-tags" aria-hidden="true"></i> Preços dos planos e seus avisos</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="priceBasic">Plano Básico (R$ por mês) — site e sistema</label>
+                        <input type="text" id="priceBasic" inputmode="decimal" placeholder="29,99">
+                    </div>
+                    <div class="form-group">
+                        <label for="pricePro">Plano PRO (R$ por mês) — com atendente IA</label>
+                        <input type="text" id="pricePro" inputmode="decimal" placeholder="49,99">
+                    </div>
+                    <div class="form-group">
+                        <label for="ownerNotifyPhone">Seu WhatsApp para os avisos</label>
+                        <input type="tel" id="ownerNotifyPhone" placeholder="Ex: (88) 99999-0000" inputmode="numeric">
+                    </div>
+                </div>
+                <p class="hint" style="margin:-4px 0 16px;">Os preços valem para os <b>novos</b> clientes. Quem já está cadastrado continua pagando o valor de quando entrou. Os avisos (novo cliente, cliente pagou) saem pelo WhatsApp de avisos do sistema, configurado na aba Barbearias.</p>
+                <button class="btn" onclick="saveResellerSettings()"><i class="fas fa-save" aria-hidden="true"></i> Salvar</button>
+            </div>
+        </div><!-- /tabResellers -->
+    </div>
+</div>
+
+<div class="modal-overlay hidden" id="detailModal">
+    <div class="modal-content wide" id="detailBody"></div>
+</div>
+
+<div class="modal-overlay hidden" id="editResModal">
+    <div class="modal-content">
+        <h3>Editar Revendedor</h3>
+        <form id="editResForm">
+            <input type="hidden" id="editResId">
+            <div class="form-group"><label for="editResName">Nome</label><input type="text" id="editResName" required></div>
+            <div class="form-group"><label for="editResEmail">Email (login)</label><input type="email" id="editResEmail" required></div>
+            <div class="form-group"><label for="editResPhone">WhatsApp</label><input type="tel" id="editResPhone" inputmode="numeric"></div>
+            <div class="form-group">
+                <label for="editResCommission">Comissão (%)</label>
+                <input type="number" id="editResCommission" min="0" max="100" step="0.5" required>
+                <label style="display:flex; align-items:center; gap:8px; margin-top:8px; cursor:pointer;">
+                    <input type="checkbox" id="editResApply" style="width:auto;"> Aplicar também aos clientes atuais (daqui pra frente)
+                </label>
+                <div class="hint">Sem marcar, a nova comissão vale só para clientes novos. Cobranças já pagas nunca mudam.</div>
+            </div>
+            <div class="form-group">
+                <label for="editResStatus">Status</label>
+                <select id="editResStatus"><option value="active">Ativo</option><option value="suspended">Suspenso</option></select>
+            </div>
+            <div class="form-group"><label for="editResPassword">Nova senha (deixe em branco para não trocar)</label><input type="text" id="editResPassword" placeholder="mínimo 6 caracteres" autocomplete="off"></div>
+            <div style="display:flex; gap:10px; margin-top:16px;">
+                <button type="submit" class="btn" style="flex:1; justify-content:center;">Salvar</button>
+                <button type="button" class="btn btn-secondary" style="flex:1; justify-content:center;" onclick="closeResellerEdit()">Cancelar</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -313,6 +505,11 @@
             <div class="form-group">
                 <label for="editSubscriptionExpires">Assinatura válida até</label>
                 <input type="date" id="editSubscriptionExpires">
+            </div>
+            <div class="form-group hidden" id="editPriceGroup">
+                <label for="editMonthlyPrice">Valor mensal deste cliente (R$) — cliente de revendedor</label>
+                <input type="text" id="editMonthlyPrice" inputmode="decimal" placeholder="29,99">
+                <div class="hint" id="editResellerInfo"></div>
             </div>
             <hr>
             <div class="form-group">
@@ -398,6 +595,18 @@
         setTimeout(() => el.remove(), 4000);
     }
 
+    // Cards que abrem/fecham (cadastro de cliente e de revendedor ficam fechados por padrao)
+    function toggleCollapse(id, force) {
+        const card = document.getElementById(id);
+        if (!card) return;
+        const open = force !== undefined ? force : !card.classList.contains('open');
+        card.classList.toggle('open', open);
+        const head = card.querySelector('.collapse-head');
+        if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
+        const label = card.querySelector('.collapse-label');
+        if (label) label.textContent = open ? 'Fechar' : 'Abrir cadastro';
+    }
+
     function showLogin() {
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('mainContent').style.display = 'none';
@@ -409,6 +618,7 @@
         loadTenants();
         loadOpenai();
         loadNotify();
+        if (typeof initResellers === 'function') initResellers();
     }
 
     // ==================== WhatsApp de avisos para os gestores ====================
@@ -539,7 +749,7 @@
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Erro ao entrar');
-            if (data.role !== 'superadmin') throw new Error('Este login não é de super admin.');
+            if (data.role !== 'superadmin') throw new Error(data.role === 'reseller' ? 'Este login é de revendedor. Entre em /revendedor.' : 'Este login não é de super admin.');
 
             setToken(data.token);
             showPanel();
@@ -574,6 +784,7 @@
                             <div class="meta">
                                 <span class="pill ${t.status === 'active' ? 'active' : 'suspended'}">${t.status === 'active' ? 'Ativo' : 'Suspenso'}</span>
                                 <span class="pill ${t.plan === 'pro' ? 'plan-pro' : 'plan-basic'}">${t.plan === 'pro' ? 'PRO' : 'Básico'}</span>
+                                ${t.reseller ? `<span class="pill st-repass" title="Barbearia vendida por revendedor">🤝 ${String(t.reseller.name).replace(/[<>&"]/g, '')} · R$ ${((t.monthly_price_cents || 0) / 100).toFixed(2).replace('.', ',')}/mês</span>` : ''}
                                 <span class="pill ${waStatus}">${waLabel}</span>
                                 <span class="pill plan-basic">${t.whatsapp_provider === 'evogo' ? 'Evolution GO' : t.whatsapp_provider === 'wuzapi' ? 'WuzAPI' : 'Evolution v2'}</span>
                                 ${t.notify_phone && t.notify_enabled !== 0 ? '<span class="pill active" title="Recebe avisos de agendamento no WhatsApp">🔔 Avisos</span>' : ''}
@@ -626,11 +837,13 @@
                     subscription_expires_at: document.getElementById('subscriptionExpires').value || null,
                     plan: document.getElementById('tenantPlan').value,
                     whatsapp_provider: document.getElementById('tenantProvider').value,
-                    notify_phone: document.getElementById('tenantNotifyPhone').value
+                    notify_phone: document.getElementById('tenantNotifyPhone').value,
+                    reseller_id: document.getElementById('tenantReseller').value || null
                 })
             });
-            showNotification('Barbearia criada com sucesso!', 'success');
+            showNotification('Cliente cadastrado com sucesso!', 'success');
             e.target.reset();
+            toggleCollapse('cardNewTenant', false);
             loadTenants();
         } catch (error) {
             showNotification(error.message, 'error');
@@ -654,6 +867,11 @@
         document.getElementById('editTenantNotifyEnabled').checked = tenant.notify_enabled !== 0;
         document.getElementById('editManagerEmail').value = tenant.manager ? tenant.manager.email : '';
         document.getElementById('editManagerPassword').value = '';
+        const priceGroup = document.getElementById('editPriceGroup');
+        priceGroup.classList.toggle('hidden', !tenant.reseller);
+        window.__editOriginalPrice = tenant.monthly_price_cents ? (tenant.monthly_price_cents / 100).toFixed(2).replace('.', ',') : '';
+        document.getElementById('editMonthlyPrice').value = window.__editOriginalPrice;
+        document.getElementById('editResellerInfo').textContent = tenant.reseller ? `Vendida por ${tenant.reseller.name}. Trocar o plano ajusta o valor para o preço do plano novo, a não ser que você digite outro valor aqui.` : '';
 
         document.getElementById('editModal').classList.remove('hidden');
     }
@@ -678,7 +896,9 @@
                     plan: document.getElementById('editTenantPlan').value,
                     whatsapp_provider: document.getElementById('editTenantProvider').value,
                     notify_phone: document.getElementById('editTenantNotifyPhone').value,
-                    notify_enabled: document.getElementById('editTenantNotifyEnabled').checked
+                    notify_enabled: document.getElementById('editTenantNotifyEnabled').checked,
+                    ...(!document.getElementById('editPriceGroup').classList.contains('hidden') && document.getElementById('editMonthlyPrice').value.trim() !== (window.__editOriginalPrice || '')
+                        ? { monthly_price: document.getElementById('editMonthlyPrice').value } : {})
                 })
             });
 
@@ -733,5 +953,6 @@
         showLogin();
     }
 </script>
+<script src="/superadmin-resellers.js"></script>
 </body>
 </html>

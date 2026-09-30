@@ -388,6 +388,63 @@ function seedTenantDefaults(tenantId) {
   upsert.run(tenantId, 'reminder_config', JSON.stringify(DEFAULT_REMINDER_CONFIG));
 }
 
+// ==================== Revendedores ====================
+// Revendedor = alguem que vende o sistema com login proprio (/revendedor), cria barbearias e
+// ganha uma comissao recorrente (%) sobre cada uma. O dinheiro do cliente passa pelo revendedor,
+// que repassa a sua parte ao dono do sistema; o razao abaixo controla cada etapa.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS resellers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    phone TEXT,
+    commission_percent REAL NOT NULL DEFAULT 40,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_resellers_email ON resellers(LOWER(email));
+`);
+ensureColumn('tenants', 'reseller_id', 'INTEGER REFERENCES resellers(id) ON DELETE SET NULL');
+ensureColumn('tenants', 'monthly_price_cents', 'INTEGER');  // valor mensal cobrado do cliente (fixado na criacao)
+ensureColumn('tenants', 'commission_percent', 'REAL');      // comissao do revendedor sobre este cliente (fixada na criacao)
+ensureColumn('tenants', 'billing_anchor', 'TEXT');          // AAAA-MM-DD: inicio do primeiro ciclo mensal
+
+db.exec(`
+  -- Uma cobranca por ciclo mensal de cada cliente de revendedor.
+  -- Etapas: a cobrar do cliente -> cliente pagou (revendedor deve repassar) -> repassado (dono confirmou).
+  -- Valores em centavos. tenant_id fica NULL se a barbearia for excluida, para nao perder o historico financeiro.
+  CREATE TABLE IF NOT EXISTS reseller_charges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    reseller_id INTEGER NOT NULL REFERENCES resellers(id) ON DELETE CASCADE,
+    tenant_id INTEGER REFERENCES tenants(id) ON DELETE SET NULL,
+    tenant_name TEXT NOT NULL,
+    plan TEXT,
+    cycle_start TEXT NOT NULL,
+    cycle_end TEXT NOT NULL,
+    amount_cents INTEGER NOT NULL,
+    commission_percent REAL NOT NULL,
+    commission_cents INTEGER NOT NULL,
+    owner_cents INTEGER NOT NULL,
+    client_paid_at TEXT,
+    repassed_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(tenant_id, cycle_start)
+  );
+  CREATE INDEX IF NOT EXISTS idx_reseller_charges_reseller ON reseller_charges(reseller_id, cycle_start);
+
+  -- Avisos para o dono (novo cliente de revendedor, pagamento registrado...). Tambem vao pro WhatsApp.
+  CREATE TABLE IF NOT EXISTS owner_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    reseller_id INTEGER REFERENCES resellers(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    read_at TEXT
+  );
+`);
+
 const superAdminCount = db.prepare('SELECT COUNT(*) AS c FROM super_admins').get().c;
 if (superAdminCount === 0) {
   const email = process.env.SUPERADMIN_EMAIL || 'super@barbersync.com';

@@ -35,4 +35,23 @@ router.post('/evolution/:instance/:secret', express.json({ limit: '50mb' }), exp
   handleWebhookEvent(instance, body).catch(err => console.error('[webhook] erro:', err.message));
 });
 
-module.exports = { router, buildWebhookUrl };
+// Webhook do numero central de avisos (toques nos botoes "Meus agendamentos" etc.)
+function buildNotifyWebhookUrl(baseUrl) {
+  return `${baseUrl.replace(/\/$/, '')}/api/webhook/notify/${webhookSecret('gestor-notify')}`;
+}
+
+router.post('/notify/:secret', express.json({ limit: '5mb' }), express.urlencoded({ extended: false, limit: '5mb' }), (req, res) => {
+  const expected = webhookSecret('gestor-notify');
+  const { secret } = req.params;
+  if (secret.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(secret), Buffer.from(expected))) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+  res.json({ ok: true });
+  let body = req.body;
+  if (body && typeof body.jsonData === 'string') {
+    try { body = { ...JSON.parse(body.jsonData), instanceName: body.instanceName }; } catch (_) { /* mantem como veio */ }
+  }
+  require('./gestor-notify').handleIncoming(body).catch(err => console.error('[aviso] erro no webhook:', err.message));
+});
+
+module.exports = { router, buildWebhookUrl, buildNotifyWebhookUrl };

@@ -217,3 +217,11 @@ avise que eu ajusto `evolution.js`.
 - Áudio: usa o base64 que a WuzAPI já manda no webhook (sem `-skipmedia`); se faltar, baixa por `/chat/downloadaudio`.
 - Enquete: na WuzAPI é sempre de escolha única (a IA pergunta se quer mais serviços depois).
 - Botões e lista: mesmo formato interativo do Evolution GO (nó `biz`); teste no seu número.
+
+## Revendedores
+
+- Super admin → aba **Revendedores**: cria o revendedor (login, senha, % de comissão), acompanha clientes, cobranças e repasses, define o preço dos planos (Básico R$ 29,99 / PRO R$ 49,99 por padrão) e o WhatsApp que recebe os avisos.
+- O revendedor entra em **/revendedor**, cria as barbearias dele (PRO já vem com WuzAPI + atendente IA em modo lista) e registra quando o cliente pagou.
+- Cada cliente gera uma cobrança por ciclo mensal (aparece 5 dias antes). "Cliente pagou" renova o acesso até o fim do ciclo; o dono confirma o repasse quando receber.
+- Preço do plano e comissão ficam gravados no cliente quando ele entra; mudar depois só vale para clientes novos (ou marque "aplicar aos clientes atuais").
+- Barbearia excluída: cobranças pagas continuam no histórico, as não pagas somem.

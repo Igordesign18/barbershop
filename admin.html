@@ -255,7 +255,17 @@
                 </button>
             </div>
 
-            <div class="card tab-panel" data-tab="catalogo">
+            <div class="full-width tab-panel marketing-subnav-wrap" data-tab="catalogo">
+                <div class="marketing-subnav" role="tablist" aria-label="Seções do Catálogo">
+                    <button class="marketing-chip active" data-cat-target="servicos" onclick="setCatalogSubtab('servicos')"><i class="fas fa-cut" aria-hidden="true"></i> Gerenciar Serviços</button>
+                    <button class="marketing-chip" data-cat-target="servicos-lista" onclick="setCatalogSubtab('servicos-lista')"><i class="fas fa-list" aria-hidden="true"></i> Serviços Cadastrados</button>
+                    <button class="marketing-chip" data-cat-target="barbeiros" onclick="setCatalogSubtab('barbeiros')"><i class="fas fa-user-tie" aria-hidden="true"></i> Gerenciar Barbeiros</button>
+                    <button class="marketing-chip" data-cat-target="barbeiros-lista" onclick="setCatalogSubtab('barbeiros-lista')"><i class="fas fa-list" aria-hidden="true"></i> Barbeiros Cadastrados</button>
+                    <button class="marketing-chip" data-cat-target="pacotes" onclick="setCatalogSubtab('pacotes')"><i class="fas fa-box-open" aria-hidden="true"></i> Gerenciar Pacotes</button>
+                </div>
+            </div>
+
+            <div class="card tab-panel catsub-on" data-tab="catalogo" data-catsub="servicos">
                 <h2><i class="fas fa-cut" aria-hidden="true"></i> Gerenciar Serviços</h2>
                 <div class="form-group">
                     <label for="serviceName">Nome do Serviço</label>
@@ -283,10 +293,14 @@
                 <button class="btn" onclick="addService()">
                     <i class="fas fa-plus" aria-hidden="true"></i> Adicionar Serviço
                 </button>
+            </div>
+
+            <div class="card tab-panel" data-tab="catalogo" data-catsub="servicos-lista">
+                <h2><i class="fas fa-list" aria-hidden="true"></i> Serviços Cadastrados</h2>
                 <div class="services-list" id="servicesList" role="region" aria-label="Lista de serviços"></div>
             </div>
 
-            <div class="card full-width tab-panel" id="packagesCard" data-tab="catalogo">
+            <div class="card full-width tab-panel" id="packagesCard" data-tab="catalogo" data-catsub="pacotes">
                 <h2><i class="fas fa-box-open" aria-hidden="true"></i> Gerenciar Pacotes</h2>
                 <p style="color: var(--text-muted); margin-bottom: 15px;">
                     Combo de 2 ou mais serviços por um preço fechado (ex: "Corte + Barba" por R$55, em vez da soma avulsa).
@@ -311,7 +325,7 @@
                 <div class="services-list" id="packagesList" role="region" aria-label="Lista de pacotes"></div>
             </div>
 
-            <div class="card tab-panel" data-tab="catalogo">
+            <div class="card tab-panel" data-tab="catalogo" data-catsub="barbeiros">
                 <h2><i class="fas fa-user-tie" aria-hidden="true"></i> Gerenciar Barbeiros</h2>
                 <div class="form-group">
                     <label for="barberName">Nome do Barbeiro</label>
@@ -345,6 +359,10 @@
                 <button class="btn" onclick="addBarber()">
                     <i class="fas fa-plus" aria-hidden="true"></i> Adicionar Barbeiro
                 </button>
+            </div>
+
+            <div class="card tab-panel" data-tab="catalogo" data-catsub="barbeiros-lista">
+                <h2><i class="fas fa-list" aria-hidden="true"></i> Barbeiros Cadastrados</h2>
                 <div class="services-list" id="barbersList" role="region" aria-label="Lista de barbeiros"></div>
             </div>
 

@@ -4,6 +4,7 @@ const { db, seedTenantDefaults } = require('./db');
 const { requireSuperAdmin } = require('./auth');
 const openai = require('./openai');
 const { getSystemSetting, setSystemSetting } = require('./system-settings');
+const resellers = require('./resellers');
 
 const router = express.Router();
 router.use(requireSuperAdmin);
@@ -20,8 +21,10 @@ function slugify(text) {
 function tenantWithManager(tenant) {
   const manager = db.prepare('SELECT id, email FROM managers WHERE tenant_id = ?').get(tenant.id);
   const whatsapp = db.prepare('SELECT status FROM whatsapp_instances WHERE tenant_id = ?').get(tenant.id);
+  const reseller = tenant.reseller_id ? db.prepare('SELECT id, name FROM resellers WHERE id = ?').get(tenant.reseller_id) : null;
   return {
     ...tenant,
+    reseller: reseller || null,
     manager: manager || null,
     whatsapp_status: whatsapp ? whatsapp.status : 'disconnected'
   };
@@ -44,7 +47,7 @@ router.get('/tenants', (req, res) => {
 
 // Criar uma nova barbearia + login do gestor, em um passo só
 router.post('/tenants', (req, res) => {
-  const { name, slug, manager_email, manager_password, subscription_expires_at, plan, whatsapp_provider, notify_phone } = req.body || {};
+  const { name, slug, manager_email, manager_password, subscription_expires_at, plan, whatsapp_provider, notify_phone, reseller_id } = req.body || {};
 
   if (!name || name.trim().length < 3) return res.status(400).json({ error: 'Nome da barbearia inválido' });
   if (!manager_email || !manager_email.includes('@')) return res.status(400).json({ error: 'Email do gestor inválido' });
@@ -57,7 +60,15 @@ router.post('/tenants', (req, res) => {
   if (slugExists) return res.status(409).json({ error: `Já existe uma barbearia usando o link "${finalSlug}"` });
 
   const emailExists = db.prepare('SELECT 1 FROM managers WHERE email = ?').get(manager_email);
-  if (emailExists) return res.status(409).json({ error: 'Já existe um gestor com esse email' });
+  if (emailExists || resellers.emailInUse(manager_email)) return res.status(409).json({ error: 'Já existe um login com esse email' });
+
+  // Barbearia vendida por um revendedor: guarda preco do plano e comissao (fixos) e abre o primeiro ciclo de cobranca
+  let reseller = null;
+  if (reseller_id) {
+    reseller = db.prepare('SELECT * FROM resellers WHERE id = ?').get(reseller_id);
+    if (!reseller) return res.status(400).json({ error: 'Revendedor não encontrado' });
+  }
+  const finalPlan = plan === 'pro' ? 'pro' : 'basic';
 
   const insertTenant = db.prepare(`
     INSERT INTO tenants (name, slug, status, subscription_expires_at, plan, whatsapp_provider, notify_phone) VALUES (?, ?, 'active', ?, ?, ?, ?)
@@ -67,11 +78,19 @@ router.post('/tenants', (req, res) => {
   `);
 
   const result = db.transaction(() => {
-    const tenantResult = insertTenant.run(name.trim(), finalSlug, subscription_expires_at || null, plan === 'pro' ? 'pro' : 'basic', ['evogo', 'wuzapi'].includes(whatsapp_provider) ? whatsapp_provider : 'evolution', cleanNotifyPhone(notify_phone));
+    const today = resellers.todayBR();
+    const expires = subscription_expires_at || (reseller ? resellers.addMonthsClamped(today, 1) : null);
+    const tenantResult = insertTenant.run(name.trim(), finalSlug, expires, finalPlan, ['evogo', 'wuzapi'].includes(whatsapp_provider) ? whatsapp_provider : 'evolution', cleanNotifyPhone(notify_phone));
     const tenantId = tenantResult.lastInsertRowid;
     const hash = bcrypt.hashSync(manager_password, 10);
     insertManager.run(tenantId, manager_email.trim(), hash);
     seedTenantDefaults(tenantId);
+    resellers.applyPlanDefaults(tenantId, finalPlan); // PRO: atendente IA ja ligado no modo lista
+    if (reseller) {
+      db.prepare('UPDATE tenants SET reseller_id = ?, monthly_price_cents = ?, commission_percent = ?, billing_anchor = ? WHERE id = ?')
+        .run(reseller.id, resellers.planPriceCents(finalPlan), reseller.commission_percent, today, tenantId);
+      resellers.ensureChargesForTenant(db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId));
+    }
     return tenantId;
   })();
 
@@ -104,6 +123,19 @@ router.put('/tenants/:id', (req, res) => {
     notify_enabled !== undefined ? (notify_enabled ? 1 : 0) : tenant.notify_enabled,
     tenant.id);
 
+  // Virou PRO: liga o atendente IA em modo lista (se o gestor ainda nao tinha configurado nada)
+  if (finalPlan === 'pro' && tenant.plan !== 'pro') resellers.applyPlanDefaults(tenant.id, 'pro');
+
+  // Cliente de revendedor: preco mensal acompanha o plano (ou o valor combinado, se informado) e
+  // as cobrancas ainda nao pagas sao acertadas. Cobrancas ja pagas nao mudam.
+  if (tenant.reseller_id) {
+    const custom = req.body && req.body.monthly_price !== undefined && req.body.monthly_price !== '' ? Math.round(Number(String(req.body.monthly_price).replace(',', '.')) * 100) : null;
+    if (custom !== null && (!isFinite(custom) || custom < 100)) return res.status(400).json({ error: 'Valor mensal inválido' });
+    if (custom !== null) db.prepare('UPDATE tenants SET monthly_price_cents = ? WHERE id = ?').run(custom, tenant.id);
+    else if (finalPlan !== tenant.plan) db.prepare('UPDATE tenants SET monthly_price_cents = ? WHERE id = ?').run(resellers.planPriceCents(finalPlan), tenant.id);
+    resellers.recalcOpenCharges(tenant.id);
+  }
+
   res.json(tenantWithManager(db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenant.id)));
 });
 
@@ -118,7 +150,7 @@ router.put('/tenants/:id/manager', (req, res) => {
 
   if (email && email.includes('@') && email !== manager.email) {
     const emailExists = db.prepare('SELECT 1 FROM managers WHERE email = ? AND id != ?').get(email, manager.id);
-    if (emailExists) return res.status(409).json({ error: 'Já existe um gestor com esse email' });
+    if (emailExists || resellers.emailInUse(email, { managerId: manager.id })) return res.status(409).json({ error: 'Já existe um login com esse email' });
     fields.push('email = ?');
     values.push(email.trim());
   }
@@ -140,6 +172,8 @@ router.put('/tenants/:id/manager', (req, res) => {
 
 // Excluir uma barbearia (e tudo relacionado - services, barbers, bookings, etc, via ON DELETE CASCADE)
 router.delete('/tenants/:id', (req, res) => {
+  // Cobrancas que o cliente ainda nao pagou somem junto; as ja pagas ficam no historico do revendedor
+  db.prepare('DELETE FROM reseller_charges WHERE tenant_id = ? AND client_paid_at IS NULL').run(req.params.id);
   const info = db.prepare('DELETE FROM tenants WHERE id = ?').run(req.params.id);
   if (info.changes === 0) return res.status(404).json({ error: 'Barbearia não encontrada' });
   res.json({ ok: true });

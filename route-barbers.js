@@ -40,7 +40,7 @@ function ownBarber(req) {
 
 router.get('/:id/blocks', (req, res) => {
   if (!ownBarber(req)) return res.status(404).json({ error: 'Barbeiro nao encontrado' });
-  const today = new Date().toISOString().slice(0, 10);
+  const today = require('./barber-services').todayBR();
   res.json(db.prepare('SELECT id, date, period, reason FROM barber_blocked_dates WHERE barber_id = ? AND date >= ? ORDER BY date ASC, period ASC').all(req.params.id, today));
 });
 

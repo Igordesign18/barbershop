@@ -30,6 +30,13 @@ router.post('/login', (req, res) => {
     });
   }
 
+  const reseller = db.prepare('SELECT * FROM resellers WHERE LOWER(email) = LOWER(?)').get(String(email).trim());
+  if (reseller && bcrypt.compareSync(password, reseller.password_hash)) {
+    if (reseller.status !== 'active') return res.status(403).json({ error: 'Conta suspensa. Fale com o suporte.' });
+    const token = signToken({ sub: reseller.id, email: reseller.email, role: 'reseller', reseller_id: reseller.id });
+    return res.json({ token, role: 'reseller', admin: { id: reseller.id, email: reseller.email }, reseller: { id: reseller.id, name: reseller.name } });
+  }
+
   return res.status(401).json({ error: 'Email ou senha invalidos' });
 });
 

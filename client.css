@@ -560,6 +560,10 @@
         .calendar-day.other-month { visibility: hidden; }
         .calendar-day:not(.disabled):not(.other-month):hover { border-color: rgba(198,161,91,0.4); transform: translateY(-1px); }
         .calendar-day.disabled { color: rgba(166,156,140,0.3); cursor: not-allowed; }
+        .calendar-day.barber-off:not(.selected) { color: rgba(166,156,140,0.4); text-decoration: line-through; }
+        .availability-notice { display: flex; gap: 10px; align-items: flex-start; margin: 16px 0 6px; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(198,161,91,0.35); background: rgba(198,161,91,0.08); color: var(--ivory-muted); font-size: 13px; line-height: 1.5; }
+        .availability-notice i { color: #c6a15b; margin-top: 2px; }
+        .availability-notice strong { color: inherit; font-weight: 600; }
         .calendar-day.today:not(.selected) { position: relative; border-color: var(--hairline); }
         .calendar-day.today:not(.selected)::after {
             content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);

@@ -87,6 +87,11 @@ function setBarberTimesForService(tenantId, serviceId, map) {
   })();
 }
 
+// Data de hoje (AAAA-MM-DD) no horario de Brasilia. toISOString() usa UTC e "vira o dia" as 21h daqui.
+function todayBR() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+}
+
 // ==================== Bloqueio de agenda do barbeiro ====================
 // Turnos bloqueados do barbeiro numa data: Set com '' (dia inteiro) e/ou 'manha' | 'tarde' | 'noite'
 function blockedPeriods(barberId, date) {
@@ -146,4 +151,4 @@ function parseDurations(raw) {
   }
 }
 
-module.exports = { getServiceIds, setServiceIds, barberDoesAll, withServiceIds, parseIds, getDurations, setDurations, getBarberTimesForService, setBarberTimesForService, blockedPeriods, isBlockedAt, durationFor, totalDuration, parseDurations };
+module.exports = { getServiceIds, setServiceIds, barberDoesAll, withServiceIds, parseIds, getDurations, setDurations, getBarberTimesForService, setBarberTimesForService, blockedPeriods, isBlockedAt, todayBR, durationFor, totalDuration, parseDurations };

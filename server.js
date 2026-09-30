@@ -41,7 +41,9 @@ app.use('/pwa', express.static(path.join(__dirname, 'pwa')));
 
 // --- API ---
 app.use('/api/auth', authRoutes);
+app.use('/api/superadmin/resellers', require('./route-superadmin-resellers')); // antes do /api/superadmin
 app.use('/api/superadmin', superadminRoutes);
+app.use('/api/reseller', require('./route-reseller'));
 app.use('/api/services', servicesRoutes);
 app.use('/api/barbers', barbersRoutes);
 app.use('/api/bookings', bookingsRoutes);
@@ -59,9 +61,11 @@ const PUBLIC_DIR = __dirname;
 
 app.get('/superadmin', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'superadmin.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
+app.get('/revendedor', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'revendedor.html')));
 
 // CSS/JS de cada pagina, servidos individualmente (evita expor os arquivos do backend
 // que tambem estao nessa mesma pasta, como aconteceria com um express.static geral)
+app.get('/superadmin-resellers.js', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'superadmin-resellers.js')));
 app.get('/admin.css', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.css')));
 app.get('/admin-theme.css', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin-theme.css')));
 app.get('/admin.js', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.js')));
@@ -82,4 +86,5 @@ app.listen(PORT, () => {
   console.log(`BarberSync rodando em http://localhost:${PORT} (fuso: ${process.env.TZ})`);
   startReminderScheduler();
   require('./automations').startAutomationsScheduler(); // retorno, avaliação e aniversário (PRO)
+  require('./resellers').startChargesScheduler(); // cobranças mensais dos clientes de revendedores
 });
