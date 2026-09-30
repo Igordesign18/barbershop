@@ -15,7 +15,7 @@ async function checkAndSendReminders() {
   const rows = db.prepare(`
     SELECT b.id, b.tenant_id, b.customer_full_name, b.customer_phone, b.booking_date, b.booking_time,
            b.item_name, b.item_price, b.discount_applied,
-           t.name AS tenant_name,
+           t.name AS tenant_name, t.slug AS tenant_slug,
            br.name AS barber_name
     FROM bookings b
     JOIN tenants t ON t.id = b.tenant_id
@@ -50,7 +50,8 @@ async function checkAndSendReminders() {
       }
 
       const instance = db.prepare('SELECT * FROM whatsapp_instances WHERE tenant_id = ?').get(row.tenant_id);
-      if (!instance || instance.status !== 'connected' || !waProvider.isConfigured(instance.provider)) continue;
+      if (!instance || !waProvider.isConfigured(instance.provider)) continue;
+      if (instance.status !== 'connected' && await waProvider.refreshStatus(instance).catch(() => instance.status) !== 'connected') continue;
 
       const message = fillTemplate(config.template || DEFAULT_REMINDER_CONFIG.template, {
         cliente: row.customer_full_name,
@@ -62,7 +63,10 @@ async function checkAndSendReminders() {
         valor: formatCurrencyBRL(Math.max(0, (row.item_price || 0) - (row.discount_applied || 0)))
       });
 
-      await waProvider.sendText(instance, row.customer_phone, message);
+      let sentCard = false;
+      try { sentCard = await require('./gestor-notify').sendOwnCard({ id: row.tenant_id, name: row.tenant_name, slug: row.tenant_slug }, instance, row.id, message, 'lembrete'); }
+      catch (e) { console.error('[reminders] botões falharam, enviando texto:', e.message); }
+      if (!sentCard) await waProvider.sendText(instance, row.customer_phone, message);
       db.prepare('UPDATE bookings SET reminder_sent = 1 WHERE id = ?').run(row.id);
     } catch (err) {
       console.error(`[reminders] Falha ao enviar lembrete (agendamento ${row.id}):`, err.message);

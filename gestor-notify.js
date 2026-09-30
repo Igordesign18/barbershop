@@ -496,9 +496,9 @@ function shopPhone(tenant, barberId) {
   return br && digits55(br.notify_phone).length >= 12 ? digits55(br.notify_phone) : '';
 }
 
-function clientCardButtons(tenant, b, text, kind) {
+function clientCardButtons(tenant, b, text, kind, own = false) {
   const phone = shopPhone(tenant, b.barber_id);
-  const inChat = manageInChat(tenant);
+  const inChat = own ? false : manageInChat(tenant);
   const base = publicBase();
   const link = (acao) => base ? `${base}/${tenant.slug}?meus=${acao}` : '';
   const list = [];
@@ -515,8 +515,12 @@ function clientCardButtons(tenant, b, text, kind) {
       extra = '\n\nℹ️ *Como funciona:*\n• Tudo certo? Toque em *Confirmar* e pronto, não precisa fazer mais nada.\n• Para *reagendar* ou *cancelar*, toque no botão: você vai para o site da barbearia, digita seu telefone, toca em *Buscar* e escolhe o horário.';
     }
   } else {
-    if (phone) list.push({ text: '💬 WhatsApp', url: `https://wa.me/${phone}` });
-    if (inChat) {
+    if (phone && !own) list.push({ text: '💬 WhatsApp', url: `https://wa.me/${phone}` });
+    if (own && base) {
+      list.push({ text: '🔄 Reagendar', url: link('reagendar') });
+      list.push({ text: '❌ Cancelar', url: link('cancelar') });
+      extra = '\n\nℹ️ *Precisa mudar o horário ou cancelar?* Toque em *Reagendar* ou *Cancelar*, digite seu telefone no site da barbearia, toque em *Buscar* e escolha a opção.';
+    } else if (inChat) {
       list.push({ text: '🔄 Reagendar', id: `cli_rag:${b.id}` });
       list.push({ text: '❌ Cancelar', id: `cli_can:${b.id}` });
     } else if (base) {
@@ -524,7 +528,7 @@ function clientCardButtons(tenant, b, text, kind) {
       extra = '\n\nℹ️ *Precisa mudar o horário ou cancelar?* Toque em *Reagendar ou cancelar*, digite seu telefone no site da barbearia, toque em *Buscar* e escolha a opção.';
     }
   }
-  const tail = inChat
+  const tail = own ? (base ? `\n\n🔗 ${link('1')}` : '') : inChat
     ? `\n\n${kind === 'lembrete' ? '✅ Para confirmar, responda *ok*. ' : ''}🔄 Para reagendar, responda *reagendar*.\n❌ Para cancelar, responda *cancelar*.`
     : (base ? `\n\n🔗 ${link('1')}` : '');
   return {
@@ -836,4 +840,29 @@ async function sendTest(phone, tenantName) {
   ].filter(Boolean).join('\n'));
 }
 
-module.exports = { hasToken: () => !!token(), usesCentral, status, connect, currentQr, disconnect, notifyBooking, notifyClient, sendClientCard, sendTest, buildMessage, recipientsFor, handleIncoming, ensureWebhook, notifyOwner };
+// Toque em "Confirmar" do lembrete enviado pelo WhatsApp PROPRIO da barbearia (chega no webhook da instancia dela)
+async function handleOwnConfirm(tenant, instance, senderPhone, text) {
+  const m = /id:\s*cli_ok:(\d+)/.exec(String(text || ''));
+  if (!m) return false;
+  const b = bookingDetails(Number(m[1]));
+  if (!b || b.tenant_id !== tenant.id || b.status !== 'confirmed' || !sameNumber(b.customer_phone, senderPhone)) return true;
+  db.prepare("UPDATE bookings SET client_confirmed_at = datetime('now') WHERE id = ?").run(b.id);
+  broadcast(tenant.id, b.id);
+  notifyBooking(tenant.id, b.id, 'confirmado');
+  await require('./wa-provider').sendText(instance, senderPhone,
+    `✅ *Presença confirmada!*\n_${tenant.name}_\n\n🗓️ ${formatDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)}\nTe esperamos! 💈`).catch(() => {});
+  return true;
+}
+
+// Monta e envia confirmacao/lembrete com botoes pelo WhatsApp proprio da barbearia. Retorna true se mandou.
+async function sendOwnCard(tenant, instance, bookingId, text, kind) {
+  const b = bookingDetails(bookingId);
+  if (!b) return false;
+  const card = clientCardButtons(tenant, b, text, kind, true);
+  if (!card.buttons.buttons.length) return false;
+  await require('./wa-provider').sendInteractive(instance, b.customer_phone, 'buttons',
+    { text: card.text, footer: tenant.name, buttons: card.buttons.buttons }, card.buttons.fallbackText);
+  return true;
+}
+
+module.exports = { handleOwnConfirm, sendOwnCard, hasToken: () => !!token(), usesCentral, status, connect, currentQr, disconnect, notifyBooking, notifyClient, sendClientCard, sendTest, buildMessage, recipientsFor, handleIncoming, ensureWebhook, notifyOwner };

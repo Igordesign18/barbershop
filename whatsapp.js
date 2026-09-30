@@ -28,10 +28,20 @@ async function sendBookingConfirmation({ tenant, booking, clientName, clientPhon
       return { sent: !skipCentral, via: 'central' };
     }
     const instance = db.prepare('SELECT * FROM whatsapp_instances WHERE tenant_id = ?').get(tenant.id);
-    if (!instance || instance.status !== 'connected') {
+    if (!instance) {
+      console.log(`[whatsapp] confirmação não enviada (tenant ${tenant.id}): a barbearia não tem WhatsApp conectado`);
       return { sent: false, reason: 'whatsapp_not_connected' };
     }
+    // O status salvo no banco so e atualizado quando alguem abre a aba WhatsApp do painel: confere o estado real antes de desistir
+    if (instance.status !== 'connected') {
+      const live = waProvider.isConfigured(instance.provider) ? await waProvider.refreshStatus(instance).catch(() => instance.status) : instance.status;
+      if (live !== 'connected') {
+        console.log(`[whatsapp] confirmação não enviada (tenant ${tenant.id}): WhatsApp da barbearia está "${live}"`);
+        return { sent: false, reason: 'whatsapp_not_connected' };
+      }
+    }
     if (!waProvider.isConfigured(instance.provider)) {
+      console.log(`[whatsapp] confirmação não enviada (tenant ${tenant.id}): motor "${instance.provider}" não configurado no servidor`);
       return { sent: false, reason: 'evolution_not_configured' };
     }
 
@@ -48,7 +58,12 @@ async function sendBookingConfirmation({ tenant, booking, clientName, clientPhon
       valor: formatCurrencyBRL(servicePrice)
     });
 
-    await waProvider.sendText(instance, clientPhone, message);
+    // Com o link publico configurado, vai com botoes (Reagendar / Cancelar); senao, texto simples
+    let sentCard = false;
+    try { sentCard = await require('./gestor-notify').sendOwnCard(tenant, instance, booking.id, message, 'confirmacao'); }
+    catch (e) { console.error('[whatsapp] botões da confirmação falharam, enviando texto:', e.message); }
+    if (!sentCard) await waProvider.sendText(instance, clientPhone, message);
+    console.log(`[whatsapp] confirmação enviada ao cliente (tenant ${tenant.id}, agendamento ${booking.id})`);
 
     db.prepare('UPDATE bookings SET whatsapp_sent = 1 WHERE id = ?').run(booking.id);
     return { sent: true };

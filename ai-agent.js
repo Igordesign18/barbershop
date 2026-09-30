@@ -1569,7 +1569,16 @@ async function handleWebhookEvent(instanceName, body) {
   const instance = db.prepare('SELECT * FROM whatsapp_instances WHERE instance_name = ?').get(instanceName);
   if (!instance) return;
   const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(instance.tenant_id);
-  if (!tenant || !isProTenant(tenant)) return;
+  if (!tenant) return;
+  // Toque em "Confirmar" do lembrete (qualquer plano, IA ligada ou nao)
+  try {
+    for (const m of waProvider.normalizeWebhook(instance.provider, body)) {
+      if (!m.fromMe && !m.isGroup && m.text && /id:\s*cli_ok:/.test(m.text) && !alreadySeen('ok:' + m.id)) {
+        await require('./gestor-notify').handleOwnConfirm(tenant, instance, m.senderPhone || m.chatId, m.text);
+      }
+    }
+  } catch (e) { console.error('[webhook] confirmar presença:', e.message); }
+  if (!isProTenant(tenant)) return;
   // A resposta ao pedido de avaliacao (automacao PRO) e tratada mesmo com a IA desligada
   const aiEnabled = !!getAiConfig(tenant.id).enabled;
   const reviewsOn = !!require('./automations').getAutomations(tenant.id).review_enabled;
@@ -1593,6 +1602,7 @@ async function handleWebhookEvent(instanceName, body) {
     const senderPhone = msg.senderPhone;
     const replyTo = senderPhone || chatId;
     let text = msg.text;
+    if (text && /id:\s*cli_ok:/.test(text)) continue; // confirmacao de presenca ja tratada acima
 
     // Nota do pedido de avaliacao (toque na lista de estrelas ou numero de 1 a 5)
     if (reviewsOn && text) {
