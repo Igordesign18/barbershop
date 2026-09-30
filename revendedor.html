@@ -90,6 +90,7 @@
     .pill.st-late { background: rgba(193,92,92,0.16); color: var(--red); }
     a.link { color: var(--brass-light); text-decoration: none; font-size: 12px; }
     a.link:hover { text-decoration: underline; }
+    .due-soon { color: var(--brass-light); font-weight: 600; }
     .money-warn { color: var(--red); font-weight: 700; font-size: 12px; }
     .empty-state { text-align: center; padding: 36px; color: var(--ivory-muted); font-size: 14px; }
     .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -331,7 +332,7 @@
 <div class="modal-overlay hidden" id="credsOverlay">
     <div class="modal-content">
         <h3><i class="fas fa-circle-check" style="color:var(--green); margin-right:8px;" aria-hidden="true"></i> Cliente criado!</h3>
-        <p class="hint" style="margin:-6px 0 14px;">Passe estes dados para o cliente:</p>
+        <p class="hint" style="margin:-6px 0 14px;">Passe estes dados para o cliente (link, login, senha e vencimento):</p>
         <div class="creds" id="credsText"></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button class="btn" onclick="copyCreds()"><i class="fas fa-copy" aria-hidden="true"></i> Copiar dados</button>
@@ -378,6 +379,13 @@
     function esc(v) { return String(v === null || v === undefined ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
     function brl(c) { return 'R$ ' + ((Number(c) || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
     function pct(n) { return (Number(n) || 0).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '%'; }
+    function daysUntil(iso) {
+        if (!iso) return null;
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+        return Math.round((new Date(iso + 'T00:00:00Z') - new Date(today + 'T00:00:00Z')) / 86400000);
+    }
+    function dueClass(iso) { const d = daysUntil(iso); return d === null ? '' : d < 0 ? 'money-warn' : d <= 5 ? 'due-soon' : ''; }
+    function dueNote(iso) { const d = daysUntil(iso); if (d === null) return ''; return d < 0 ? ` (venceu há ${-d} dia${d === -1 ? '' : 's'})` : d === 0 ? ' (vence hoje)' : d <= 5 ? ` (em ${d} dia${d === 1 ? '' : 's'})` : ''; }
     function fmtDate(iso) { if (!iso) return '—'; const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
     function fmtDateTime(sql) {
         if (!sql) return '—';
@@ -512,7 +520,7 @@
                     <div class="meta">
                         <span class="pill ${c.status === 'active' ? 'active' : 'suspended'}">${c.status === 'active' ? 'Ativo' : 'Suspenso'}</span>
                         <span class="pill ${c.plan === 'pro' ? 'plan-pro' : 'plan-basic'}">${c.plan === 'pro' ? 'PRO' : 'Básico'}</span>
-                        <span>acesso até ${fmtDate(c.subscription_expires_at)}</span>
+                        <span class="${dueClass(c.subscription_expires_at)}"><i class="fas fa-calendar-day" aria-hidden="true"></i> Vence em <b>${fmtDate(c.subscription_expires_at)}</b>${dueNote(c.subscription_expires_at)}</span>
                         ${c.overdue_charges ? '<span class="money-warn">pagamento atrasado</span>' : (c.open_charges ? '<span class="pill st-wait">cobrança em aberto</span>' : '<span class="pill st-done">em dia</span>')}
                     </div>
                     <div class="nums">
@@ -532,12 +540,14 @@
             </div>`).join('');
     }
 
-    function accessText(slug, email, password) {
+    function accessText(slug, email, password, expires, planLabel) {
         const base = location.origin;
         return `Seu sistema de agendamento:\n\n` +
             `Link para seus clientes agendarem: ${base}/${slug}\n` +
             `Painel para você gerenciar: ${base}/admin\n` +
-            `Login: ${email}\n` + (password ? `Senha: ${password}\n` : '');
+            `Login: ${email}\n` + (password ? `Senha: ${password}\n` : '') +
+            (planLabel ? `Plano: ${planLabel}\n` : '') +
+            `Vencimento: ${expires ? fmtDate(expires) : 'sem data definida'}\n`;
     }
 
     $('newClientForm').addEventListener('submit', async (e) => {
@@ -552,7 +562,7 @@
             });
             e.target.reset();
             renderPlanSelect();
-            lastCreds = accessText(c.slug, c.manager_email, password);
+            lastCreds = accessText(c.slug, c.manager_email, password, c.subscription_expires_at, c.plan === 'pro' ? 'PRO' : 'Básico');
             $('credsText').innerHTML = esc(lastCreds).replace(/\n/g, '<br>');
             $('credsOverlay').classList.remove('hidden');
             await Promise.all([loadClients(), loadSummary(), loadCharges()]);
@@ -573,7 +583,7 @@
     // A senha atual nao fica guardada em lugar nenhum (so o hash), entao o acesso copiado nao a inclui
     function copyClientAccess(id) {
         const c = clients.find(x => x.id === id);
-        if (c) copyText(accessText(c.slug, c.manager_email, null) + '\n(a senha é a que você cadastrou; se ele esqueceu, troque em “Senha / WhatsApp”)');
+        if (c) copyText(accessText(c.slug, c.manager_email, null, c.subscription_expires_at, c.plan === 'pro' ? 'PRO' : 'Básico') + '\n(a senha é a que você cadastrou; se ele esqueceu, troque em “Senha / WhatsApp”)');
     }
 
     function openEditClient(id) {

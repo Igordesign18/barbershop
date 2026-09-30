@@ -426,6 +426,19 @@
     </div>
 </div>
 
+<div class="modal-overlay hidden" id="accessModal" style="z-index:2000;">
+    <div class="modal-content">
+        <h3 id="accessTitle">Cadastro concluído</h3>
+        <p id="accessHint" style="color:var(--text-muted,#a89f8d); font-size:.9rem; margin:6px 0 12px;">Copie e envie pelo WhatsApp. A senha só aparece agora — depois de fechar, ela não fica visível.</p>
+        <pre id="accessText" style="white-space:pre-wrap; word-break:break-word; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:14px; font-family:inherit; font-size:.92rem; line-height:1.6; user-select:all;"></pre>
+        <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+            <button type="button" class="btn" id="accessCopyBtn" onclick="copyAccess()">📋 Copiar tudo</button>
+            <a class="btn btn-secondary hidden" id="accessWaBtn" target="_blank" rel="noopener" style="text-decoration:none;">💬 Abrir no WhatsApp</a>
+            <button type="button" class="btn btn-secondary" onclick="closeAccess()">Fechar</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay hidden" id="detailModal">
     <div class="modal-content wide" id="detailBody"></div>
 </div>
@@ -822,12 +835,41 @@
         return `${d}/${m}/${y}`;
     }
 
+    // ---- Janela "copiar acesso" (usada após cadastrar cliente e revendedor) ----
+    let __accessText = '';
+    function showAccessModal(title, text, waPhone, hint) {
+        __accessText = text;
+        document.getElementById('accessTitle').textContent = title;
+        document.getElementById('accessText').textContent = text;
+        document.getElementById('accessCopyBtn').textContent = '📋 Copiar tudo';
+        const wa = document.getElementById('accessWaBtn');
+        const digits = String(waPhone || '').replace(/\D/g, '');
+        if (digits) { wa.href = `https://wa.me/${digits.length <= 11 ? '55' + digits : digits}?text=${encodeURIComponent(text)}`; wa.classList.remove('hidden'); }
+        else wa.classList.add('hidden');
+        document.getElementById('accessHint').textContent = hint || 'Copie e envie pelo WhatsApp. A senha só aparece agora — depois de fechar, ela não fica visível.';
+        document.getElementById('accessModal').classList.remove('hidden');
+    }
+    function closeAccess() { document.getElementById('accessModal').classList.add('hidden'); }
+    async function copyAccess() {
+        const btn = document.getElementById('accessCopyBtn');
+        let ok = false;
+        try { await navigator.clipboard.writeText(__accessText); ok = true; }
+        catch (_) {
+            const ta = document.createElement('textarea'); ta.value = __accessText; document.body.appendChild(ta); ta.select();
+            try { ok = document.execCommand('copy'); } catch (__) {}
+            ta.remove();
+        }
+        if (ok) { btn.textContent = '✅ Copiado!'; showNotification('Dados copiados!', 'success'); }
+        else showNotification('Não consegui copiar. Selecione o texto e copie manualmente.', 'error');
+    }
+
     document.getElementById('newTenantForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = e.target.querySelector('button[type="submit"]');
         btn.disabled = true;
         try {
-            await apiFetch('/tenants', {
+            const password = document.getElementById('managerPassword').value;
+            const created = await apiFetch('/tenants', {
                 method: 'POST',
                 body: JSON.stringify({
                     name: document.getElementById('tenantName').value,
@@ -842,6 +884,15 @@
                 })
             });
             showNotification('Cliente cadastrado com sucesso!', 'success');
+            const planLabel = created.plan === 'pro' ? 'PRO' : 'Básico';
+            showAccessModal('Cliente cadastrado', `Acesso ao sistema de agendamento\n\n` +
+                `Barbearia: ${created.name}\n` +
+                `Plano: ${planLabel}\n` +
+                `Link para os clientes agendarem: ${location.origin}/${created.slug}\n` +
+                `Painel do gestor: ${location.origin}/admin\n` +
+                `Login: ${(created.manager && created.manager.email) || document.getElementById('managerEmail').value}\n` +
+                `Senha: ${password}\n` +
+                `Vencimento: ${created.subscription_expires_at ? formatDateBR(created.subscription_expires_at) : 'sem data definida'}\n`);
             e.target.reset();
             toggleCollapse('cardNewTenant', false);
             loadTenants();

@@ -190,7 +190,8 @@
         const btn = e.target.querySelector('button[type="submit"]');
         btn.disabled = true;
         try {
-            await apiFetch('/resellers', {
+            const password = $('resPassword').value;
+            const created = await apiFetch('/resellers', {
                 method: 'POST',
                 body: JSON.stringify({
                     name: $('resName').value,
@@ -201,6 +202,13 @@
                 })
             });
             showNotification('Revendedor criado! Ele entra em /revendedor com esse email e senha.', 'success');
+            const pct = (created && created.commission_percent !== undefined) ? created.commission_percent : $('resCommission').value;
+            showAccessModal('Revendedor cadastrado', `Acesso ao painel de revendedor\n\n` +
+                `Nome: ${created.name || ''}\n` +
+                `Painel do revendedor: ${location.origin}/revendedor\n` +
+                `Login: ${created.email || ''}\n` +
+                `Senha: ${password}\n` +
+                `Comissão: ${pct}% por cliente cadastrado\n`);
             e.target.reset();
             toggleCollapse('cardNewReseller', false);
             loadOverview();
@@ -349,7 +357,8 @@
             <div class="filters">
                 ${[['todas', 'Todas'], ['cobrar', 'A cobrar do cliente'], ['repassar', 'Aguardando repasse'], ['repassado', 'Repassadas']].map(([k, l]) =>
                     `<button class="marketing-chip ${detailFilter === k ? 'active' : ''}" onclick="setDetailFilter('${k}')">${l} (${counts[k]})</button>`).join('')}
-                ${counts.repassar ? `<button class="btn btn-sm" style="margin-left:auto;" onclick="repassAll(${r.id})"><i class="fas fa-check-double" aria-hidden="true"></i> Confirmar todos os repasses (${brl(s.to_repass_cents)})</button>` : ''}
+                ${counts.repassar ? `<button class="btn btn-secondary btn-sm" style="margin-left:auto;" onclick="chargeReseller(${r.id})"><i class="fas fa-paper-plane" aria-hidden="true"></i> Cobrar revendedor</button>` : ''}
+                ${counts.repassar ? `<button class="btn btn-sm" onclick="repassAll(${r.id})"><i class="fas fa-check-double" aria-hidden="true"></i> Confirmar todos os repasses (${brl(s.to_repass_cents)})</button>` : ''}
             </div>
             ${shown.length ? `<div class="table-wrap"><table>
                 <thead><tr><th>Ciclo</th><th>Barbearia</th><th>Cliente paga</th><th>Comissão</th><th>Repasse a você</th><th>Situação</th><th></th></tr></thead>
@@ -376,6 +385,21 @@
             showNotification(value ? 'Repasse confirmado!' : 'Confirmação desfeita.', value ? 'success' : 'info');
             openResellerDetail(currentDetailId);
         } catch (e) { showNotification(e.message, 'error'); }
+    };
+
+    // Monta a mensagem de cobranca do repasse (clientes que ja pagaram e ainda nao foram repassados)
+    window.chargeReseller = function (id) {
+        if (!detailData || detailData.reseller.id !== id) return;
+        const r = detailData.reseller;
+        const pend = detailData.charges.filter(c => c.stage === 'repassar')
+            .sort((a, b) => String(a.cycle_end).localeCompare(String(b.cycle_end)));
+        if (!pend.length) { showNotification('Nada pendente de repasse.', 'info'); return; }
+        const d = iso => { const [y, m, dd] = String(iso).split('-'); return `${dd}/${m}/${y}`; };
+        const total = pend.reduce((t, c) => t + c.owner_cents, 0);
+        const lines = pend.map(c => `• ${c.tenant_name || 'Cliente removido'} (${c.plan === 'pro' ? 'PRO' : 'Básico'}) — venc. ${d(c.cycle_start)} — repassar ${brl(c.owner_cents)}`).join('\n');
+        const first = String(r.name).trim().split(/\s+/)[0];
+        const text = `Oi, ${first}! Segue o repasse pendente dos clientes que já pagaram:\n\n${lines}\n\nTotal a repassar: ${brl(total)}\n\nPode me enviar o PIX e o comprovante? Obrigado! 🙏`;
+        showAccessModal('Cobrar repasse — ' + r.name, text, r.phone, 'Confira a mensagem, copie ou abra direto no WhatsApp dela. Depois que ela pagar, use "Recebi".');
     };
 
     window.repassAll = async function (id) {
