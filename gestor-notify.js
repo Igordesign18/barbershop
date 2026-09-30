@@ -261,12 +261,12 @@ function clientChatUrl(b) {
 function bookingButtons(b, text) {
   const url = clientChatUrl(b);
   const list = [];
-  if (url) list.push({ text: '💬 Falar com o cliente', url });
+  if (url) list.push({ text: '💬 WhatsApp', url });
   list.push({ text: '📋 Meus agendamentos', id: BTN_AGENDA_ID });
   return {
     buttons: list,
     // Se o WhatsApp nao mostrar botoes, o link do cliente vai no proprio texto
-    fallbackText: url ? `${text}\n\n💬 *Falar com o cliente:* ${url}\n📋 Para ver sua agenda, responda *agenda*.` : `${text}\n\n📋 Para ver sua agenda, responda *agenda*.`
+    fallbackText: url ? `${text}\n\n💬 *WhatsApp do cliente:* ${url}\n📋 Para ver sua agenda, responda *agenda*.` : `${text}\n\n📋 Para ver sua agenda, responda *agenda*.`
   };
 }
 
