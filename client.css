@@ -368,7 +368,7 @@
         .amenities-row { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; }
         .amenities-row .amenity { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ivory-muted); }
         .amenities-row .amenity i { color: var(--brass); }
-        .payment-pill { background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 100px; padding: 4px 12px; font-size: 12px; }
+        .payment-pill { flex: 0 0 auto !important; white-space: nowrap; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 6px; padding: 7px 12px; font-size: 12.5px; font-weight: 500; line-height: 1.3; }
         .social-icon-link { color: var(--brass-light); font-size: 20px; transition: opacity 0.2s; }
         .social-icon-link:hover { opacity: 0.7; }
         .star-input { color: var(--hairline); cursor: pointer; transition: transform 0.15s, color 0.15s; }
@@ -648,6 +648,33 @@
             background: transparent; color: var(--brass-light); font-weight: 700; font-size: 14px; cursor: pointer;
         }
         .modal-close-btn:hover { background: rgba(198,161,91,0.08); }
+
+        /* Janela "Meus agendamentos": cabecalho fixo com Voltar e rolagem propria */
+        .modal-content.sheet { padding: 0; max-width: 480px; max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); overflow-y: auto; text-align: left; }
+        .sheet-head { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--surface); border-bottom: 1px solid var(--hairline); }
+        .sheet-head h2 { font-size: 16px; margin: 0; flex: 1; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sheet-head h2 i { color: var(--brass); margin-right: 6px; }
+        .sheet-back { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--brass); background: transparent; color: var(--brass-light); font-weight: 700; font-size: 13.5px; cursor: pointer; flex-shrink: 0; }
+        .sheet-back:active { background: rgba(198,161,91,0.12); }
+        .sheet-body { padding: 18px 20px 24px; }
+        @media (max-width: 640px) {
+            #lookupModal { padding: 0; align-items: stretch; }
+            #lookupModal .modal-content.sheet { max-width: none; max-height: none; height: 100%; border-radius: 0; border: none; }
+        }
+
+        /* Cartoes de agendamento */
+        .bk { display: flex; gap: 14px; border: 1px solid var(--hairline); border-left: 4px solid var(--bk-color, var(--hairline)); background: var(--surface-raised); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+        .bk-date { flex: 0 0 58px; text-align: center; border-radius: 10px; background: rgba(255,255,255,0.04); padding: 8px 4px; align-self: flex-start; }
+        .bk-date b { display: block; font-family: 'Fraunces', serif; font-size: 22px; line-height: 1; }
+        .bk-date small { display: block; margin-top: 4px; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ivory-muted); }
+        .bk-main { flex: 1; min-width: 0; }
+        .bk-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+        .bk-title { font-family: 'Fraunces', serif; font-size: 15px; line-height: 1.3; }
+        .bk-status { flex-shrink: 0; font-size: 10.5px; font-weight: 700; letter-spacing: .03em; padding: 3px 8px; border-radius: 6px; color: var(--bk-color); border: 1px solid var(--bk-color); }
+        .bk-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 13px; color: var(--ivory-muted); }
+        .bk-meta i { color: var(--brass); margin-right: 5px; }
+        .bk.cancelled { opacity: .72; }
+        .bk.cancelled .bk-title { text-decoration: line-through; text-decoration-color: rgba(255,255,255,.25); }
 
         @media (max-width: 640px) {
             .card { padding: 20px; }

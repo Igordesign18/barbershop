@@ -526,10 +526,19 @@
         function openLookup() {
             document.getElementById('lookupModal').classList.remove('hidden');
             document.getElementById('lookupResults').innerHTML = '';
+            document.getElementById('lookupModal').querySelector('.sheet').scrollTop = 0;
+            // Entrada no historico: o botao "voltar" do celular fecha a janela em vez de sair da pagina
+            try { history.pushState({ lookup: 1 }, ''); } catch (_) {}
         }
         function closeLookup() {
-            document.getElementById('lookupModal').classList.add('hidden');
+            const el = document.getElementById('lookupModal');
+            if (el.classList.contains('hidden')) return;
+            el.classList.add('hidden');
+            try { if (history.state && history.state.lookup) history.back(); } catch (_) {}
         }
+        window.addEventListener('popstate', () => {
+            document.getElementById('lookupModal').classList.add('hidden');
+        });
         let lookupPhoneCache = '';
 
         async function fetchLoyaltyStatus(phone) {
@@ -590,33 +599,39 @@
                 const statusLabel = { confirmed: 'Confirmado', completed: 'Concluído', cancelled: 'Cancelado', pending: 'Pendente' };
                 const statusColor = { confirmed: 'var(--green)', completed: 'var(--brass-light)', cancelled: 'var(--red)', pending: 'var(--ivory-muted)' };
 
-                resultsEl.innerHTML = bookings.map((b, i) => `
-                    <div style="border:1px solid var(--hairline); border-radius:10px; padding:14px 16px; margin-bottom:10px; animation: cardIn 0.35s ease ${i * 0.05}s both;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                            <strong style="font-family:'Fraunces',serif; font-size:15px;">${b.service_name || 'Serviço'}</strong>
-                            <span style="font-size:11px; font-weight:700; color:${statusColor[b.status] || 'var(--ivory-muted)'};">${statusLabel[b.status] || b.status}</span>
-                        </div>
-                        <p style="font-size:13px; color:var(--ivory-muted);">
-                            <i class="fas fa-calendar" aria-hidden="true"></i> ${b.booking_date.split('-').reverse().join('/')}
-                            &nbsp;•&nbsp; <i class="fas fa-clock" aria-hidden="true"></i> ${b.booking_time.substring(0,5)}
-                            ${b.barber_name ? `&nbsp;•&nbsp; <i class="fas fa-user-tie" aria-hidden="true"></i> ${b.barber_name}` : ''}
-                        </p>
-                        ${b.can_cancel ? `
-                            <div id="cancelBox-${b.id}">
-                                <button class="btn" style="margin-top:10px; padding:9px; background:transparent; border:1px solid var(--red); color:var(--red);" onclick="openCancelRequest(${b.id})">
-                                    <i class="fas fa-ban" aria-hidden="true"></i> Cancelar agendamento
-                                </button>
+                const MONTHS = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+                const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+                resultsEl.innerHTML = bookings.map((b, i) => {
+                    const [yy, mm, dd] = b.booking_date.split('-');
+                    return `
+                    <div class="bk ${b.status === 'cancelled' ? 'cancelled' : ''}" style="--bk-color:${statusColor[b.status] || 'var(--ivory-muted)'}; animation: cardIn 0.35s ease ${i * 0.05}s both;">
+                        <div class="bk-date"><b>${dd}</b><small>${MONTHS[Number(mm) - 1] || ''} ${yy}</small></div>
+                        <div class="bk-main">
+                            <div class="bk-top">
+                                <strong class="bk-title">${esc(b.service_name || 'Serviço')}</strong>
+                                <span class="bk-status">${statusLabel[b.status] || esc(b.status)}</span>
                             </div>
-                        ` : ''}
-                        ${b.can_review ? `
-                            <button class="btn" style="margin-top:10px; padding:9px;" onclick="openReviewModal(${b.id}, '${(b.service_name || '').replace(/'/g, "\\'")}')">
-                                <i class="fas fa-star" aria-hidden="true"></i> Avaliar atendimento
-                            </button>
-                        ` : b.has_review ? `
-                            <p style="margin-top:8px; font-size:12px; color:var(--brass-light);"><i class="fas fa-check" aria-hidden="true"></i> Você já avaliou este atendimento</p>
-                        ` : ''}
-                    </div>
-                `).join('');
+                            <div class="bk-meta">
+                                <span><i class="fas fa-clock" aria-hidden="true"></i>${b.booking_time.substring(0,5)}</span>
+                                ${b.barber_name ? `<span><i class="fas fa-user-tie" aria-hidden="true"></i>${esc(b.barber_name)}</span>` : ''}
+                            </div>
+                            ${b.can_cancel ? `
+                                <div id="cancelBox-${b.id}">
+                                    <button class="btn" style="margin-top:12px; padding:9px; background:transparent; border:1px solid var(--red); color:var(--red);" onclick="openCancelRequest(${b.id})">
+                                        <i class="fas fa-ban" aria-hidden="true"></i> Cancelar agendamento
+                                    </button>
+                                </div>
+                            ` : ''}
+                            ${b.can_review ? `
+                                <button class="btn" style="margin-top:12px; padding:9px;" onclick="openReviewModal(${b.id}, '${(b.service_name || '').replace(/'/g, "\\'")}')">
+                                    <i class="fas fa-star" aria-hidden="true"></i> Avaliar atendimento
+                                </button>
+                            ` : b.has_review ? `
+                                <p style="margin-top:10px; font-size:12px; color:var(--brass-light);"><i class="fas fa-check" aria-hidden="true"></i> Você já avaliou este atendimento</p>
+                            ` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
             } catch (error) {
                 resultsEl.innerHTML = '<p style="color:var(--red); font-size:13px;">Erro ao buscar agendamentos. Tente novamente.</p>';
             }
