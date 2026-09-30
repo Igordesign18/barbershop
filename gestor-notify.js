@@ -261,8 +261,8 @@ function clientChatUrl(b) {
 function bookingButtons(b, text) {
   const url = clientChatUrl(b);
   const list = [];
-  if (url) list.push({ text: '💬 WhatsApp', url });
-  list.push({ text: '📋 Meus agendamentos', id: BTN_AGENDA_ID });
+  if (url) list.push({ text: 'WhatsApp', url });
+  list.push({ text: 'Meus agendamentos', id: BTN_AGENDA_ID });
   return {
     buttons: list,
     // Se o WhatsApp nao mostrar botoes, o link do cliente vai no proprio texto
@@ -359,7 +359,7 @@ function buildDaysList(scopes) {
   textLines.push('Para ver um dia, responda com a data. Ex: *15/10*');
   const fallbackText = textLines.join('\n');
   return {
-    title: '📋 Meus agendamentos',
+    title: 'Meus agendamentos',
     text: 'Escolha a data para ver os agendamentos daquele dia. 👇',
     footer: scopes.length === 1 && scopes[0].barberName ? `${scopes[0].tenantName} · ${scopes[0].barberName}` : (scopes.length === 1 ? scopes[0].tenantName : ''),
     buttonText: 'Ver datas',
@@ -385,7 +385,7 @@ function buildDayMessage(scope, date) {
   return out.join('\n');
 }
 
-const BACK_BUTTONS = { buttons: [{ text: '📋 Ver outras datas', id: BTN_AGENDA_ID }] };
+const BACK_BUTTONS = { buttons: [{ text: 'Ver outras datas', id: BTN_AGENDA_ID }] };
 
 // "15/10" ou "15/10/2026" digitado -> AAAA-MM-DD (ano atual, ou o proximo se a data ja passou)
 function parseTypedDate(text) {
@@ -505,26 +505,26 @@ function clientCardButtons(tenant, b, text, kind, own = false) {
   let extra = '';
 
   if (kind === 'lembrete') {
-    list.push({ text: '✅ Confirmar', id: `cli_ok:${b.id}` });
+    list.push({ text: 'Confirmar', id: `cli_ok:${b.id}` });
     if (inChat) {
-      list.push({ text: '🔄 Reagendar', id: `cli_rag:${b.id}` });
-      list.push({ text: '❌ Cancelar', id: `cli_can:${b.id}` });
+      list.push({ text: 'Reagendar', id: `cli_rag:${b.id}` });
+      list.push({ text: 'Cancelar', id: `cli_can:${b.id}` });
     } else if (base) {
-      list.push({ text: '🔄 Reagendar', url: link('reagendar') });
-      list.push({ text: '❌ Cancelar', url: link('cancelar') });
-      extra = '\n\nℹ️ *Como funciona:*\n• Tudo certo? Toque em *Confirmar* e pronto, não precisa fazer mais nada.\n• Para *reagendar* ou *cancelar*, toque no botão: você vai para o site da barbearia, digita seu telefone, toca em *Buscar* e escolhe o horário.';
+      list.push({ text: 'Reagendar', url: link('reagendar') });
+      list.push({ text: 'Cancelar', url: link('cancelar') });
+      extra = '\n\n✅ *Tudo certo?* Toque em *Confirmar* e pronto.\n🔄 Para *reagendar* ou *cancelar*, toque no botão, informe seu telefone no site da barbearia e toque em *Buscar*.';
     }
   } else {
-    if (phone && !own) list.push({ text: '💬 WhatsApp', url: `https://wa.me/${phone}` });
+    if (phone && !own) list.push({ text: 'WhatsApp', url: `https://wa.me/${phone}` });
     if (own && base) {
-      list.push({ text: '🔄 Reagendar', url: link('reagendar') });
-      list.push({ text: '❌ Cancelar', url: link('cancelar') });
-      extra = '\n\nℹ️ *Precisa mudar o horário ou cancelar?* Toque em *Reagendar* ou *Cancelar*, digite seu telefone no site da barbearia, toque em *Buscar* e escolha a opção.';
+      list.push({ text: 'Reagendar', url: link('reagendar') });
+      list.push({ text: 'Cancelar', url: link('cancelar') });
+      extra = '\n\n🔄 *Precisa mudar o horário ou cancelar?*\nToque em *Reagendar* ou *Cancelar*, informe seu telefone no site da barbearia, toque em *Buscar* e escolha a opção.';
     } else if (inChat) {
-      list.push({ text: '🔄 Reagendar', id: `cli_rag:${b.id}` });
-      list.push({ text: '❌ Cancelar', id: `cli_can:${b.id}` });
+      list.push({ text: 'Reagendar', id: `cli_rag:${b.id}` });
+      list.push({ text: 'Cancelar', id: `cli_can:${b.id}` });
     } else if (base) {
-      list.push({ text: '🔄 Reagendar ou cancelar', url: link('1') });
+      list.push({ text: 'Reagendar ou cancelar', url: link('1') });
       extra = '\n\nℹ️ *Precisa mudar o horário ou cancelar?* Toque em *Reagendar ou cancelar*, digite seu telefone no site da barbearia, toque em *Buscar* e escolha a opção.';
     }
   }
@@ -621,7 +621,7 @@ async function askCancel(phone, found) {
   const { b, tenant } = found;
   const text = `❌ *Cancelar agendamento?*\n_${tenant.name}_\n\n${bookingSummary(b)}\n\nConfirme os dados acima para cancelar.`;
   await sendTo(phone, text, {
-    buttons: [{ text: '✅ Sim, cancelar', id: `cli_cok:${b.id}` }, { text: '↩️ Manter', id: `cli_cno:${b.id}` }],
+    buttons: [{ text: 'Sim, cancelar', id: `cli_cok:${b.id}` }, { text: 'Manter', id: `cli_cno:${b.id}` }],
     fallbackText: `${text}\n\nResponda *sim* para cancelar ou *manter* para continuar com o agendamento.`
   });
 }
@@ -633,7 +633,7 @@ async function doCancel(phone, found) {
   notifyBooking(tenant.id, b.id, 'cancelado');
   const base = publicBase();
   const text = `✅ *Agendamento cancelado.*\n_${tenant.name}_\n\n🗓️ ${formatDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)} · ${b.servico || ''}\n\nQuando quiser marcar de novo, é só agendar pelo link. ✂️`;
-  await sendTo(phone, text, base ? { buttons: [{ text: '📅 Agendar novamente', url: `${base}/${tenant.slug}` }], fallbackText: `${text}\n${base}/${tenant.slug}` } : null);
+  await sendTo(phone, text, base ? { buttons: [{ text: 'Agendar novamente', url: `${base}/${tenant.slug}` }], fallbackText: `${text}\n${base}/${tenant.slug}` } : null);
 }
 
 // Reagendar: dias com horario livre -> horarios (paginados) -> confirmacao
@@ -658,7 +658,7 @@ async function askRescheduleDay(phone, found) {
   }
   const fallbackText = `🔄 *Reagendar*\n\n${rows.map(r => `🗓️ ${r.title} · ${r.description}`).join('\n')}\n\nResponda com a data desejada. Ex: *15/10*`;
   await sendTo(phone, fallbackText, null, {
-    title: '🔄 Reagendar', text: `Escolha o novo dia para ${b.servico || 'seu atendimento'}. 👇`, footer: tenant.name,
+    title: 'Reagendar', text: `Escolha o novo dia para ${b.servico || 'seu atendimento'}. 👇`, footer: tenant.name,
     buttonText: 'Ver datas', sections: [{ title: 'Datas disponíveis', rows }], fallbackText
   });
 }
@@ -667,13 +667,13 @@ const PAGE = 9;
 async function askRescheduleTime(phone, found, date, offset = 0) {
   const { b, tenant } = found;
   const slots = freeSlots(found, date);
-  if (!slots.length) { await sendTo(phone, `Não há mais horários livres em ${formatDate(date)}. Escolha outra data. 🙏`, { buttons: [{ text: '🔄 Escolher outra data', id: `cli_rag:${b.id}` }] }); return; }
+  if (!slots.length) { await sendTo(phone, `Não há mais horários livres em ${formatDate(date)}. Escolha outra data. 🙏`, { buttons: [{ text: 'Escolher outra data', id: `cli_rag:${b.id}` }] }); return; }
   const page = slots.slice(offset, offset + PAGE);
   const rows = page.map(t => ({ title: t, description: formatDate(date), id: `cli_rhr:${b.id}:${date}:${t.replace(':', '')}` }));
-  if (offset + PAGE < slots.length) rows.push({ title: '➡️ Mais horários', description: 'Ver os próximos horários do dia', id: `cli_rmais:${b.id}:${date}:${offset + PAGE}` });
+  if (offset + PAGE < slots.length) rows.push({ title: 'Mais horários', description: 'Ver os próximos horários do dia', id: `cli_rmais:${b.id}:${date}:${offset + PAGE}` });
   const fallbackText = `🕐 *Horários em ${formatDate(date)}*\n\n${page.join(' · ')}\n\nResponda com o horário. Ex: *${page[0]}*`;
   await sendTo(phone, fallbackText, null, {
-    title: `🕐 ${formatDate(date)}`, text: 'Escolha o novo horário. 👇', footer: tenant.name, buttonText: 'Ver horários',
+    title: formatDate(date), text: 'Escolha o novo horário. 👇', footer: tenant.name, buttonText: 'Ver horários',
     sections: [{ title: 'Horários livres', rows }], fallbackText
   });
 }
@@ -684,7 +684,7 @@ async function askRescheduleConfirm(phone, found, date, hhmm) {
   if (!freeSlots(found, date).includes(time)) { await askRescheduleTime(phone, found, date); return; }
   const text = `🔄 *Confirmar reagendamento?*\n_${tenant.name}_\n\n👤 *Nome:* ${b.customer_full_name || '-'}\n📱 *Telefone:* ${formatPhone(b.customer_phone)}\n✂️ *Serviço:* ${b.servico || '-'}\n\n🗓️ *Antes:* ~${formatDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)}~\n🗓️ *Novo:* ${formatDate(date)} às ${time}`;
   await sendTo(phone, text, {
-    buttons: [{ text: '✅ Confirmar', id: `cli_rok:${b.id}:${date}:${hhmm}` }, { text: '↩️ Voltar', id: `cli_rag:${b.id}` }],
+    buttons: [{ text: 'Confirmar', id: `cli_rok:${b.id}:${date}:${hhmm}` }, { text: 'Voltar', id: `cli_rag:${b.id}` }],
     fallbackText: `${text}\n\nResponda *confirmar* para reagendar.`
   });
 }
@@ -692,7 +692,7 @@ async function askRescheduleConfirm(phone, found, date, hhmm) {
 async function doReschedule(phone, found, date, hhmm) {
   const { b, tenant } = found;
   const time = `${hhmm.slice(0, 2)}:${hhmm.slice(2)}`;
-  if (!freeSlots(found, date).includes(time)) { await sendTo(phone, 'Esse horário acabou de ser ocupado. Escolha outro. 🙏', { buttons: [{ text: '🔄 Escolher outro', id: `cli_rag:${b.id}` }] }); return; }
+  if (!freeSlots(found, date).includes(time)) { await sendTo(phone, 'Esse horário acabou de ser ocupado. Escolha outro. 🙏', { buttons: [{ text: 'Escolher outro', id: `cli_rag:${b.id}` }] }); return; }
   db.prepare("UPDATE bookings SET booking_date = ?, booking_time = ?, rescheduled_at = datetime('now'), client_confirmed_at = NULL, reminder_sent = 0 WHERE id = ?").run(date, time, b.id);
   broadcast(tenant.id, b.id);
   notifyBooking(tenant.id, b.id, 'reagendado', { oldDate: b.booking_date, oldTime: b.booking_time });
@@ -726,7 +726,7 @@ async function handleClientMessage(msg, text) {
           return { title: `${c.tenant.name}`.slice(0, 24), description: `${formatDate(c.b.booking_date)} às ${String(c.b.booking_time).slice(0, 5)} · ${c.b.servico || ''}`.slice(0, 72), id: `${act}:${r.id}` };
         });
         const fallbackText = `${isOk ? '✅ *Confirmar presença*' : isCancel ? '❌ *Cancelar*' : '🔄 *Reagendar*'}\n\nVocê tem mais de um agendamento:\n${mine.slice(0, 10).map(r => { const c = clientBooking(r.id, phone); return `• ${c.tenant.name} — ${formatDate(c.b.booking_date)} às ${String(c.b.booking_time).slice(0, 5)}`; }).join('\n')}\n\nToque no botão da mensagem original do agendamento que quer alterar.`;
-        await sendTo(phone, fallbackText, null, { title: isOk ? '✅ Confirmar' : isCancel ? '❌ Cancelar' : '🔄 Reagendar', text: 'Qual agendamento? 👇', buttonText: 'Ver agendamentos', sections: [{ title: 'Seus agendamentos', rows }], fallbackText }).catch(() => {});
+        await sendTo(phone, fallbackText, null, { title: isOk ? 'Confirmar' : isCancel ? 'Cancelar' : 'Reagendar', text: 'Qual agendamento? 👇', buttonText: 'Ver agendamentos', sections: [{ title: 'Seus agendamentos', rows }], fallbackText }).catch(() => {});
         return true;
       }
       action = act; id = mine[0].id;

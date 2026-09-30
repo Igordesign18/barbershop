@@ -343,21 +343,32 @@ const DEFAULT_SCHEDULE = {
 };
 
 const DEFAULT_WHATSAPP_TEMPLATE =
-  'Ola {{cliente}}! Seu agendamento na *{{barbearia}}* foi confirmado.\n\n' +
-  'Servico: {{servico}}\n' +
-  'Barbeiro: {{barbeiro}}\n' +
-  'Data: {{data}}\n' +
-  'Horario: {{hora}}\n' +
-  'Valor: R$ {{valor}}\n\n' +
-  'Qualquer imprevisto, e so chamar por aqui. Ate ja!';
+  'Olá, {{cliente}}! ✅\n\n' +
+  'Seu agendamento na *{{barbearia}}* está confirmado.\n\n' +
+  '✂️ *Serviço:* {{servico}}\n' +
+  '💈 *Barbeiro:* {{barbeiro}}\n' +
+  '🗓️ *Data:* {{data}}\n' +
+  '⏰ *Horário:* {{hora}}\n' +
+  '💰 *Valor:* R$ {{valor}}\n\n' +
+  'Qualquer imprevisto, é só chamar por aqui. Até já! 👋';
 
 const DEFAULT_REMINDER_TEMPLATE =
+  'Olá, {{cliente}}! 👋\n\n' +
+  'Passando para lembrar do seu agendamento na *{{barbearia}}*:\n\n' +
+  '✂️ *Serviço:* {{servico}}\n' +
+  '💈 *Barbeiro:* {{barbeiro}}\n' +
+  '🗓️ *Data:* {{data}}\n' +
+  '⏰ *Horário:* {{hora}}\n\n' +
+  'Te esperamos! 💈';
+
+// Textos padrao antigos (sem acento nem emoji): quem nunca personalizou passa a usar os novos
+const OLD_WHATSAPP_TEMPLATE =
+  'Ola {{cliente}}! Seu agendamento na *{{barbearia}}* foi confirmado.\n\n' +
+  'Servico: {{servico}}\n' + 'Barbeiro: {{barbeiro}}\n' + 'Data: {{data}}\n' + 'Horario: {{hora}}\n' +
+  'Valor: R$ {{valor}}\n\n' + 'Qualquer imprevisto, e so chamar por aqui. Ate ja!';
+const OLD_REMINDER_TEMPLATE =
   'Ola {{cliente}}! Passando pra lembrar do seu agendamento na *{{barbearia}}*.\n\n' +
-  'Servico: {{servico}}\n' +
-  'Barbeiro: {{barbeiro}}\n' +
-  'Data: {{data}}\n' +
-  'Horario: {{hora}}\n\n' +
-  'Te esperamos!';
+  'Servico: {{servico}}\n' + 'Barbeiro: {{barbeiro}}\n' + 'Data: {{data}}\n' + 'Horario: {{hora}}\n\n' + 'Te esperamos!';
 
 // Lembrete comeca desligado - o gestor liga e escolhe a antecedencia no painel (em horas)
 const DEFAULT_REMINDER_CONFIG = {
@@ -389,6 +400,19 @@ function seedTenantDefaults(tenantId) {
   upsert.run(tenantId, 'loyalty_config', JSON.stringify(DEFAULT_LOYALTY_CONFIG));
   upsert.run(tenantId, 'reminder_config', JSON.stringify(DEFAULT_REMINDER_CONFIG));
 }
+
+
+// Migra os textos padrao antigos para os novos (so quem nao personalizou)
+try {
+  db.prepare("UPDATE settings SET value = ? WHERE key = 'whatsapp_template' AND value = ?").run(DEFAULT_WHATSAPP_TEMPLATE, OLD_WHATSAPP_TEMPLATE);
+  for (const r of db.prepare("SELECT tenant_id, value FROM settings WHERE key = 'reminder_config'").all()) {
+    const cfg = JSON.parse(r.value || '{}');
+    if (cfg.template === OLD_REMINDER_TEMPLATE) {
+      cfg.template = DEFAULT_REMINDER_TEMPLATE;
+      db.prepare("UPDATE settings SET value = ? WHERE tenant_id = ? AND key = 'reminder_config'").run(JSON.stringify(cfg), r.tenant_id);
+    }
+  }
+} catch (err) { console.error('[db] migração dos textos padrão:', err.message); }
 
 // ==================== Revendedores ====================
 // Revendedor = alguem que vende o sistema com login proprio (/revendedor), cria barbearias e
