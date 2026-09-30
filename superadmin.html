@@ -513,6 +513,9 @@
                 <label style="display:flex; align-items:center; gap:8px; margin-top:8px; cursor:pointer;">
                     <input type="checkbox" id="editTenantNotifyEnabled" style="width:auto;"> Enviar avisos de agendamento para este número
                 </label>
+                <label style="display:flex; align-items:flex-start; gap:8px; margin-top:10px; cursor:pointer;">
+                    <input type="checkbox" id="editClientNotifyCentral" style="width:auto; margin-top:3px;"> <span>Enviar confirmação e lembrete aos <b>clientes</b> desta barbearia pelo WhatsApp do sistema (com botões WhatsApp, Reagendar e Cancelar)</span>
+                </label>
                 <button type="button" class="btn btn-secondary" style="margin-top:8px;" onclick="testNotifyTenant()"><i class="fas fa-paper-plane" aria-hidden="true"></i> Enviar teste</button>
             </div>
             <div class="form-group">
@@ -916,6 +919,7 @@
         document.getElementById('editTenantProvider').value = ['evogo', 'wuzapi'].includes(tenant.whatsapp_provider) ? tenant.whatsapp_provider : 'evolution';
         document.getElementById('editTenantNotifyPhone').value = tenant.notify_phone || '';
         document.getElementById('editTenantNotifyEnabled').checked = tenant.notify_enabled !== 0;
+        document.getElementById('editClientNotifyCentral').checked = !!tenant.client_notify_central;
         document.getElementById('editManagerEmail').value = tenant.manager ? tenant.manager.email : '';
         document.getElementById('editManagerPassword').value = '';
         const priceGroup = document.getElementById('editPriceGroup');
@@ -948,6 +952,7 @@
                     whatsapp_provider: document.getElementById('editTenantProvider').value,
                     notify_phone: document.getElementById('editTenantNotifyPhone').value,
                     notify_enabled: document.getElementById('editTenantNotifyEnabled').checked,
+                    client_notify_central: document.getElementById('editClientNotifyCentral').checked,
                     ...(!document.getElementById('editPriceGroup').classList.contains('hidden') && document.getElementById('editMonthlyPrice').value.trim() !== (window.__editOriginalPrice || '')
                         ? { monthly_price: document.getElementById('editMonthlyPrice').value } : {})
                 })

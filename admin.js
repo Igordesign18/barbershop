@@ -3047,6 +3047,7 @@
                 document.getElementById('gestorNotifyPhone').value = d.notify_phone ? String(d.notify_phone).replace(/^55/, '') : '';
                 document.getElementById('gestorNotifyEnabled').checked = d.notify_enabled !== false;
                 document.getElementById('gestorNotifyAllBarbers').checked = d.notify_all_barbers !== false;
+                document.getElementById('clientNotifyCentral').checked = !!d.client_notify_central;
                 document.getElementById('gestorNotifyWarn').classList.toggle('hidden', !!d.sistema_conectado);
             } catch (_) { /* card opcional */ }
         }
@@ -3058,7 +3059,8 @@
                     body: JSON.stringify({
                         notify_phone: document.getElementById('gestorNotifyPhone').value,
                         notify_enabled: document.getElementById('gestorNotifyEnabled').checked,
-                        notify_all_barbers: document.getElementById('gestorNotifyAllBarbers').checked
+                        notify_all_barbers: document.getElementById('gestorNotifyAllBarbers').checked,
+                        client_notify_central: document.getElementById('clientNotifyCentral').checked
                     })
                 });
                 showNotification('Avisos salvos!', 'success');

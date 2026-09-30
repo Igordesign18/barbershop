@@ -635,6 +635,13 @@
                         Quero receber os avisos
                     </label>
                 </div>
+                <div class="form-group" style="padding:12px; border:1px solid var(--border, rgba(255,255,255,.12)); border-radius:10px;">
+                    <label for="clientNotifyCentral" style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="clientNotifyCentral" style="width:auto; margin-top:4px;">
+                        <span><b>Enviar confirmação e lembrete aos meus clientes pelo WhatsApp do sistema</b><br>
+                        <small style="color:var(--text-muted, #a89f8d); line-height:1.5;">Use se você não quer conectar o seu próprio WhatsApp. O cliente recebe a mensagem com os botões <b>WhatsApp</b>, <b>Reagendar</b> e <b>Cancelar</b>. Cada barbearia envia só para os seus clientes.</small></span>
+                    </label>
+                </div>
                 <div class="form-group">
                     <label for="gestorNotifyAllBarbers" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                         <input type="checkbox" id="gestorNotifyAllBarbers" style="width:auto;">
@@ -902,8 +909,9 @@
                 <h2><i class="fas fa-clock" aria-hidden="true"></i> Horários de Funcionamento</h2>
                 <div class="interval-config">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label for="intervalTime">Intervalo entre atendimentos (minutos)</label>
-                        <input type="number" id="intervalTime" value="30" min="5" step="5">
+                        <label for="intervalTime">De quanto em quanto tempo mostrar horários (minutos)</label>
+                        <input type="number" id="intervalTime" value="30" min="5" max="120" step="5">
+                        <small style="display:block; margin-top:8px; color:var(--text-muted, #a89f8d); line-height:1.5;">Não é uma pausa entre clientes. Só define os horários que aparecem para agendar (30 = 08:00, 08:30, 09:00…). O horário em que um atendimento termina também é oferecido, sem espera. Recomendado: 30.</small>
                     </div>
                 </div>
                 <div class="day-schedule-container" id="dayScheduleContainer" role="region" aria-label="Configuração de horários"></div>

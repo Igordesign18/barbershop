@@ -905,7 +905,8 @@ async function runTool(name, args, ctx) {
         clientPhone: user.phone,
         serviceName: itemName,
         servicePrice: finalPrice,
-        barberName: barber.name
+        barberName: barber.name,
+        skipCentral: true // a IA ja confirma na propria conversa
       });
 
       return {

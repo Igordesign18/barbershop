@@ -265,6 +265,8 @@ ensureColumn('tenants', 'notify_phone', 'TEXT');
 // WhatsApp do proprio barbeiro: recebe os avisos dos agendamentos dele
 ensureColumn('barbers', 'notify_phone', 'TEXT');
 ensureColumn('tenants', 'notify_enabled', 'INTEGER NOT NULL DEFAULT 1');
+// 1 = confirmacao/lembrete ao CLIENTE saem pelo numero central do sistema (em vez do WhatsApp da barbearia)
+ensureColumn('tenants', 'client_notify_central', 'INTEGER NOT NULL DEFAULT 0');
 // 1 = gestor recebe o aviso de TODOS os barbeiros; 0 = nao recebe os de barbeiros que ja tem WhatsApp proprio
 ensureColumn('tenants', 'notify_all_barbers', 'INTEGER NOT NULL DEFAULT 1');
 

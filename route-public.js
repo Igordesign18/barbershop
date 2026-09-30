@@ -210,6 +210,65 @@ router.post('/:slug/bookings/:id/cancel-request', (req, res) => {
   res.json({ ok: true });
 });
 
+// ---- Reagendar pelo site: o cliente (identificado pelo telefone) troca dia/horario do PROPRIO agendamento ----
+// Mesmo profissional e mesmo servico; os horarios livres seguem a mesma regra da agenda (ai-agent.computeFreeSlots).
+function ownFutureBooking(req, phone) {
+  if (!phone) return { error: 'Informe o telefone', status: 400 };
+  const b = db.prepare(`
+    SELECT b.*, COALESCE(b.item_duration, s.duration, 30) AS duracao
+    FROM bookings b LEFT JOIN services s ON s.id = b.service_id
+    WHERE b.id = ? AND b.tenant_id = ?
+  `).get(req.params.id, req.tenantId);
+  if (!b) return { error: 'Agendamento não encontrado', status: 404 };
+  if (normalizePhone(phone) !== b.customer_phone) return { error: 'Este agendamento não pertence a este telefone', status: 403 };
+  if (b.status !== 'confirmed' || !isFuture(b, nowBrasilia())) return { error: 'Este agendamento não pode mais ser reagendado', status: 400 };
+  if (!b.barber_id) return { error: 'Este agendamento não tem profissional definido. Fale com a barbearia para reagendar.', status: 400 };
+  return { booking: b };
+}
+
+function addDaysISO(date, n) {
+  const d = new Date(date + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+router.get('/:slug/bookings/:id/reschedule-days', (req, res) => {
+  const r = ownFutureBooking(req, req.query.phone);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  const { computeFreeSlots } = require('./ai-agent');
+  const today = nowBrasilia().date;
+  const days = [];
+  for (let i = 0; i < 30 && days.length < 10; i++) {
+    const date = addDaysISO(today, i);
+    const slots = computeFreeSlots(req.tenantId, r.booking.barber_id, date, Number(r.booking.duracao), r.booking.id);
+    if (slots.length) days.push({ date, count: slots.length });
+  }
+  res.json({ days });
+});
+
+router.get('/:slug/bookings/:id/reschedule-slots', (req, res) => {
+  const r = ownFutureBooking(req, req.query.phone);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  const date = String(req.query.date || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Data inválida' });
+  const { computeFreeSlots } = require('./ai-agent');
+  res.json({ slots: computeFreeSlots(req.tenantId, r.booking.barber_id, date, Number(r.booking.duracao), r.booking.id) });
+});
+
+router.post('/:slug/bookings/:id/reschedule', (req, res) => {
+  const { phone, date, time } = req.body || {};
+  const r = ownFutureBooking(req, phone);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  const t = String(time || '').slice(0, 5);
+  const { computeFreeSlots } = require('./ai-agent');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date)) || !computeFreeSlots(req.tenantId, r.booking.barber_id, date, Number(r.booking.duracao), r.booking.id).includes(t)) {
+    return res.status(409).json({ error: 'Esse horário não está mais disponível. Escolha outro.' });
+  }
+  db.prepare("UPDATE bookings SET booking_date = ?, booking_time = ?, rescheduled_at = datetime('now'), client_confirmed_at = NULL, reminder_sent = 0 WHERE id = ?").run(date, t, r.booking.id);
+  try { require('./events').broadcastBookingChange(req.tenantId, 'UPDATE', { id: r.booking.id, status: 'confirmed' }); } catch (_) {}
+  require('./gestor-notify').notifyBooking(req.tenantId, r.booking.id, 'reagendado', { oldDate: r.booking.booking_date, oldTime: r.booking.booking_time });
+  res.json({ ok: true, booking_date: date, booking_time: t });
+});
+
 // Cliente avalia um atendimento - so permitido se o gestor ja marcou como concluido,
 // se o telefone bate com o do agendamento, e se ainda nao existe avaliacao pra ele
 router.post('/:slug/bookings/:id/review', (req, res) => {

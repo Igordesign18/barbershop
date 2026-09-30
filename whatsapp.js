@@ -20,8 +20,13 @@ function fillTemplate(template, vars) {
 
 // Chamada depois que um agendamento e criado (rota publica). Nunca deixa o agendamento
 // falhar por causa do WhatsApp: qualquer erro aqui so fica registrado no log.
-async function sendBookingConfirmation({ tenant, booking, clientName, clientPhone, serviceName, servicePrice, barberName }) {
+async function sendBookingConfirmation({ tenant, booking, clientName, clientPhone, serviceName, servicePrice, barberName, skipCentral }) {
   try {
+    // Barbearia que usa o numero central do sistema: confirmacao com botoes (WhatsApp / Reagendar / Cancelar)
+    if (require('./gestor-notify').usesCentral(tenant.id)) {
+      if (!skipCentral) require('./gestor-notify').notifyClient(tenant.id, booking.id, 'confirmacao');
+      return { sent: !skipCentral, via: 'central' };
+    }
     const instance = db.prepare('SELECT * FROM whatsapp_instances WHERE tenant_id = ?').get(tenant.id);
     if (!instance || instance.status !== 'connected') {
       return { sent: false, reason: 'whatsapp_not_connected' };

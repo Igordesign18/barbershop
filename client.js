@@ -339,6 +339,21 @@
             setInterval(updateStatusBadge, 60000);
             
             document.getElementById('unverifiedUserFields').classList.remove('hidden'); 
+
+            // Link vindo do lembrete do WhatsApp (?meus=cancelar | reagendar): abre direto "Meus agendamentos"
+            const meus = new URLSearchParams(location.search).get('meus');
+            if (meus) {
+                enterAppAndOpenLookup();
+                const hint = document.getElementById('lookupHint');
+                if (hint) {
+                    hint.textContent = meus === 'cancelar'
+                        ? 'Digite seu telefone, toque em Buscar e depois em "Cancelar agendamento" no horário que quer cancelar.'
+                        : meus === 'reagendar'
+                            ? 'Digite seu telefone, toque em Buscar e depois em "Reagendar" no horário que quer trocar.'
+                            : 'Digite seu telefone e toque em Buscar para ver, reagendar ou cancelar seus horários.';
+                    hint.classList.remove('hidden');
+                }
+            }
         }
 
         function showTenantError(message) {
@@ -617,8 +632,13 @@
                                 ${b.barber_name ? `<span><i class="fas fa-user-tie" aria-hidden="true"></i>${esc(b.barber_name)}</span>` : ''}
                             </div>
                             ${b.can_cancel ? `
+                                <div id="rescheduleBox-${b.id}">
+                                    <button class="btn" style="margin-top:12px; padding:9px; background:transparent; border:1px solid var(--brass); color:var(--brass-light);" onclick="openReschedule(${b.id})">
+                                        <i class="fas fa-rotate" aria-hidden="true"></i> Reagendar
+                                    </button>
+                                </div>
                                 <div id="cancelBox-${b.id}">
-                                    <button class="btn" style="margin-top:12px; padding:9px; background:transparent; border:1px solid var(--red); color:var(--red);" onclick="openCancelRequest(${b.id})">
+                                    <button class="btn" style="margin-top:10px; padding:9px; background:transparent; border:1px solid var(--red); color:var(--red);" onclick="openCancelRequest(${b.id})">
                                         <i class="fas fa-ban" aria-hidden="true"></i> Cancelar agendamento
                                     </button>
                                 </div>
@@ -703,6 +723,78 @@
         }
 
         // ==================== Cancelamento (instantâneo — a barbearia só recebe o aviso) ====================
+        // ==================== Reagendar pelo site (mesmo profissional e serviço) ====================
+        function rsBox(id) { return document.getElementById(`rescheduleBox-${id}`); }
+        function rsFmtDate(iso) {
+            const d = new Date(iso + 'T12:00:00');
+            const wd = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d.getDay()];
+            return `${wd}, ${iso.split('-').reverse().slice(0, 2).join('/')}`;
+        }
+        const RS_CHIP = 'padding:9px 12px; border-radius:8px; border:1px solid var(--hairline); background:var(--surface-raised); color:var(--ivory); font-family:inherit; font-size:13px; cursor:pointer;';
+
+        async function openReschedule(id) {
+            const box = rsBox(id);
+            if (!box) return;
+            box.innerHTML = '<p style="margin-top:12px; font-size:13px; color:var(--ivory-muted);">Buscando datas livres...</p>';
+            try {
+                const r = await fetch(`${API_URL}/bookings/${id}/reschedule-days?phone=${encodeURIComponent(lookupPhoneCache)}`);
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(data.error || 'Não foi possível buscar as datas');
+                if (!data.days.length) { box.innerHTML = '<p style="margin-top:12px; font-size:13px; color:var(--ivory-muted);">Não há horários livres nos próximos dias. Fale com a barbearia.</p>'; return; }
+                box.innerHTML = `
+                    <div style="margin-top:12px; padding:12px; border:1px solid var(--brass); border-radius:10px;">
+                        <p style="font-size:13px; margin-bottom:10px;"><strong>Escolha o novo dia</strong> (mesmo profissional e serviço):</p>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            ${data.days.map(d => `<button style="${RS_CHIP}" onclick="pickRescheduleDay(${id}, '${d.date}')">${rsFmtDate(d.date)}</button>`).join('')}
+                        </div>
+                        <button style="${RS_CHIP} margin-top:10px; background:transparent;" onclick="searchMyBookings()">Voltar</button>
+                    </div>`;
+            } catch (e) { box.innerHTML = `<p style="margin-top:12px; font-size:13px; color:var(--red);">${e.message}</p>`; }
+        }
+
+        async function pickRescheduleDay(id, date) {
+            const box = rsBox(id);
+            box.innerHTML = '<p style="margin-top:12px; font-size:13px; color:var(--ivory-muted);">Buscando horários...</p>';
+            try {
+                const r = await fetch(`${API_URL}/bookings/${id}/reschedule-slots?phone=${encodeURIComponent(lookupPhoneCache)}&date=${date}`);
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(data.error || 'Não foi possível buscar os horários');
+                box.innerHTML = `
+                    <div style="margin-top:12px; padding:12px; border:1px solid var(--brass); border-radius:10px;">
+                        <p style="font-size:13px; margin-bottom:10px;"><strong>${rsFmtDate(date)}</strong> — escolha o horário:</p>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                            ${data.slots.length ? data.slots.map(t => `<button style="${RS_CHIP}" onclick="confirmReschedule(${id}, '${date}', '${t}')">${t}</button>`).join('') : '<span style="font-size:13px; color:var(--ivory-muted);">Sem horários nesse dia.</span>'}
+                        </div>
+                        <button style="${RS_CHIP} margin-top:10px; background:transparent;" onclick="openReschedule(${id})">Escolher outro dia</button>
+                    </div>`;
+            } catch (e) { box.innerHTML = `<p style="margin-top:12px; font-size:13px; color:var(--red);">${e.message}</p>`; }
+        }
+
+        function confirmReschedule(id, date, time) {
+            const box = rsBox(id);
+            box.innerHTML = `
+                <div style="margin-top:12px; padding:12px; border:1px solid var(--brass); border-radius:10px;">
+                    <p style="font-size:13px; margin-bottom:10px;">Reagendar para <strong>${rsFmtDate(date)} às ${time}</strong>?</p>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn" style="padding:9px;" onclick="sendReschedule(${id}, '${date}', '${time}')">Confirmar</button>
+                        <button class="btn" style="padding:9px; background:transparent; border:1px solid var(--hairline); color:var(--ivory);" onclick="pickRescheduleDay(${id}, '${date}')">Voltar</button>
+                    </div>
+                </div>`;
+        }
+
+        async function sendReschedule(id, date, time) {
+            try {
+                const r = await fetch(`${API_URL}/bookings/${id}/reschedule`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: lookupPhoneCache, date, time })
+                });
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(data.error || 'Não foi possível reagendar');
+                await searchMyBookings();
+                alert(`Reagendado para ${rsFmtDate(date)} às ${time}! A barbearia foi avisada.`);
+            } catch (e) { alert(e.message); openReschedule(id); }
+        }
+
         function openCancelRequest(bookingId) {
             const box = document.getElementById(`cancelBox-${bookingId}`);
             if (!box) return;

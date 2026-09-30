@@ -423,6 +423,10 @@ async function handleIncoming(body) {
     if (seenMsg.size > 500) seenMsg.delete(seenMsg.values().next().value);
 
     const text = msg.text.toLowerCase();
+    // Cliente final mexendo no proprio agendamento (botoes Reagendar / Cancelar)
+    if (/id: cli_/.test(text) || !scopesFor(msg.senderPhone).length) {
+      if (await handleClientMessage(msg, text).catch(err => { console.error('[aviso] erro cliente:', err.message); return true; })) continue;
+    }
     const dayId = text.match(/id: dia:(\d+):(\d+):(\d{4}-\d{2}-\d{2})/);
     const isAgenda = text.includes(BTN_AGENDA_ID) || /^\W*(meus )?agendamentos?\W*$|^\W*agenda\W*$/.test(text) || text.includes('meus agendamentos');
     const typedDate = !dayId && !text.startsWith('[cliente tocou') ? parseTypedDate(text) : null;
@@ -452,6 +456,315 @@ async function handleIncoming(body) {
   }
 }
 const seenMsg = new Set();
+
+// ==================== Mensagens ao CLIENTE pelo numero central ====================
+// Barbearias que preferem nao conectar o proprio WhatsApp: a confirmacao e o lembrete saem pelo numero
+// do sistema, com 3 botoes: WhatsApp da barbearia, Reagendar e Cancelar. Cada toque carrega o id do
+// agendamento e so vale se quem tocou e o dono do telefone daquele agendamento (barbearias nunca se misturam).
+
+// O numero do sistema so vale quando a barbearia marcou a opcao E NAO tem WhatsApp proprio conectado.
+function usesCentral(tenantId) {
+  const t = db.prepare('SELECT client_notify_central FROM tenants WHERE id = ?').get(tenantId);
+  if (!t || !t.client_notify_central) return false;
+  const inst = db.prepare('SELECT status FROM whatsapp_instances WHERE tenant_id = ?').get(tenantId);
+  return !(inst && inst.status === 'connected');
+}
+
+// Cliente pode reagendar/cancelar conversando no WhatsApp? Só se o atendente IA estiver ativo (plano PRO).
+// Sem a IA, os botoes levam ao link da barbearia (aba "Meus agendamentos").
+function manageInChat(tenant) {
+  try {
+    const ai = require('./ai-agent');
+    return ai.isProTenant(tenant) && !!ai.getAiConfig(tenant.id).enabled;
+  } catch (_) { return false; }
+}
+
+function publicBase() {
+  let base = process.env.PUBLIC_BASE_URL;
+  if (!base) base = (db.prepare("SELECT value FROM settings WHERE key = 'public_base_url' AND value != '' ORDER BY rowid DESC LIMIT 1").get() || {}).value;
+  return base ? base.replace(/\/$/, '') : '';
+}
+
+function shopPhone(tenant, barberId) {
+  try {
+    const row = db.prepare("SELECT value FROM settings WHERE tenant_id = ? AND key = 'shop_profile'").get(tenant.id);
+    const phone = row && JSON.parse(row.value).phone;
+    if (phone && digits55(phone).length >= 12) return digits55(phone);
+  } catch (_) {}
+  if (digits55(tenant.notify_phone).length >= 12) return digits55(tenant.notify_phone);
+  const br = barberId ? db.prepare('SELECT notify_phone FROM barbers WHERE id = ?').get(barberId) : null;
+  return br && digits55(br.notify_phone).length >= 12 ? digits55(br.notify_phone) : '';
+}
+
+function clientCardButtons(tenant, b, text, kind) {
+  const phone = shopPhone(tenant, b.barber_id);
+  const inChat = manageInChat(tenant);
+  const base = publicBase();
+  const link = (acao) => base ? `${base}/${tenant.slug}?meus=${acao}` : '';
+  const list = [];
+  let extra = '';
+
+  if (kind === 'lembrete') {
+    list.push({ text: '✅ Confirmar', id: `cli_ok:${b.id}` });
+    if (inChat) {
+      list.push({ text: '🔄 Reagendar', id: `cli_rag:${b.id}` });
+      list.push({ text: '❌ Cancelar', id: `cli_can:${b.id}` });
+    } else if (base) {
+      list.push({ text: '🔄 Reagendar', url: link('reagendar') });
+      list.push({ text: '❌ Cancelar', url: link('cancelar') });
+      extra = '\n\nℹ️ *Como funciona:*\n• Tudo certo? Toque em *Confirmar* e pronto, não precisa fazer mais nada.\n• Para *reagendar* ou *cancelar*, toque no botão: você vai para o site da barbearia, digita seu telefone, toca em *Buscar* e escolhe o horário.';
+    }
+  } else {
+    if (phone) list.push({ text: '💬 WhatsApp', url: `https://wa.me/${phone}` });
+    if (inChat) {
+      list.push({ text: '🔄 Reagendar', id: `cli_rag:${b.id}` });
+      list.push({ text: '❌ Cancelar', id: `cli_can:${b.id}` });
+    } else if (base) {
+      list.push({ text: '🔄 Reagendar ou cancelar', url: link('1') });
+      extra = '\n\nℹ️ *Precisa mudar o horário ou cancelar?* Toque em *Reagendar ou cancelar*, digite seu telefone no site da barbearia, toque em *Buscar* e escolha a opção.';
+    }
+  }
+  const tail = inChat
+    ? `\n\n${kind === 'lembrete' ? '✅ Para confirmar, responda *ok*. ' : ''}🔄 Para reagendar, responda *reagendar*.\n❌ Para cancelar, responda *cancelar*.`
+    : (base ? `\n\n🔗 ${link('1')}` : '');
+  return {
+    text: text + extra,
+    buttons: { buttons: list, footer: tenant.name, fallbackText: text + extra + tail + (phone ? `\n💬 Falar com a barbearia: https://wa.me/${phone}` : '') }
+  };
+}
+
+function fillVars(template, vars) {
+  return Object.entries(vars).reduce((t, [k, v]) => t.split(`{{${k}}}`).join(v ?? ''), template);
+}
+
+// kind: 'confirmacao' | 'lembrete' | 'reagendado'. Retorna true se enviou. Lanca erro se falhar.
+async function sendClientCard(tenantId, bookingId, kind = 'confirmacao') {
+  if (!token()) throw new Error('WhatsApp do sistema não conectado');
+  const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId);
+  if (!tenant || !usesCentral(tenantId)) return false;
+  const b = bookingDetails(bookingId);
+  if (!b || b.tenant_id !== tenantId || !b.customer_phone) return false;
+  const { DEFAULT_REMINDER_CONFIG } = require('./db');
+  const vars = {
+    cliente: b.customer_full_name || '', barbearia: tenant.name, servico: b.servico || '',
+    barbeiro: b.profissional || 'a definir',
+    data: String(b.booking_date).split('-').reverse().join('/'), hora: String(b.booking_time).slice(0, 5),
+    valor: brl(Math.max(0, Number(b.preco) - Number(b.discount_applied || 0)))
+  };
+  let text;
+  if (kind === 'lembrete') {
+    let cfg = {};
+    try { cfg = JSON.parse((db.prepare("SELECT value FROM settings WHERE tenant_id = ? AND key = 'reminder_config'").get(tenantId) || {}).value || '{}'); } catch (_) {}
+    text = fillVars(cfg.template || DEFAULT_REMINDER_CONFIG.template, vars);
+  } else if (kind === 'reagendado') {
+    text = `🔄 *Reagendado com sucesso!*\n_${tenant.name}_\n\n🗓️ ${formatDate(b.booking_date)} às ${vars.hora}\n✂️ ${vars.servico}\n💈 ${vars.barbeiro}`;
+  } else {
+    const row = db.prepare("SELECT value FROM settings WHERE tenant_id = ? AND key = 'whatsapp_template'").get(tenantId);
+    text = fillVars((row && row.value) || '{{cliente}}, agendamento confirmado para {{data}} às {{hora}}.', vars);
+  }
+  await ensureWebhook();
+  const card = clientCardButtons(tenant, b, text, kind);
+  await sendTo(b.customer_phone, card.text, card.buttons);
+  return true;
+}
+
+// Em segundo plano (confirmacao do agendamento): erro so vai pro log.
+function notifyClient(tenantId, bookingId, kind = 'confirmacao') {
+  setImmediate(async () => {
+    try {
+      if (await sendClientCard(tenantId, bookingId, kind)) {
+        if (kind === 'confirmacao') db.prepare('UPDATE bookings SET whatsapp_sent = 1 WHERE id = ?').run(bookingId);
+        console.log(`[aviso] ${kind} enviada ao cliente (tenant ${tenantId}, agendamento ${bookingId})`);
+      }
+    } catch (err) {
+      console.error(`[aviso] falhou ${kind} ao cliente (tenant ${tenantId}, agendamento ${bookingId}):`, err.message);
+    }
+  });
+}
+
+// Agendamento que ESTE telefone pode mexer: dele, confirmado, futuro e de barbearia que usa o numero central
+function clientBooking(id, senderPhone) {
+  const b = bookingDetails(Number(id));
+  if (!b || b.status !== 'confirmed' || !sameNumber(b.customer_phone, senderPhone)) return null;
+  const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(b.tenant_id);
+  if (!tenant || !tenant.client_notify_central) return null;
+  const now = nowBrasilia();
+  if (b.booking_date < now.date || (b.booking_date === now.date && String(b.booking_time).slice(0, 5) < now.time)) return null;
+  return { b, tenant };
+}
+
+function bookingSummary(b) {
+  return [
+    `👤 *Nome:* ${b.customer_full_name || '-'}`,
+    `📱 *Telefone:* ${formatPhone(b.customer_phone)}`,
+    `✂️ *Serviço:* ${b.servico || '-'}`,
+    `💈 *Profissional:* ${b.profissional || 'Qualquer um'}`,
+    `🗓️ *Data:* ${formatDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)}`
+  ].join('\n');
+}
+
+const NOT_FOUND_MSG = 'Não encontrei esse agendamento (ele pode já ter passado ou sido cancelado). Se precisar, fale com a barbearia. 🙏';
+
+function broadcast(tenantId, id) {
+  try {
+    const row = db.prepare('SELECT id, status FROM bookings WHERE id = ?').get(id);
+    require('./events').broadcastBookingChange(tenantId, 'UPDATE', row);
+  } catch (_) {}
+}
+
+// Passo 1 do cancelamento: pede confirmacao com nome completo e telefone (ja preenchidos)
+async function askCancel(phone, found) {
+  const { b, tenant } = found;
+  const text = `❌ *Cancelar agendamento?*\n_${tenant.name}_\n\n${bookingSummary(b)}\n\nConfirme os dados acima para cancelar.`;
+  await sendTo(phone, text, {
+    buttons: [{ text: '✅ Sim, cancelar', id: `cli_cok:${b.id}` }, { text: '↩️ Manter', id: `cli_cno:${b.id}` }],
+    fallbackText: `${text}\n\nResponda *sim* para cancelar ou *manter* para continuar com o agendamento.`
+  });
+}
+
+async function doCancel(phone, found) {
+  const { b, tenant } = found;
+  db.prepare("UPDATE bookings SET status = 'cancelled', cancelled_by = 'cliente_whatsapp' WHERE id = ?").run(b.id);
+  broadcast(tenant.id, b.id);
+  notifyBooking(tenant.id, b.id, 'cancelado');
+  const base = publicBase();
+  const text = `✅ *Agendamento cancelado.*\n_${tenant.name}_\n\n🗓️ ${formatDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)} · ${b.servico || ''}\n\nQuando quiser marcar de novo, é só agendar pelo link. ✂️`;
+  await sendTo(phone, text, base ? { buttons: [{ text: '📅 Agendar novamente', url: `${base}/${tenant.slug}` }], fallbackText: `${text}\n${base}/${tenant.slug}` } : null);
+}
+
+// Reagendar: dias com horario livre -> horarios (paginados) -> confirmacao
+function freeSlots(found, date) {
+  const { b, tenant } = found;
+  return require('./ai-agent').computeFreeSlots(tenant.id, b.barber_id, date, Number(b.duracao), b.id);
+}
+
+async function askRescheduleDay(phone, found) {
+  const { b, tenant } = found;
+  const today = nowBrasilia().date;
+  const rows = [];
+  for (let i = 0; i < 30 && rows.length < 10; i++) {
+    const date = new Date(today + 'T12:00:00Z'); date.setUTCDate(date.getUTCDate() + i);
+    const iso = date.toISOString().slice(0, 10);
+    const slots = freeSlots(found, iso);
+    if (slots.length) rows.push({ title: formatDate(iso), description: `${plural(slots.length, 'horário livre', 'horários livres')}`, id: `cli_rdia:${b.id}:${iso}` });
+  }
+  if (!rows.length) {
+    await sendTo(phone, `Não há horários livres nos próximos dias para reagendar. 😕 Fale com a barbearia para combinar.`, null);
+    return;
+  }
+  const fallbackText = `🔄 *Reagendar*\n\n${rows.map(r => `🗓️ ${r.title} · ${r.description}`).join('\n')}\n\nResponda com a data desejada. Ex: *15/10*`;
+  await sendTo(phone, fallbackText, null, {
+    title: '🔄 Reagendar', text: `Escolha o novo dia para ${b.servico || 'seu atendimento'}. 👇`, footer: tenant.name,
+    buttonText: 'Ver datas', sections: [{ title: 'Datas disponíveis', rows }], fallbackText
+  });
+}
+
+const PAGE = 9;
+async function askRescheduleTime(phone, found, date, offset = 0) {
+  const { b, tenant } = found;
+  const slots = freeSlots(found, date);
+  if (!slots.length) { await sendTo(phone, `Não há mais horários livres em ${formatDate(date)}. Escolha outra data. 🙏`, { buttons: [{ text: '🔄 Escolher outra data', id: `cli_rag:${b.id}` }] }); return; }
+  const page = slots.slice(offset, offset + PAGE);
+  const rows = page.map(t => ({ title: t, description: formatDate(date), id: `cli_rhr:${b.id}:${date}:${t.replace(':', '')}` }));
+  if (offset + PAGE < slots.length) rows.push({ title: '➡️ Mais horários', description: 'Ver os próximos horários do dia', id: `cli_rmais:${b.id}:${date}:${offset + PAGE}` });
+  const fallbackText = `🕐 *Horários em ${formatDate(date)}*\n\n${page.join(' · ')}\n\nResponda com o horário. Ex: *${page[0]}*`;
+  await sendTo(phone, fallbackText, null, {
+    title: `🕐 ${formatDate(date)}`, text: 'Escolha o novo horário. 👇', footer: tenant.name, buttonText: 'Ver horários',
+    sections: [{ title: 'Horários livres', rows }], fallbackText
+  });
+}
+
+async function askRescheduleConfirm(phone, found, date, hhmm) {
+  const { b, tenant } = found;
+  const time = `${hhmm.slice(0, 2)}:${hhmm.slice(2)}`;
+  if (!freeSlots(found, date).includes(time)) { await askRescheduleTime(phone, found, date); return; }
+  const text = `🔄 *Confirmar reagendamento?*\n_${tenant.name}_\n\n👤 *Nome:* ${b.customer_full_name || '-'}\n📱 *Telefone:* ${formatPhone(b.customer_phone)}\n✂️ *Serviço:* ${b.servico || '-'}\n\n🗓️ *Antes:* ~${formatDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)}~\n🗓️ *Novo:* ${formatDate(date)} às ${time}`;
+  await sendTo(phone, text, {
+    buttons: [{ text: '✅ Confirmar', id: `cli_rok:${b.id}:${date}:${hhmm}` }, { text: '↩️ Voltar', id: `cli_rag:${b.id}` }],
+    fallbackText: `${text}\n\nResponda *confirmar* para reagendar.`
+  });
+}
+
+async function doReschedule(phone, found, date, hhmm) {
+  const { b, tenant } = found;
+  const time = `${hhmm.slice(0, 2)}:${hhmm.slice(2)}`;
+  if (!freeSlots(found, date).includes(time)) { await sendTo(phone, 'Esse horário acabou de ser ocupado. Escolha outro. 🙏', { buttons: [{ text: '🔄 Escolher outro', id: `cli_rag:${b.id}` }] }); return; }
+  db.prepare("UPDATE bookings SET booking_date = ?, booking_time = ?, rescheduled_at = datetime('now'), client_confirmed_at = NULL, reminder_sent = 0 WHERE id = ?").run(date, time, b.id);
+  broadcast(tenant.id, b.id);
+  notifyBooking(tenant.id, b.id, 'reagendado', { oldDate: b.booking_date, oldTime: b.booking_time });
+  await sendClientCard(tenant.id, b.id, 'reagendado');
+}
+
+// Toques do cliente (ids "cli_*") e palavras soltas (cancelar / reagendar / sim / manter / confirmar)
+const pendingTyped = new Map(); // telefone -> { action, ... } ultima etapa aguardando resposta digitada
+async function handleClientMessage(msg, text) {
+  const phone = msg.senderPhone;
+  const m = text.match(/id: (cli_[a-z]+):(\d+)(?::(\d{4}-\d{2}-\d{2}))?(?::(\d{1,4}))?/);
+  let action = null, id = null, date = null, extra = null;
+  if (m) { [, action, id, date, extra] = m; }
+  else {
+    const word = text.replace(/[^\p{L}\s]/gu, '').trim();
+    let last = pendingTyped.get(digits55(phone));
+    if (last && Date.now() - (last.at || 0) > 10 * 60 * 1000) { pendingTyped.delete(digits55(phone)); last = null; } // etapa digitada expira em 10 min
+    if (/^(cancelar|cancela|cancelamento)$/.test(word) || /^(reagendar|remarcar|reagenda)$/.test(word) || (!(last && last.yes) && /^(ok|confirmo|confirmado|confirmar presenca|confirmar presença)$/.test(word))) {
+      const now = nowBrasilia();
+      const mine = db.prepare(`SELECT b.id FROM bookings b JOIN tenants t ON t.id = b.tenant_id
+        WHERE t.client_notify_central = 1 AND b.status = 'confirmed' AND (b.booking_date > ? OR (b.booking_date = ? AND substr(b.booking_time,1,5) >= ?))
+        ORDER BY b.booking_date, b.booking_time`).all(now.date, now.date, now.time).filter(r => { const c = clientBooking(r.id, phone); return !!c; });
+      if (!mine.length) return false;
+      const isCancel = /cancel/.test(word);
+      const isOk = /^(ok|confirm)/.test(word);
+      const act = isOk ? 'cli_ok' : isCancel ? 'cli_can' : 'cli_rag';
+      if (mine.length > 1) {
+        // Mais de um agendamento (ou de mais de uma barbearia): nunca adivinha, o cliente escolhe qual
+        const rows = mine.slice(0, 10).map(r => {
+          const c = clientBooking(r.id, phone);
+          return { title: `${c.tenant.name}`.slice(0, 24), description: `${formatDate(c.b.booking_date)} às ${String(c.b.booking_time).slice(0, 5)} · ${c.b.servico || ''}`.slice(0, 72), id: `${act}:${r.id}` };
+        });
+        const fallbackText = `${isOk ? '✅ *Confirmar presença*' : isCancel ? '❌ *Cancelar*' : '🔄 *Reagendar*'}\n\nVocê tem mais de um agendamento:\n${mine.slice(0, 10).map(r => { const c = clientBooking(r.id, phone); return `• ${c.tenant.name} — ${formatDate(c.b.booking_date)} às ${String(c.b.booking_time).slice(0, 5)}`; }).join('\n')}\n\nToque no botão da mensagem original do agendamento que quer alterar.`;
+        await sendTo(phone, fallbackText, null, { title: isOk ? '✅ Confirmar' : isCancel ? '❌ Cancelar' : '🔄 Reagendar', text: 'Qual agendamento? 👇', buttonText: 'Ver agendamentos', sections: [{ title: 'Seus agendamentos', rows }], fallbackText }).catch(() => {});
+        return true;
+      }
+      action = act; id = mine[0].id;
+    } else if (last && last.yes && /^(sim|confirmar|confirmo)$/.test(word)) { ({ id, date, extra } = last); action = last.yes; }
+    else if (last && last.yes === 'cli_cok' && /^(manter|nao|não)$/.test(word)) { action = 'cli_cno'; id = last.id; }
+    else if (last && last.action === 'day') {
+      const d = parseTypedDate(text); if (d) { action = 'cli_rdia'; id = last.id; date = d; }
+    } else if (last && last.action === 'time' && /^\d{1,2}[:h]?\d{2}$/.test(word.replace(/\s/g, '')) ) {
+      action = 'cli_rhr'; id = last.id; date = last.date; extra = word.replace(/\D/g, '').padStart(4, '0');
+    }
+    if (!action) return false;
+  }
+  const found = clientBooking(id, phone);
+  if (!found) { await sendTo(phone, NOT_FOUND_MSG, null).catch(() => {}); return true; }
+  const key = digits55(phone);
+  const origSet = pendingTyped.set.bind(pendingTyped);
+  const stamp = (k, v) => origSet(k, { ...v, at: Date.now() });
+  try {
+    switch (action) {
+      case 'cli_ok': {
+        db.prepare("UPDATE bookings SET client_confirmed_at = datetime('now') WHERE id = ?").run(found.b.id);
+        broadcast(found.tenant.id, found.b.id);
+        notifyBooking(found.tenant.id, found.b.id, 'confirmado');
+        await sendTo(phone, `✅ *Presença confirmada!*\n_${found.tenant.name}_\n\n🗓️ ${formatDate(found.b.booking_date)} às ${String(found.b.booking_time).slice(0, 5)}\nTe esperamos! 💈`, null);
+        break;
+      }
+      case 'cli_can': stamp(key, { id, yes: 'cli_cok' }); await askCancel(phone, found); break;
+      case 'cli_cok': pendingTyped.delete(key); await doCancel(phone, found); break;
+      case 'cli_cno': pendingTyped.delete(key); await sendTo(phone, `👍 Combinado! Mantivemos seu agendamento de ${formatDate(found.b.booking_date)} às ${String(found.b.booking_time).slice(0, 5)}.`, null); break;
+      case 'cli_rag': stamp(key, { action: 'day', id }); await askRescheduleDay(phone, found); break;
+      case 'cli_rdia': stamp(key, { action: 'time', id, date }); await askRescheduleTime(phone, found, date, 0); break;
+      case 'cli_rmais': await askRescheduleTime(phone, found, date, Number(extra) || 0); break;
+      case 'cli_rhr': stamp(key, { id, yes: 'cli_rok', date, extra }); await askRescheduleConfirm(phone, found, date, String(extra).padStart(4, '0')); break;
+      case 'cli_rok': pendingTyped.delete(key); await doReschedule(phone, found, date, String(extra).padStart(4, '0')); break;
+      default: return false;
+    }
+  } catch (err) {
+    console.error('[aviso] falha no fluxo do cliente:', err.message);
+  }
+  return true;
+}
+
 
 // Garante que o numero central avisa este servidor dos toques nos botoes. Usa PUBLIC_BASE_URL ou a URL
 // que qualquer gestor ja usou no painel (salva em settings.public_base_url). Roda 1x por URL.
@@ -523,4 +836,4 @@ async function sendTest(phone, tenantName) {
   ].filter(Boolean).join('\n'));
 }
 
-module.exports = { status, connect, currentQr, disconnect, notifyBooking, sendTest, buildMessage, recipientsFor, handleIncoming, ensureWebhook, notifyOwner };
+module.exports = { hasToken: () => !!token(), usesCentral, status, connect, currentQr, disconnect, notifyBooking, notifyClient, sendClientCard, sendTest, buildMessage, recipientsFor, handleIncoming, ensureWebhook, notifyOwner };

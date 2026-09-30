@@ -100,7 +100,7 @@ router.post('/tenants', (req, res) => {
 
 // Editar dados da barbearia (nome, link, status, vencimento)
 router.put('/tenants/:id', (req, res) => {
-  const { name, slug, status, subscription_expires_at, plan, whatsapp_provider, notify_phone, notify_enabled } = req.body || {};
+  const { name, slug, status, subscription_expires_at, plan, whatsapp_provider, notify_phone, notify_enabled, client_notify_central } = req.body || {};
   const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(req.params.id);
   if (!tenant) return res.status(404).json({ error: 'Barbearia não encontrada' });
 
@@ -117,10 +117,11 @@ router.put('/tenants/:id', (req, res) => {
 
   db.prepare(`
     UPDATE tenants SET name = ?, slug = ?, status = ?, subscription_expires_at = ?, plan = ?, whatsapp_provider = ?,
-      notify_phone = ?, notify_enabled = ? WHERE id = ?
+      notify_phone = ?, notify_enabled = ?, client_notify_central = ? WHERE id = ?
   `).run(finalName, finalSlug, finalStatus, subscription_expires_at !== undefined ? subscription_expires_at : tenant.subscription_expires_at, finalPlan, finalProvider,
     notify_phone !== undefined ? cleanNotifyPhone(notify_phone) : tenant.notify_phone,
     notify_enabled !== undefined ? (notify_enabled ? 1 : 0) : tenant.notify_enabled,
+    client_notify_central !== undefined ? (client_notify_central ? 1 : 0) : (tenant.client_notify_central || 0),
     tenant.id);
 
   // Virou PRO: liga o atendente IA em modo lista (se o gestor ainda nao tinha configurado nada)

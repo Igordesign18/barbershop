@@ -40,6 +40,15 @@ async function checkAndSendReminders() {
       // So dispara dentro da janela: ja passou da hora de avisar, mas o atendimento ainda nao comecou
       if (now < sendAt || now >= bookingDateTime.getTime()) continue;
 
+      // Barbearia que usa o numero central: lembrete com botoes pelo WhatsApp do sistema
+      if (require('./gestor-notify').usesCentral(row.tenant_id)) {
+        if (!require('./gestor-notify').hasToken()) continue; // numero do sistema ainda nao conectado
+        if (await require('./gestor-notify').sendClientCard(row.tenant_id, row.id, 'lembrete')) {
+          db.prepare('UPDATE bookings SET reminder_sent = 1 WHERE id = ?').run(row.id);
+        }
+        continue;
+      }
+
       const instance = db.prepare('SELECT * FROM whatsapp_instances WHERE tenant_id = ?').get(row.tenant_id);
       if (!instance || instance.status !== 'connected' || !waProvider.isConfigured(instance.provider)) continue;
 
