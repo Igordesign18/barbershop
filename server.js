@@ -69,8 +69,8 @@ app.get('/superadmin-resellers.js', (req, res) => res.sendFile(path.join(PUBLIC_
 app.get('/admin.css', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.css')));
 app.get('/admin-theme.css', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin-theme.css')));
 app.get('/admin.js', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.js')));
-app.get('/client.css', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'client.css')));
-app.get('/client.js', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'client.js')));
+app.get('/client.css', (req, res) => { res.set('Cache-Control', 'no-cache'); res.sendFile(path.join(PUBLIC_DIR, 'client.css')); });
+app.get('/client.js', (req, res) => { res.set('Cache-Control', 'no-cache'); res.sendFile(path.join(PUBLIC_DIR, 'client.js')); });
 app.get('/sw.js', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'sw.js')));
 
 app.get('/', (req, res) => {
