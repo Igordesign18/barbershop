@@ -178,7 +178,11 @@ function computeFreeSlots(tenantId, barberId, date, duration, ignoreBookingId = 
   for (const period of dayConfig.periods || []) {
     const open = toMinutes(period.start);
     const close = toMinutes(period.end);
-    for (let start = open; start + duration <= close; start += interval) {
+    // Grade de "interval" em "interval" + o minuto em que cada agendamento termina (ex.: 18:00 com 40 min libera 18:40)
+    const starts = new Set();
+    for (let m = open; m + duration <= close; m += interval) starts.add(m);
+    busy.forEach(b => { if (b.end >= open && b.end + duration <= close) starts.add(b.end); });
+    for (const start of [...starts].sort((x, y) => x - y)) {
       if (blocked.has(periodKey(Math.floor(start / 60)))) continue;
       if (date === now.date && start <= now.minutes) continue;
       const end = start + duration;

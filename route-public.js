@@ -326,6 +326,20 @@ router.post('/:slug/bookings', async (req, res) => {
     }
   }
 
+  // Conflito real de horario: o profissional nao pode ter outro agendamento confirmado que se sobreponha
+  if (barber_id) {
+    const toMin = t => { const [h, mi] = String(t).split(':').map(Number); return h * 60 + (mi || 0); };
+    const start = toMin(booking_time), end = start + Number(itemDuration || 30);
+    const busy = db.prepare(`
+      SELECT b.booking_time, COALESCE(b.item_duration, s.duration, 30) AS duration
+      FROM bookings b LEFT JOIN services s ON s.id = b.service_id
+      WHERE b.tenant_id = ? AND b.booking_date = ? AND b.barber_id = ? AND b.status = 'confirmed'
+    `).all(req.tenantId, booking_date, Number(barber_id));
+    if (busy.some(b => start < toMin(b.booking_time) + Number(b.duration) && end > toMin(b.booking_time))) {
+      return res.status(409).json({ error: 'Esse horário acabou de ser ocupado. Escolha outro horário.' });
+    }
+  }
+
   // Cadastra (ou reconhece) o cliente automaticamente pelo telefone, dentro desta barbearia.
   // Assim toda pessoa que agenda pelo link público já aparece em "Gerenciar Clientes" do gestor,
   // e da próxima vez que agendar com o mesmo telefone, é reconhecida como o mesmo cliente.

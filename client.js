@@ -40,6 +40,7 @@
         let packages = [];
         let barbers = [];
         let bookedSlots = {}; 
+        let bookedIntervals = []; // [{start, end}] em minutos - ocupacao real do barbeiro no dia
         let scheduleConfig = {};
         let intervalTime = 30;
         let barberBlockedDates = new Map(); // 'idDoBarbeiro|AAAA-MM-DD' -> Set de turnos em que o barbeiro esta de folga
@@ -1223,11 +1224,14 @@
                 const data = await response.json();
 
                 const allBookedSlots = {}; 
+                const intervals = [];
                 
                 data.forEach(booking => {
                     const startTime = booking.booking_time.substring(0, 5);
                     const duration = booking.duration || 30;
                     const barberId = selectedBarber.id;
+                    const [bh, bm] = startTime.split(':').map(Number);
+                    intervals.push({ start: bh * 60 + bm, end: bh * 60 + bm + Number(duration) });
                     
                     for(let time of generateBlockedTimes(startTime, duration, intervalTime)) {
                         if(!allBookedSlots[time]) {
@@ -1240,10 +1244,12 @@
                 });
                 
                 bookedSlots = allBookedSlots;
+                bookedIntervals = intervals;
                 
             } catch (error) {
                 console.error('Erro ao carregar horários:', error);
                 bookedSlots = {};
+                bookedIntervals = [];
             }
         }
         
@@ -1341,16 +1347,23 @@
                 const [openHour, openMin] = period.start.split(':').map(Number);
                 const [closeHour, closeMin] = period.end.split(':').map(Number);
                 
-                let currentMinutes = openHour * 60 + openMin;
+                const openMinutes = openHour * 60 + openMin;
                 const endMinutes = closeHour * 60 + closeMin;
-                
-                while (currentMinutes + serviceDuration <= endMinutes) {
+
+                // Horarios de "intervalo em intervalo" + o minuto exato em que cada agendamento
+                // do barbeiro termina (ex.: 18:00 com 40 min libera 18:40, nao so 19:00).
+                const starts = new Set();
+                for (let m = openMinutes; m + serviceDuration <= endMinutes; m += intervalTime) starts.add(m);
+                bookedIntervals.forEach(iv => {
+                    if (iv.end >= openMinutes && iv.end + serviceDuration <= endMinutes) starts.add(iv.end);
+                });
+
+                for (const currentMinutes of [...starts].sort((a, b) => a - b)) {
                     const hour = Math.floor(currentMinutes / 60);
                     const minute = currentMinutes % 60;
                     const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 
                     if (dateBlocks && dateBlocks.has(getPeriodKey(hour))) {
-                        currentMinutes += intervalTime;
                         continue; // turno fechado nesse dia - nem aparece como opcao
                     }
 
@@ -1358,24 +1371,14 @@
                     let isBlocked = isTimePassed;
 
                     if (!isBlocked && selectedService) {
-                        const blockTimes = generateBlockedTimes(time, serviceDuration, intervalTime);
-                        
-                        for (let blockTime of blockTimes) {
-                            const bookingsAtBlockTime = bookedSlots[blockTime] || [];
-                            
-                            if (bookingsAtBlockTime.includes(selectedBarber.id)) {
-                                isBlocked = true;
-                                break;
-                            }
-                        }
+                        const end = currentMinutes + serviceDuration;
+                        isBlocked = bookedIntervals.some(iv => currentMinutes < iv.end && end > iv.start);
                     }
-                    
+
                     slots.push({
                         time: time,
                         isBooked: isBlocked
                     });
-                    
-                    currentMinutes += intervalTime;
                 }
             }
             
