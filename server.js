@@ -9,6 +9,7 @@ const cors = require('cors');
 
 require('./db'); // garante que o banco e as tabelas existam antes de tudo
 const { startReminderScheduler } = require('./reminders');
+const { startWaitlistScheduler } = require('./waitlist');
 
 const authRoutes = require('./route-auth');
 const superadminRoutes = require('./route-superadmin');
@@ -85,6 +86,7 @@ app.get('/:slug', (req, res) => {
 app.listen(PORT, () => {
   console.log(`BarberSync rodando em http://localhost:${PORT} (fuso: ${process.env.TZ})`);
   startReminderScheduler();
+  startWaitlistScheduler();
   require('./automations').startAutomationsScheduler(); // retorno, avaliação e aniversário (PRO)
   require('./resellers').startChargesScheduler(); // cobranças mensais dos clientes de revendedores
 });

@@ -631,6 +631,7 @@ async function doCancel(phone, found) {
   db.prepare("UPDATE bookings SET status = 'cancelled', cancelled_by = 'cliente_whatsapp' WHERE id = ?").run(b.id);
   broadcast(tenant.id, b.id);
   notifyBooking(tenant.id, b.id, 'cancelado');
+  require('./waitlist').kick(tenant.id);
   const base = publicBase();
   const text = `✅ *Agendamento cancelado.*\n_${tenant.name}_\n\n🗓️ ${formatDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)} · ${b.servico || ''}\n\nQuando quiser marcar de novo, é só agendar pelo link. ✂️`;
   await sendTo(phone, text, base ? { buttons: [{ text: 'Agendar novamente', url: `${base}/${tenant.slug}` }], fallbackText: `${text}\n${base}/${tenant.slug}` } : null);
@@ -696,6 +697,7 @@ async function doReschedule(phone, found, date, hhmm) {
   db.prepare("UPDATE bookings SET booking_date = ?, booking_time = ?, rescheduled_at = datetime('now'), client_confirmed_at = NULL, reminder_sent = 0 WHERE id = ?").run(date, time, b.id);
   broadcast(tenant.id, b.id);
   notifyBooking(tenant.id, b.id, 'reagendado', { oldDate: b.booking_date, oldTime: b.booking_time });
+  require('./waitlist').kick(tenant.id);
   await sendClientCard(tenant.id, b.id, 'reagendado');
 }
 
@@ -703,6 +705,11 @@ async function doReschedule(phone, found, date, hhmm) {
 const pendingTyped = new Map(); // telefone -> { action, ... } ultima etapa aguardando resposta digitada
 async function handleClientMessage(msg, text) {
   const phone = msg.senderPhone;
+  // Vaga da fila de espera: toque em Aceitar/Recusar, ou "sim"/"nao" digitado quando ha uma oferta aberta
+  if (/id:\s*cli_w(ok|no):/.test(text) || (!pendingTyped.get(digits55(phone)) && /^(sim|aceito|aceitar|quero|nao|não|recuso|recusar)$/i.test(text.replace(/[^\p{L}\s]/gu, '').trim()))) {
+    const reply = require('./waitlist').handleReply(text, phone);
+    if (reply) { await sendTo(phone, reply, null).catch(() => {}); return true; }
+  }
   const m = text.match(/id: (cli_[a-z]+):(\d+)(?::(\d{4}-\d{2}-\d{2}))?(?::(\d{1,4}))?/);
   let action = null, id = null, date = null, extra = null;
   if (m) { [, action, id, date, extra] = m; }
@@ -865,4 +872,4 @@ async function sendOwnCard(tenant, instance, bookingId, text, kind) {
   return true;
 }
 
-module.exports = { handleOwnConfirm, sendOwnCard, hasToken: () => !!token(), usesCentral, status, connect, currentQr, disconnect, notifyBooking, notifyClient, sendClientCard, sendTest, buildMessage, recipientsFor, handleIncoming, ensureWebhook, notifyOwner };
+module.exports = { sendTo, sameNumber, handleOwnConfirm, sendOwnCard, hasToken: () => !!token(), usesCentral, status, connect, currentQr, disconnect, notifyBooking, notifyClient, sendClientCard, sendTest, buildMessage, recipientsFor, handleIncoming, ensureWebhook, notifyOwner };

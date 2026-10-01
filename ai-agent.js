@@ -153,7 +153,7 @@ function getBlockedPeriods(tenantId, date) {
 
 // Mesma regra da pagina publica (client.js): horarios de "interval" em "interval" dentro de cada turno,
 // que caibam a duracao inteira, sem turno bloqueado, sem horario passado e sem conflito com o barbeiro.
-function computeFreeSlots(tenantId, barberId, date, duration, ignoreBookingId = null) {
+function computeFreeSlots(tenantId, barberId, date, duration, ignoreBookingId = null, ignoreWaitlistId = null) {
   const { schedule, interval } = getScheduleConfig(tenantId);
   const dayConfig = schedule[weekdayOf(date)];
   if (!dayConfig || !dayConfig.active) return [];
@@ -173,6 +173,8 @@ function computeFreeSlots(tenantId, barberId, date, duration, ignoreBookingId = 
     const start = toMinutes(b.booking_time);
     return { start, end: start + Number(b.duration || 30) };
   });
+  // Vaga oferecida a alguem da fila de espera fica reservada ate a oferta vencer
+  heldOffers(tenantId, barberId, date, ignoreWaitlistId).forEach(h => busy.push(h));
 
   const slots = [];
   for (const period of dayConfig.periods || []) {
@@ -191,6 +193,43 @@ function computeFreeSlots(tenantId, barberId, date, duration, ignoreBookingId = 
     }
   }
   return slots;
+}
+
+// Ofertas da fila de espera ainda validas (intervalos reservados) de um barbeiro num dia
+function heldOffers(tenantId, barberId, date, ignoreWaitlistId = null) {
+  return db.prepare(`
+    SELECT booking_time, COALESCE(item_duration, 30) AS duration FROM waitlist
+    WHERE tenant_id = ? AND barber_id = ? AND booking_date = ? AND status = 'offered' AND offer_expires_at > ? AND id != ?
+  `).all(tenantId, barberId, date, Date.now(), ignoreWaitlistId || 0).map(w => {
+    const start = toMinutes(w.booking_time);
+    return { start, end: start + Number(w.duration || 30) };
+  });
+}
+
+// O horario exato esta livre para esse servico? (dentro do expediente, sem folga/bloqueio, sem choque com agendamentos ou vagas reservadas)
+function slotIsFree(tenantId, barberId, date, time, duration, { ignoreBookingId = null, ignoreWaitlistId = null } = {}) {
+  const { schedule } = getScheduleConfig(tenantId);
+  const dayConfig = schedule[weekdayOf(date)];
+  if (!dayConfig || !dayConfig.active) return false;
+  const blocked = getBlockedPeriods(tenantId, date);
+  for (const p of barberServices.blockedPeriods(barberId, date)) blocked.add(p);
+  if (blocked.has('')) return false;
+  const now = nowBR();
+  const start = toMinutes(time), end = start + Number(duration || 30);
+  if (date < now.date || (date === now.date && start <= now.minutes)) return false;
+  const inPeriod = (dayConfig.periods || []).some(p => start >= toMinutes(p.start) && end <= toMinutes(p.end));
+  if (!inPeriod) return false;
+  if (blocked.has(periodKey(Math.floor(start / 60)))) return false;
+  const busy = db.prepare(`
+    SELECT b.booking_time, COALESCE(b.item_duration, s.duration, 30) AS duration
+    FROM bookings b LEFT JOIN services s ON s.id = b.service_id
+    WHERE b.tenant_id = ? AND b.booking_date = ? AND b.barber_id = ? AND b.status = 'confirmed' AND b.id != ?
+  `).all(tenantId, date, barberId, ignoreBookingId || 0).map(b => {
+    const s = toMinutes(b.booking_time);
+    return { start: s, end: s + Number(b.duration || 30) };
+  });
+  heldOffers(tenantId, barberId, date, ignoreWaitlistId).forEach(h => busy.push(h));
+  return !busy.some(b => start < b.end && end > b.start);
 }
 
 function describeNextDays(tenantId, days = 14) {
@@ -999,6 +1038,7 @@ async function runTool(name, args, ctx) {
       db.prepare("UPDATE bookings SET status = 'cancelled', cancelled_by = 'cliente_whatsapp' WHERE id = ?").run(b.id);
       notifyPanel(tenantId, b.id);
       require('./gestor-notify').notifyBooking(tenantId, b.id, 'cancelado');
+      require('./waitlist').kick(tenantId);
       return { ok: true, mensagem_sugerida: `❌ Agendamento de ${shortDate(b.booking_date)} às ${String(b.booking_time).slice(0, 5)} cancelado. Quando quiser marcar de novo, é só chamar!` };
     }
 
@@ -1012,6 +1052,7 @@ async function runTool(name, args, ctx) {
       db.prepare("UPDATE bookings SET booking_date = ?, booking_time = ?, rescheduled_at = datetime('now'), client_confirmed_at = NULL, reminder_sent = 0 WHERE id = ?").run(date, time, b.id);
       notifyPanel(tenantId, b.id);
       require('./gestor-notify').notifyBooking(tenantId, b.id, 'reagendado', { oldDate: b.booking_date, oldTime: b.booking_time });
+      require('./waitlist').kick(tenantId);
       return { ok: true, mensagem_sugerida: `🔄 Reagendado! Seu novo horário:\n🗓️ ${shortDate(date)} às ${time}\n💈 ${b.profissional || ''}\n✂️ ${b.servico}` };
     }
 
@@ -1570,14 +1611,23 @@ async function handleWebhookEvent(instanceName, body) {
   if (!instance) return;
   const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(instance.tenant_id);
   if (!tenant) return;
-  // Toque em "Confirmar" do lembrete (qualquer plano, IA ligada ou nao)
+  // Respostas por botao/texto que valem em qualquer plano, com a IA ligada ou nao:
+  // "Confirmar" do lembrete e "Aceitar"/"Recusar" da vaga da fila de espera
+  const handledIds = new Set();
   try {
     for (const m of waProvider.normalizeWebhook(instance.provider, body)) {
-      if (!m.fromMe && !m.isGroup && m.text && /id:\s*cli_ok:/.test(m.text) && !alreadySeen('ok:' + m.id)) {
-        await require('./gestor-notify').handleOwnConfirm(tenant, instance, m.senderPhone || m.chatId, m.text);
+      if (m.fromMe || m.isGroup || !m.text) continue;
+      const who = m.senderPhone || m.chatId;
+      if (/id:\s*cli_ok:/.test(m.text)) {
+        handledIds.add(m.id);
+        if (!alreadySeen('ok:' + m.id)) await require('./gestor-notify').handleOwnConfirm(tenant, instance, who, m.text);
+      } else if (/cli_w(ok|no):|^\s*(sim|aceito|aceitar|quero|n[aã]o|recuso|recusar)\s*[.!]?\s*$/i.test(m.text)) {
+        if (alreadySeen('wl:' + m.id)) { handledIds.add(m.id); continue; }
+        const reply = require('./waitlist').handleReply(m.text, who, tenant.id);
+        if (reply) { handledIds.add(m.id); await waProvider.sendText(instance, who, reply).catch(() => {}); }
       }
     }
-  } catch (e) { console.error('[webhook] confirmar presença:', e.message); }
+  } catch (e) { console.error('[webhook] respostas de botão:', e.message); }
   if (!isProTenant(tenant)) return;
   // A resposta ao pedido de avaliacao (automacao PRO) e tratada mesmo com a IA desligada
   const aiEnabled = !!getAiConfig(tenant.id).enabled;
@@ -1602,7 +1652,7 @@ async function handleWebhookEvent(instanceName, body) {
     const senderPhone = msg.senderPhone;
     const replyTo = senderPhone || chatId;
     let text = msg.text;
-    if (text && /id:\s*cli_ok:/.test(text)) continue; // confirmacao de presenca ja tratada acima
+    if (handledIds.has(msg.id) || (text && /id:\s*cli_(ok|wok|wno):/.test(text))) continue; // ja tratado acima
 
     // Nota do pedido de avaliacao (toque na lista de estrelas ou numero de 1 a 5)
     if (reviewsOn && text) {
@@ -1657,5 +1707,7 @@ module.exports = {
   getAiConfig,
   saveAiConfig,
   handleWebhookEvent,
-  computeFreeSlots
+  computeFreeSlots,
+  slotIsFree,
+  heldOffers
 };

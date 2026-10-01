@@ -80,6 +80,9 @@ router.get('/:slug/settings', (req, res) => {
   // Folgas de cada barbeiro (sem o motivo, que e privado)
   result.barber_blocked_dates = db.prepare('SELECT barber_id, date, period FROM barber_blocked_dates WHERE tenant_id = ? AND date >= ? ORDER BY date ASC').all(req.tenantId, today);
 
+  // Fila de espera so e oferecida se a barbearia tem por onde avisar o cliente (WhatsApp proprio ou numero central)
+  result.waitlist_available = require('./waitlist').channelAvailable(req.tenantId);
+
   res.json(result);
 });
 
@@ -206,6 +209,7 @@ router.post('/:slug/bookings/:id/cancel-request', (req, res) => {
 
   try { require('./events').broadcastBookingChange(req.tenantId, 'UPDATE', { id: booking.id, status: 'cancelled' }); } catch (_) {}
   require('./gestor-notify').notifyBooking(req.tenantId, booking.id, 'cancelado', { reason: motivo });
+  require('./waitlist').kick(req.tenantId);
 
   res.json({ ok: true });
 });
@@ -266,6 +270,7 @@ router.post('/:slug/bookings/:id/reschedule', (req, res) => {
   db.prepare("UPDATE bookings SET booking_date = ?, booking_time = ?, rescheduled_at = datetime('now'), client_confirmed_at = NULL, reminder_sent = 0 WHERE id = ?").run(date, t, r.booking.id);
   try { require('./events').broadcastBookingChange(req.tenantId, 'UPDATE', { id: r.booking.id, status: 'confirmed' }); } catch (_) {}
   require('./gestor-notify').notifyBooking(req.tenantId, r.booking.id, 'reagendado', { oldDate: r.booking.booking_date, oldTime: r.booking.booking_time });
+  require('./waitlist').kick(req.tenantId);
   res.json({ ok: true, booking_date: date, booking_time: t });
 });
 
@@ -307,6 +312,12 @@ router.get('/:slug/bookings/availability', (req, res) => {
     LEFT JOIN services s ON s.id = b.service_id
     WHERE b.tenant_id = ? AND b.booking_date = ? AND b.barber_id = ? AND b.status = 'confirmed'
   `).all(req.tenantId, date, barberId);
+
+  // Vaga reservada para alguem da fila de espera tambem aparece como ocupada
+  require('./ai-agent').heldOffers(req.tenantId, Number(barberId), String(date)).forEach(h => {
+    const hh = Math.floor(h.start / 60), mm = h.start % 60;
+    rows.push({ booking_time: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`, duration: h.end - h.start });
+  });
 
   res.json(rows);
 });
@@ -397,6 +408,10 @@ router.post('/:slug/bookings', async (req, res) => {
     if (busy.some(b => start < toMin(b.booking_time) + Number(b.duration) && end > toMin(b.booking_time))) {
       return res.status(409).json({ error: 'Esse horário acabou de ser ocupado. Escolha outro horário.' });
     }
+    // Vaga reservada (por alguns minutos) para quem estava na fila de espera
+    if (require('./ai-agent').heldOffers(req.tenantId, Number(barber_id), booking_date).some(h => start < h.end && end > h.start)) {
+      return res.status(409).json({ error: 'Esse horário está reservado por alguns minutos para uma pessoa da fila de espera. Escolha outro horário ou tente de novo daqui a pouco.' });
+    }
   }
 
   // Cadastra (ou reconhece) o cliente automaticamente pelo telefone, dentro desta barbearia.
@@ -463,6 +478,26 @@ router.post('/:slug/bookings', async (req, res) => {
 
   // Avisa o gestor no WhatsApp dele (numero central do sistema, em segundo plano)
   require('./gestor-notify').notifyBooking(req.tenantId, booking.id, 'novo');
+});
+
+// ---- Fila de espera (horario ocupado) ----
+router.post('/:slug/waitlist', (req, res) => {
+  const r = require('./waitlist').createEntry(req.tenant, req.body || {});
+  res.status(r.status).json(r.json);
+});
+router.get('/:slug/waitlist/lookup', (req, res) => {
+  res.json({ entries: require('./waitlist').lookup(req.tenantId, req.query.phone) });
+});
+router.post('/:slug/waitlist/:id/link', (req, res) => {
+  const { phone, booking_id } = req.body || {};
+  const r = require('./waitlist').linkEntry(req.tenantId, Number(req.params.id), phone, booking_id == null || booking_id === '' ? null : Number(booking_id));
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  res.json({ ok: true });
+});
+router.post('/:slug/waitlist/:id/leave', (req, res) => {
+  const r = require('./waitlist').leaveEntry(req.tenantId, Number(req.params.id), (req.body || {}).phone);
+  if (r.error) return res.status(r.status).json({ error: r.error });
+  res.json({ ok: true });
 });
 
 module.exports = router;

@@ -225,7 +225,13 @@ router.patch('/:id/status', (req, res) => {
   const row = db.prepare(JOIN_SELECT + ' AND b.id = ?').get(req.tenantId, req.params.id);
   const booking = toBookingJson(row);
   broadcastBookingChange(req.tenantId, 'UPDATE', booking);
+  if (status === 'cancelled' && before.status !== 'cancelled') require('./waitlist').kick(req.tenantId);
   res.json(booking);
+});
+
+// Fila de espera da barbearia (so leitura)
+router.get('/waitlist/list', (req, res) => {
+  res.json(require('./waitlist').listForTenant(req.tenantId));
 });
 
 router.delete('/:id', (req, res) => {
@@ -234,6 +240,7 @@ router.delete('/:id', (req, res) => {
 
   db.prepare('DELETE FROM bookings WHERE id = ? AND tenant_id = ?').run(req.params.id, req.tenantId);
   broadcastBookingChange(req.tenantId, 'DELETE', toBookingJson(row));
+  require('./waitlist').kick(req.tenantId);
   res.json({ ok: true });
 });
 

@@ -414,6 +414,35 @@ try {
   }
 } catch (err) { console.error('[db] migração dos textos padrão:', err.message); }
 
+
+// ==================== Fila de espera ====================
+// O cliente entra na fila de um horario ocupado (mesmo barbeiro). Se o horario vagar, a vaga e oferecida
+// (botoes Aceitar/Recusar) ao primeiro da fila e fica reservada por alguns minutos.
+// replace_booking_id: horario que o cliente ja tinha e escolheu trocar; so e cancelado se ele ACEITAR a vaga.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS waitlist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    customer_full_name TEXT NOT NULL,
+    customer_phone TEXT NOT NULL,
+    service_id INTEGER NOT NULL,
+    package_id INTEGER,
+    item_name TEXT,
+    item_price REAL,
+    item_duration INTEGER NOT NULL DEFAULT 30,
+    barber_id INTEGER NOT NULL,
+    booking_date TEXT NOT NULL,
+    booking_time TEXT NOT NULL,
+    replace_booking_id INTEGER,
+    status TEXT NOT NULL DEFAULT 'waiting', -- waiting | offered | accepted | declined | expired | left | closed
+    offered_at INTEGER,
+    offer_expires_at INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_waitlist_slot ON waitlist (tenant_id, barber_id, booking_date, status);
+  CREATE INDEX IF NOT EXISTS idx_waitlist_phone ON waitlist (customer_phone, status);
+`);
+
 // ==================== Revendedores ====================
 // Revendedor = alguem que vende o sistema com login proprio (/revendedor), cria barbearias e
 // ganha uma comissao recorrente (%) sobre cada uma. O dinheiro do cliente passa pelo revendedor,
