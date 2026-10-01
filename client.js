@@ -565,14 +565,19 @@
                         <input type="tel" id="wlPhone" placeholder="(88) 99999-9999" maxlength="15" style="padding-left: 48px;" value="${escHtml(savedPhone ? wlFormatPhone(savedPhone) : '')}">
                     </div>
                 </div>
-                <div class="form-group" id="wlNameBox" ${known ? 'style="display:none;"' : ''}>
+                <div class="form-group" id="wlNameBox">
                     <label for="wlName">Nome completo</label>
-                    <input type="text" id="wlName" placeholder="Seu nome completo" >
+                    <input type="text" id="wlName" placeholder="Seu nome completo" autocomplete="name">
                 </div>
+                <p id="wlKnown" class="wl-note" style="display:none; margin:-4px 0 12px;"></p>
                 <button class="btn" id="wlJoinBtn" onclick="joinWaitlist()">Entrar na fila</button>
                 <p id="wlErr" class="wl-note" style="color:var(--red); display:none;"></p>
                 <p class="wl-note">Entrar na fila não cria agendamento e não custa nada. Você pode sair quando quiser.</p>`;
             formatPhoneInput(document.getElementById('wlPhone'));
+            // Cliente ja cadastrado com esse telefone nao precisa digitar o nome; os demais precisam
+            const wlPhoneEl = document.getElementById('wlPhone');
+            wlPhoneEl.addEventListener('input', () => wlCheckKnown());
+            wlCheckKnown();
             document.getElementById('waitlistModal').classList.remove('hidden');
             document.getElementById('waitlistModal').querySelector('.sheet').scrollTop = 0;
         }
@@ -580,13 +585,34 @@
             d = d.replace(/\D/g, '').slice(-11);
             return d.length > 6 ? `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}` : d;
         }
+        let wlKnownFor = '';
+        async function wlCheckKnown() {
+            const phone = (document.getElementById('wlPhone')?.value || '').replace(/\D/g, '');
+            const nameBox = document.getElementById('wlNameBox'), note = document.getElementById('wlKnown');
+            if (!nameBox) return;
+            if (phone.length < 10) { nameBox.style.display = ''; note.style.display = 'none'; wlKnownFor = ''; return; }
+            if (phone === wlKnownFor) return;
+            try {
+                const r = await fetch(`${API_URL}/customer?phone=${encodeURIComponent(phone)}`);
+                const c = await r.json();
+                // O telefone pode ter mudado enquanto a consulta ia
+                if ((document.getElementById('wlPhone')?.value || '').replace(/\D/g, '') !== phone) return;
+                if (c.found) {
+                    nameBox.style.display = 'none'; wlKnownFor = phone;
+                    note.textContent = `Olá, ${c.first_name || 'cliente'}! Já temos o seu cadastro.`; note.style.display = 'block';
+                } else { nameBox.style.display = ''; note.style.display = 'none'; wlKnownFor = ''; }
+            } catch (_) { nameBox.style.display = ''; }
+        }
         function closeWaitlist() { document.getElementById('waitlistModal').classList.add('hidden'); }
 
         async function joinWaitlist() {
             const btn = document.getElementById('wlJoinBtn'), err = document.getElementById('wlErr');
             const phone = document.getElementById('wlPhone').value.replace(/\D/g, '');
-            const name = (document.getElementById('wlName')?.value || '').trim();
+            const nameBox = document.getElementById('wlNameBox');
+            const nameVisible = nameBox && nameBox.style.display !== 'none';
+            const name = nameVisible ? (document.getElementById('wlName')?.value || '').trim() : '';
             err.style.display = 'none';
+            if (nameVisible && name.length < 3) { err.textContent = 'Informe seu nome completo.'; err.style.display = 'block'; document.getElementById('wlName').focus(); return; }
             if (phone.length < 10) { err.textContent = 'Digite um telefone válido (DDD + número).'; err.style.display = 'block'; return; }
             btn.disabled = true; btn.textContent = 'Entrando na fila...';
             try {

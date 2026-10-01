@@ -172,13 +172,18 @@ router.get('/:slug/bookings/lookup', (req, res) => {
   `).all(req.tenantId, normalizedPhone);
 
   const now = nowBrasilia();
-  res.json(rows.map(row => ({
+  const list = rows.map(row => ({
     ...row,
     can_review: row.status === 'completed' && !row.review_id,
     has_review: !!row.review_id,
     // Pode cancelar: agendamento confirmado e ainda por acontecer
     can_cancel: row.status === 'confirmed' && isFuture(row, now)
-  })));
+  }));
+  // Primeiro os proximos horarios confirmados (o mais perto no topo); depois o historico, do mais recente para o mais antigo
+  const key = r => `${r.booking_date} ${String(r.booking_time).slice(0, 5)}`;
+  const upcoming = list.filter(r => r.can_cancel).sort((a, b) => key(a).localeCompare(key(b)));
+  const rest = list.filter(r => !r.can_cancel).sort((a, b) => key(b).localeCompare(key(a)));
+  res.json([...upcoming, ...rest]);
 });
 
 function nowBrasilia() {
