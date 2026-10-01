@@ -402,6 +402,12 @@ function seedTenantDefaults(tenantId) {
 }
 
 
+// Motor padrao do WhatsApp: WuzAPI. Barbearia que ainda nao conectou nada e estava no Evolution v2 (padrao antigo) passa para a WuzAPI.
+// Quem ja tem instancia conectada num motor nao e mexido (precisaria reconectar).
+try {
+  db.prepare("UPDATE tenants SET whatsapp_provider = 'wuzapi' WHERE whatsapp_provider = 'evolution' AND id NOT IN (SELECT tenant_id FROM whatsapp_instances)").run();
+} catch (err) { console.error('[db] migração do motor WhatsApp:', err.message); }
+
 // Migra os textos padrao antigos para os novos (so quem nao personalizou)
 try {
   db.prepare("UPDATE settings SET value = ? WHERE key = 'whatsapp_template' AND value = ?").run(DEFAULT_WHATSAPP_TEMPLATE, OLD_WHATSAPP_TEMPLATE);

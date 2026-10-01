@@ -75,8 +75,9 @@ async function sendToClient(tenantId, phone, text, buttons, footer) {
     const live = await wa().refreshStatus(inst).catch(() => inst.status);
     if (live !== 'connected') throw new Error(`WhatsApp da barbearia está "${live}"`);
   }
-  if (buttons.length) await wa().sendInteractive(inst, phone, 'buttons', { text, footer, buttons }, fallbackText);
-  else await wa().sendText(inst, phone, text);
+  // Botoes so chegam de verdade pela WuzAPI; nos outros motores vai texto ("responda sim ou nao")
+  if (buttons.length && wa().normalizeProvider(inst.provider) === 'wuzapi') await wa().sendInteractive(inst, phone, 'buttons', { text, footer, buttons }, fallbackText);
+  else await wa().sendText(inst, phone, buttons.length ? fallbackText : text);
 }
 
 // ==================== Entrar / sair / ligar ao horario atual ====================

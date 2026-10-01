@@ -80,7 +80,7 @@ router.post('/tenants', (req, res) => {
   const result = db.transaction(() => {
     const today = resellers.todayBR();
     const expires = subscription_expires_at || (reseller ? resellers.addMonthsClamped(today, 1) : null);
-    const tenantResult = insertTenant.run(name.trim(), finalSlug, expires, finalPlan, ['evogo', 'wuzapi'].includes(whatsapp_provider) ? whatsapp_provider : 'evolution', cleanNotifyPhone(notify_phone));
+    const tenantResult = insertTenant.run(name.trim(), finalSlug, expires, finalPlan, ['evolution', 'evogo', 'wuzapi'].includes(whatsapp_provider) ? whatsapp_provider : 'wuzapi', cleanNotifyPhone(notify_phone));
     const tenantId = tenantResult.lastInsertRowid;
     const hash = bcrypt.hashSync(manager_password, 10);
     insertManager.run(tenantId, manager_email.trim(), hash);

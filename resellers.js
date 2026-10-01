@@ -184,7 +184,7 @@ function createClientForReseller(reseller, data) {
       INSERT INTO tenants (name, slug, status, subscription_expires_at, plan, whatsapp_provider, notify_phone,
                            reseller_id, monthly_price_cents, commission_percent, billing_anchor)
       VALUES (?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(String(name).trim(), finalSlug, addMonthsClamped(today, 1), plan, plan === 'pro' ? 'wuzapi' : 'evolution', cleanPhone(notify_phone),
+    `).run(String(name).trim(), finalSlug, addMonthsClamped(today, 1), plan, 'wuzapi', cleanPhone(notify_phone),
       reseller.id, priceCents, reseller.commission_percent, today);
     const id = t.lastInsertRowid;
     db.prepare('INSERT INTO managers (tenant_id, email, password_hash) VALUES (?, ?, ?)')

@@ -867,7 +867,14 @@ async function sendOwnCard(tenant, instance, bookingId, text, kind) {
   if (!b) return false;
   const card = clientCardButtons(tenant, b, text, kind, true);
   if (!card.buttons.buttons.length) return false;
-  await require('./wa-provider').sendInteractive(instance, b.customer_phone, 'buttons',
+  const wp = require('./wa-provider');
+  // Botoes de link so chegam de verdade pela WuzAPI. Na Evolution API (e Evolution GO) o envio "passa" mas o WhatsApp
+  // nao entrega; ai vai texto simples com o link no final, como sempre foi.
+  if (wp.normalizeProvider(instance.provider) !== 'wuzapi') {
+    await wp.sendText(instance, b.customer_phone, card.buttons.fallbackText);
+    return true;
+  }
+  await wp.sendInteractive(instance, b.customer_phone, 'buttons',
     { text: card.text, footer: tenant.name, buttons: card.buttons.buttons }, card.buttons.fallbackText);
   return true;
 }
