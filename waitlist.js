@@ -1,9 +1,10 @@
 // Fila de espera de horarios.
 //
 // Regras (resumo):
-// - O cliente entra na fila de UM horario ocupado de UM barbeiro. Entrar na fila nao cria agendamento.
-// - Quando o horario vaga (qualquer cancelamento/remarcacao/folga removida), a vaga e oferecida ao primeiro da fila
-//   (ordem de chegada) com os botoes Aceitar / Recusar e fica reservada por alguns minutos.
+// - A fila e POR TURNO (manha, tarde, noite): o cliente escolhe um turno ou varios de um dia de UM barbeiro.
+//   Entrar na fila nao cria agendamento e NAO GARANTE VAGA: para ter certeza, ele precisa agendar outro horario.
+// - Quando surge um horario livre dentro de um turno da fila (cancelamento/remarcacao/folga removida), a vaga e
+//   oferecida ao primeiro da fila (ordem de chegada) com os botoes Aceitar / Recusar e fica reservada por alguns minutos.
 // - Recusou ou nao respondeu: a oferta passa para o proximo. Nada acontece com o horario que o cliente ja tinha.
 // - Aceitou: cria o agendamento e, na MESMA transacao, cancela o horario que ele ligou a fila (replace_booking_id).
 // - Isolamento: toda consulta e filtrada por tenant_id; o cancelamento so atinge agendamento do mesmo telefone e da mesma barbearia.
@@ -27,6 +28,7 @@ function nowBR() {
   return { date: `${parts.year}-${parts.month}-${parts.day}`, minutes: Number(hour) * 60 + Number(parts.minute) };
 }
 
+function toHHMM(m) { return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; }
 function toMin(t) { const [h, m] = String(t).split(':').map(Number); return h * 60 + (m || 0); }
 
 // Minutos ate o inicio do horario (negativo = ja passou)
@@ -35,6 +37,19 @@ function minutesUntil(date, time) {
   const days = Math.round((new Date(date + 'T12:00:00Z') - new Date(n.date + 'T12:00:00Z')) / 86400000);
   return days * 1440 + toMin(time) - n.minutes;
 }
+
+const SHIFT_KEYS = ['manha', 'tarde', 'noite'];
+const SHIFT_LABEL = { manha: 'Manhã', tarde: 'Tarde', noite: 'Noite' };
+function parseShifts(v) {
+  const arr = Array.isArray(v) ? v : String(v || '').split(',');
+  return SHIFT_KEYS.filter(k => arr.map(x => String(x).trim()).includes(k));
+}
+function shiftsText(csv) {
+  const list = parseShifts(csv);
+  if (!list.length) return '';
+  return list.length === 3 ? 'todos os turnos' : list.map(k => SHIFT_LABEL[k].toLowerCase()).join(' e ');
+}
+const NO_GUARANTEE = '⚠️ *Atenção:* a fila *não garante a vaga*. Só avisamos se um horário vagar, e quem aceitar primeiro fica com ele. Para ter certeza, *agende outro horário*.';
 
 function fmtDate(iso) {
   const [y, m, d] = String(iso).split('-');
@@ -98,10 +113,10 @@ function futureBookingsOf(tenantId, phone) {
   `).all(tenantId, phone, n.date, n.date, nowHHMM);
 }
 
-// body: { customer_full_name, customer_phone, service_id | package_id, barber_id, booking_date, booking_time }
+// body: { customer_full_name, customer_phone, service_id | package_id, barber_id, booking_date, shifts: ['manha','tarde','noite'] | 'all' }
 function createEntry(tenant, body) {
   const bs = require('./barber-services');
-  const { slotIsFree } = require('./ai-agent');
+  const { shiftInfo } = require('./ai-agent');
   const phone = normalizePhone(body.customer_phone);
   if (!phone) return { status: 400, json: { error: 'Telefone inválido' } };
 
@@ -114,8 +129,7 @@ function createEntry(tenant, body) {
 
   const barberId = Number(body.barber_id);
   const date = String(body.booking_date || '');
-  const time = String(body.booking_time || '').slice(0, 5);
-  if (!barberId || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return { status: 400, json: { error: 'Dados incompletos' } };
+  if (!barberId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return { status: 400, json: { error: 'Dados incompletos' } };
   const barber = db.prepare('SELECT * FROM barbers WHERE id = ? AND tenant_id = ?').get(barberId, tenant.id);
   if (!barber) return { status: 400, json: { error: 'Profissional inválido' } };
 
@@ -135,20 +149,55 @@ function createEntry(tenant, body) {
   }
 
   if (!channelAvailable(tenant.id)) return { status: 400, json: { error: 'A fila de espera não está disponível nesta barbearia.' } };
-  if (minutesUntil(date, time) <= CLOSE_MINUTES) return { status: 400, json: { error: 'Esse horário está muito próximo para entrar na fila.' } };
-  // Horario livre: nao precisa de fila, e so agendar
-  if (slotIsFree(tenant.id, barberId, date, time, item.duration)) return { status: 409, json: { error: 'Esse horário está livre agora. É só agendar normalmente.' } };
+
+  // Turnos cheios (existem, tem expediente e nenhum horario livre) sao os unicos em que faz sentido esperar
+  const info = shiftInfo(tenant.id, barberId, date, item.duration);
+  const full = SHIFT_KEYS.filter(k => info[k].exists && info[k].free.length === 0 && minutesUntil(date, toHHMM(info[k].endMin)) > CLOSE_MINUTES);
+  const wantAll = body.shifts === 'all' || body.shifts == null || body.shifts === '';
+  const chosen = wantAll ? full : parseShifts(body.shifts).filter(k => full.includes(k));
+  if (!chosen.length) {
+    const anyFree = SHIFT_KEYS.some(k => info[k].exists && info[k].free.length);
+    return { status: anyFree && wantAll ? 409 : 400, json: { error: anyFree ? 'Esse turno tem horário livre agora. É só agendar normalmente.' : 'Não há turno disponível para entrar na fila nesse dia.' } };
+  }
+  const shifts = chosen.join(',');
 
   const mine = activeEntries(tenant.id, phone);
-  const dup = mine.find(e => e.barber_id === barberId && e.booking_date === date && e.booking_time === time);
-  if (dup) return { status: 200, json: { id: dup.id, already: true, bookings: futureBookingsOf(tenant.id, phone), replace_booking_id: dup.replace_booking_id || null } };
+  const dup = mine.find(e => e.barber_id === barberId && e.booking_date === date);
+  if (dup) {
+    // Mesmo barbeiro e dia: atualiza os turnos em vez de duplicar a fila
+    if (dup.status === 'waiting' && dup.shifts !== shifts) db.prepare('UPDATE waitlist SET shifts = ? WHERE id = ?').run(shifts, dup.id);
+    return { status: 200, json: { id: dup.id, already: true, shifts: dup.status === 'waiting' ? shifts : dup.shifts, bookings: futureBookingsOf(tenant.id, phone), replace_booking_id: dup.replace_booking_id || null } };
+  }
   if (mine.length >= MAX_ACTIVE_PER_PHONE) return { status: 400, json: { error: `Você já está em ${MAX_ACTIVE_PER_PHONE} filas. Saia de alguma antes de entrar em outra.` } };
 
   const r = db.prepare(`
-    INSERT INTO waitlist (tenant_id, customer_full_name, customer_phone, service_id, package_id, item_name, item_price, item_duration, barber_id, booking_date, booking_time)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(tenant.id, name, phone, item.service_id, item.package_id, item.name, item.price, item.duration, barberId, date, time);
-  return { status: 201, json: { id: r.lastInsertRowid, bookings: futureBookingsOf(tenant.id, phone), replace_booking_id: null } };
+    INSERT INTO waitlist (tenant_id, customer_full_name, customer_phone, service_id, package_id, item_name, item_price, item_duration, barber_id, booking_date, booking_time, shifts)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '00:00', ?)
+  `).run(tenant.id, name, phone, item.service_id, item.package_id, item.name, item.price, item.duration, barberId, date, shifts);
+  return { status: 201, json: { id: r.lastInsertRowid, shifts, bookings: futureBookingsOf(tenant.id, phone), replace_booking_id: null } };
+}
+
+// Quais turnos de um barbeiro/dia estao cheios (da para entrar na fila) e quais tem horario livre. Para a pagina publica.
+function shiftStatus(tenant, barberId, date, serviceId, packageId) {
+  const bs = require('./barber-services');
+  const { shiftInfo } = require('./ai-agent');
+  barberId = Number(barberId);
+  if (!barberId || !/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) return { status: 400, json: { error: 'Dados incompletos' } };
+  let duration = 30;
+  if (packageId) {
+    const svcs = db.prepare('SELECT s.id, s.duration FROM package_services ps JOIN services s ON s.id = ps.service_id JOIN packages p ON p.id = ps.package_id WHERE ps.package_id = ? AND p.tenant_id = ?').all(packageId, tenant.id);
+    if (svcs.length) duration = bs.totalDuration(barberId, svcs);
+  } else if (serviceId) {
+    const svc = db.prepare('SELECT * FROM services WHERE id = ? AND tenant_id = ?').get(serviceId, tenant.id);
+    if (svc) duration = bs.durationFor(barberId, svc.id, svc.duration);
+  }
+  const info = shiftInfo(tenant.id, barberId, date, duration);
+  const shifts = {};
+  for (const k of SHIFT_KEYS) {
+    const state = !info[k].exists ? 'closed' : info[k].free.length ? 'free' : (minutesUntil(date, toHHMM(info[k].endMin)) > CLOSE_MINUTES ? 'full' : 'closed');
+    shifts[k] = { label: SHIFT_LABEL[k], state, free: info[k].free.length };
+  }
+  return { status: 200, json: { available: channelAvailable(tenant.id), shifts } };
 }
 
 function ownEntry(tenantId, id, phone) {
@@ -185,11 +234,11 @@ function lookup(tenantId, phone) {
   const p = normalizePhone(phone);
   if (!p) return [];
   return db.prepare(`
-    SELECT w.id, w.booking_date, w.booking_time, w.item_name, w.status, w.replace_booking_id, br.name AS barbeiro,
+    SELECT w.id, w.booking_date, w.shifts, w.offered_time, w.item_name, w.status, w.replace_booking_id, br.name AS barbeiro,
            rb.booking_date AS replace_date, rb.booking_time AS replace_time
     FROM waitlist w LEFT JOIN barbers br ON br.id = w.barber_id
     LEFT JOIN bookings rb ON rb.id = w.replace_booking_id AND rb.status = 'confirmed'
-    WHERE w.tenant_id = ? AND w.customer_phone = ? AND w.status IN ('waiting','offered') ORDER BY w.booking_date, w.booking_time
+    WHERE w.tenant_id = ? AND w.customer_phone = ? AND w.status IN ('waiting','offered') ORDER BY w.booking_date, w.id
   `).all(tenantId, p);
 }
 
@@ -197,30 +246,33 @@ function lookup(tenantId, phone) {
 function listForTenant(tenantId) {
   const n = nowBR();
   return db.prepare(`
-    SELECT w.id, w.customer_full_name, w.customer_phone, w.item_name, w.booking_date, w.booking_time, w.status, w.offer_expires_at,
+    SELECT w.id, w.customer_full_name, w.customer_phone, w.item_name, w.booking_date, w.shifts, w.offered_time, w.status, w.offer_expires_at,
            w.created_at, br.name AS barbeiro
     FROM waitlist w LEFT JOIN barbers br ON br.id = w.barber_id
     WHERE w.tenant_id = ? AND w.status IN ('waiting','offered') AND w.booking_date >= ?
-    ORDER BY w.booking_date, w.booking_time, w.id
+    ORDER BY w.booking_date, w.id
   `).all(tenantId, n.date);
 }
 
 // ==================== Ofertas ====================
 
 // Texto de "o prazo acabou": deixa claro o que acontece com o horario que ele ja tinha
+function slotTimeOf(e) { return String(e.offered_time || e.booking_time).slice(0, 5); }
+
 function expiredText(e, late = false) {
-  const slot = `${fmtDate(e.booking_date)} às ${e.booking_time.slice(0, 5)}`;
+  const slot = `${fmtDate(e.booking_date)} às ${slotTimeOf(e)}`;
   let kept = '';
   if (e.replace_booking_id) {
     const rb = db.prepare("SELECT booking_date, booking_time FROM bookings WHERE id = ? AND tenant_id = ? AND customer_phone = ? AND status = 'confirmed'").get(e.replace_booking_id, e.tenant_id, e.customer_phone);
     if (rb) kept = `\n\n✅ *Você continua com o seu horário de ${fmtDate(rb.booking_date)} às ${rb.booking_time.slice(0, 5)}.* Nada foi cancelado, está tudo certo.`;
   }
   return `⏳ *O prazo para aceitar acabou.*\n\nComo não recebemos sua resposta a tempo, a vaga de *${slot}* foi liberada para a próxima pessoa da fila.${kept}` +
-    (late ? '\n\nPor isso não dá mais para confirmar essa vaga. Se ainda quiser, entre na fila de novo pelo site.' : '');
+    (late ? '\n\nPor isso não dá mais para confirmar essa vaga. Se ainda quiser, entre na fila de novo pelo site.' : '') +
+    '\n\n💡 Lembrete: a fila não garante vaga. Para ter certeza do seu horário, agende pelo site.';
 }
 
 function offerMinutesFor(e) {
-  const until = minutesUntil(e.booking_date, e.booking_time);
+  const until = minutesUntil(e.booking_date, slotTimeOf(e));
   const base = until < SOON_MINUTES ? OFFER_MINUTES_SOON : OFFER_MINUTES;
   return Math.max(1, Math.min(base, until - 5)); // nunca vence depois do horario
 }
@@ -233,9 +285,10 @@ async function sendOffer(e, minutes) {
     const rb = db.prepare("SELECT booking_date, booking_time FROM bookings WHERE id = ? AND tenant_id = ? AND customer_phone = ? AND status = 'confirmed'").get(e.replace_booking_id, e.tenant_id, e.customer_phone);
     if (rb) swap = `\n\n⚠️ Se você aceitar, seu horário de *${fmtDate(rb.booking_date)} às ${rb.booking_time.slice(0, 5)}* será cancelado.`;
   }
-  const text = `Boa notícia, ${String(e.customer_full_name).split(' ')[0]}! 🎉\n\nO horário que você esperava vagou na *${tenant.name}*:\n\n` +
-    `✂️ *Serviço:* ${e.item_name}\n💈 *Barbeiro:* ${barber ? barber.name : '-'}\n🗓️ *Data:* ${fmtDate(e.booking_date)}\n⏰ *Horário:* ${e.booking_time.slice(0, 5)}` +
-    `${swap}\n\nReservamos para você por *${minutes} minutos*. Quer ficar com ele?`;
+  const turno = shiftsText(e.shifts);
+  const text = `Boa notícia, ${String(e.customer_full_name).split(' ')[0]}! 🎉\n\nUm horário vagou na *${tenant.name}*${turno ? ` (fila: ${turno})` : ''}:\n\n` +
+    `✂️ *Serviço:* ${e.item_name}\n💈 *Barbeiro:* ${barber ? barber.name : '-'}\n🗓️ *Data:* ${fmtDate(e.booking_date)}\n⏰ *Horário:* ${slotTimeOf(e)}` +
+    `${swap}\n\nReservamos para você por *${minutes} minutos*. Quer ficar com ele?\n\n_Lembrete: a fila não garante vaga. Se não responder a tempo, ela passa para a próxima pessoa._`;
   await sendToClient(e.tenant_id, e.customer_phone, text, [
     { text: 'Aceitar', id: `cli_wok:${e.id}` },
     { text: 'Recusar', id: `cli_wno:${e.id}` }
@@ -250,7 +303,7 @@ async function processTenant(tenantId) {
   if (running.has(tenantId)) { again.add(tenantId); return; }
   running.add(tenantId);
   try {
-    const { slotIsFree } = require('./ai-agent');
+    const { shiftInfo } = require('./ai-agent');
     const now = Date.now();
 
     for (const e of db.prepare("SELECT * FROM waitlist WHERE tenant_id = ? AND status = 'offered' AND offer_expires_at <= ?").all(tenantId, now)) {
@@ -258,15 +311,19 @@ async function processTenant(tenantId) {
       sendToClient(tenantId, e.customer_phone, expiredText(e), [], '').catch(err => console.error(`[fila] aviso de prazo não enviado (fila ${e.id}): ${err.message}`));
     }
 
-    for (const e of db.prepare("SELECT * FROM waitlist WHERE tenant_id = ? AND status = 'waiting'").all(tenantId)) {
-      if (minutesUntil(e.booking_date, e.booking_time) <= CLOSE_MINUTES) db.prepare("UPDATE waitlist SET status = 'closed' WHERE id = ?").run(e.id);
-    }
-
     const waiting = db.prepare("SELECT * FROM waitlist WHERE tenant_id = ? AND status = 'waiting' ORDER BY id").all(tenantId);
     for (const e of waiting) {
       const cur = db.prepare('SELECT status FROM waitlist WHERE id = ?').get(e.id);
       if (!cur || cur.status !== 'waiting') continue;
-      if (!slotIsFree(tenantId, e.barber_id, e.booking_date, e.booking_time.slice(0, 5), e.item_duration)) continue;
+      const shifts = parseShifts(e.shifts);
+      const info = shiftInfo(tenantId, e.barber_id, e.booking_date, e.item_duration);
+      // A fila encerra quando o ultimo turno escolhido esta acabando (ou o dia ja passou)
+      const lastEnd = Math.max(0, ...shifts.map(k => info[k].endRaw));
+      if (!shifts.length || minutesUntil(e.booking_date, toHHMM(lastEnd)) <= CLOSE_MINUTES) { db.prepare("UPDATE waitlist SET status = 'closed' WHERE id = ?").run(e.id); continue; }
+      // Primeiro horario livre dentro dos turnos da fila (nao oferece horario quase comecando)
+      const free = shifts.flatMap(k => info[k].free).filter(t => minutesUntil(e.booking_date, t) > CLOSE_MINUTES).sort();
+      if (!free.length) continue;
+      e.offered_time = free[0];
       if (!channelAvailable(tenantId)) { console.log(`[fila] tenant ${tenantId}: vaga livre, mas sem WhatsApp para avisar`); break; }
       // O horario que ele quer trocar deixou de existir: oferece sem cancelar nada
       if (e.replace_booking_id && !db.prepare("SELECT 1 FROM bookings WHERE id = ? AND tenant_id = ? AND customer_phone = ? AND status = 'confirmed'").get(e.replace_booking_id, tenantId, e.customer_phone)) {
@@ -275,10 +332,10 @@ async function processTenant(tenantId) {
       }
       const minutes = offerMinutesFor(e);
       // Reserva primeiro (sincrono): ninguem mais consegue pegar o horario enquanto a mensagem vai
-      db.prepare("UPDATE waitlist SET status = 'offered', offered_at = ?, offer_expires_at = ? WHERE id = ? AND status = 'waiting'").run(Date.now(), Date.now() + minutes * 60000, e.id);
+      db.prepare("UPDATE waitlist SET status = 'offered', offered_time = ?, offered_at = ?, offer_expires_at = ? WHERE id = ? AND status = 'waiting'").run(e.offered_time, Date.now(), Date.now() + minutes * 60000, e.id);
       try {
         await sendOffer(e, minutes);
-        console.log(`[fila] vaga oferecida (tenant ${tenantId}, fila ${e.id}, ${e.booking_date} ${e.booking_time})`);
+        console.log(`[fila] vaga oferecida (tenant ${tenantId}, fila ${e.id}, ${e.booking_date} ${e.offered_time})`);
         // Avisa no minuto exato em que o prazo acaba (o conferidor de 30s fica de reserva)
         setTimeout(() => processTenant(tenantId).catch(() => {}), minutes * 60000 + 1500).unref();
       } catch (err) {
@@ -327,10 +384,11 @@ function accept(entryId, senderPhone) {
   if (e.status === 'expired') return { ok: false, text: expiredText(e, true) };
   if (e.status !== 'offered') return { ok: false, text: 'Essa vaga não está mais disponível. 🙏' };
   const tenantId = e.tenant_id;
-  if (!slotIsFree(tenantId, e.barber_id, e.booking_date, e.booking_time.slice(0, 5), e.item_duration, { ignoreWaitlistId: e.id })) {
+  const slot = slotTimeOf(e);
+  if (!slotIsFree(tenantId, e.barber_id, e.booking_date, slot, e.item_duration, { ignoreWaitlistId: e.id })) {
     db.prepare("UPDATE waitlist SET status = 'expired' WHERE id = ?").run(e.id);
     kick(tenantId);
-    return { ok: false, text: 'Poxa, esse horário acabou de ser ocupado. Seu horário anterior (se houver) continua valendo. 🙏' };
+    return { ok: false, text: 'Poxa, esse horário acabou de ser ocupado. Seu horário anterior (se houver) continua valendo. Lembre: a fila não garante vaga, agende pelo site para ter certeza. 🙏' };
   }
 
   let bookingId = null, cancelled = null;
@@ -341,7 +399,7 @@ function accept(entryId, senderPhone) {
       bookingId = db.prepare(`
         INSERT INTO bookings (tenant_id, user_id, customer_full_name, customer_phone, service_id, package_id, item_name, item_price, item_duration, barber_id, booking_date, booking_time, status)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed')
-      `).run(tenantId, user.id, e.customer_full_name, e.customer_phone, e.service_id, e.package_id, e.item_name, e.item_price, e.item_duration, e.barber_id, e.booking_date, e.booking_time).lastInsertRowid;
+      `).run(tenantId, user.id, e.customer_full_name, e.customer_phone, e.service_id, e.package_id, e.item_name, e.item_price, e.item_duration, e.barber_id, e.booking_date, slot).lastInsertRowid;
       try {
         const reward = require('./loyalty').tryApplyReward(tenantId, user.id, e.item_price);
         if (reward.discount > 0) db.prepare('UPDATE bookings SET discount_applied = ?, reward_label = ? WHERE id = ?').run(reward.discount, reward.label, bookingId);
@@ -381,7 +439,7 @@ function accept(entryId, senderPhone) {
   });
 
   const extra = cancelled ? `\n\n❌ Seu horário de *${fmtDate(cancelled.booking_date)} às ${cancelled.booking_time.slice(0, 5)}* foi cancelado.` : '';
-  return { ok: true, text: `✅ *Vaga garantida!*\n_${tenant.name}_\n\n🗓️ ${fmtDate(e.booking_date)} às ${e.booking_time.slice(0, 5)}\n✂️ ${e.item_name}\n💈 ${barber ? barber.name : '-'}${extra}` };
+  return { ok: true, text: `✅ *Vaga garantida!*\n_${tenant.name}_\n\n🗓️ ${fmtDate(e.booking_date)} às ${slot}\n✂️ ${e.item_name}\n💈 ${barber ? barber.name : '-'}${extra}` };
 }
 
 function decline(entryId, senderPhone) {
@@ -392,7 +450,7 @@ function decline(entryId, senderPhone) {
   if (e.status !== 'offered') return { ok: false, text: 'Essa vaga já não está mais com você. 🙏' };
   db.prepare("UPDATE waitlist SET status = 'declined' WHERE id = ?").run(e.id);
   kick(e.tenant_id);
-  return { ok: true, text: `👍 Tudo bem! Passamos a vaga para a próxima pessoa.${e.replace_booking_id ? ' Seu horário anterior continua valendo.' : ''}` };
+  return { ok: true, text: `👍 Tudo bem! Passamos a vaga para a próxima pessoa.${e.replace_booking_id ? ' Seu horário anterior continua valendo.' : ''}\n\nSe ainda quiser um horário, entre na fila de novo ou agende pelo site. A fila não garante vaga.` };
 }
 
 // Oferta aberta para este telefone (usado para "sim"/"nao" digitados). Retorna null se nao houver ou se houver mais de uma.
@@ -417,6 +475,6 @@ function handleReply(text, senderPhone, tenantId = null) {
 }
 
 module.exports = {
-  createEntry, linkEntry, leaveEntry, lookup, listForTenant, channelAvailable,
+  createEntry, shiftStatus, linkEntry, leaveEntry, lookup, listForTenant, channelAvailable,
   kick, processTenant, startWaitlistScheduler, accept, decline, handleReply, singleOfferFor
 };

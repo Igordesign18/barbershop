@@ -485,9 +485,15 @@ router.post('/:slug/bookings', async (req, res) => {
   require('./gestor-notify').notifyBooking(req.tenantId, booking.id, 'novo');
 });
 
-// ---- Fila de espera (horario ocupado) ----
+// ---- Fila de espera por turno ----
 router.post('/:slug/waitlist', (req, res) => {
   const r = require('./waitlist').createEntry(req.tenant, req.body || {});
+  res.status(r.status).json(r.json);
+});
+// Turnos de um barbeiro/dia: 'free' (tem horario, e so agendar), 'full' (da para entrar na fila) ou 'closed'
+router.get('/:slug/waitlist/shifts', (req, res) => {
+  const q = req.query || {};
+  const r = require('./waitlist').shiftStatus(req.tenant, q.barber_id, q.date, q.service_id ? Number(q.service_id) : null, q.package_id ? Number(q.package_id) : null);
   res.status(r.status).json(r.json);
 });
 router.get('/:slug/waitlist/lookup', (req, res) => {

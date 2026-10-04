@@ -603,6 +603,31 @@
         .wl-opt { display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border: 1px solid var(--hairline); border-radius: 10px; margin-bottom: 8px; cursor: pointer; font-size: 13.5px; }
         .wl-opt input { margin-top: 3px; accent-color: var(--brass); }
         .wl-opt.on { border-color: var(--brass); background: rgba(198,161,91,0.08); }
+        /* Aviso bem visivel: a fila nao garante vaga */
+        .wl-alert { display: flex; gap: 12px; align-items: flex-start; border: 1.5px solid var(--red); background: rgba(193,92,92,0.12); border-radius: 12px; padding: 13px 14px; margin: 12px 0 14px; font-size: 13.5px; line-height: 1.55; }
+        .wl-alert > i { color: var(--red); font-size: 20px; margin-top: 1px; flex-shrink: 0; }
+        .wl-alert strong:first-child { display: block; font-size: 14.5px; margin-bottom: 3px; color: var(--ivory); }
+        .wl-shifts { display: flex; flex-wrap: wrap; gap: 8px; }
+        .wl-chip { flex: 1 1 calc(33% - 8px); min-width: 96px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 11px 8px; border: 1px solid var(--hairline); background: transparent; color: var(--ivory); border-radius: 10px; font: inherit; font-size: 13.5px; cursor: pointer; transition: border-color .15s, background .15s; }
+        .wl-chip i { color: var(--brass); font-size: 16px; }
+        .wl-chip small { font-size: 10.5px; color: var(--ivory-muted); }
+        .wl-chip.on { border-color: var(--brass); background: rgba(198,161,91,0.14); }
+        .wl-chip.on small { color: var(--brass-light); }
+        .wl-chip:disabled { opacity: .45; cursor: not-allowed; }
+        .wl-chip-all { flex-basis: 100%; flex-direction: row; justify-content: center; gap: 8px; }
+        .wl-chip-all small { margin-left: 2px; }
+        .wl-ack { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.5; margin: 4px 0 14px; cursor: pointer; }
+        .wl-ack input { margin-top: 3px; accent-color: var(--brass); width: 18px; height: 18px; flex-shrink: 0; }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        /* Caixa de fila embaixo de cada turno lotado */
+        .wl-shiftbox { display: flex; gap: 12px; align-items: center; justify-content: space-between; border: 1px dashed rgba(198,161,91,0.6); background: rgba(198,161,91,0.07); border-radius: 12px; padding: 12px 14px; margin: 10px 0 4px; }
+        .wl-shiftbox > div { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; line-height: 1.45; color: var(--ivory-muted); }
+        .wl-shiftbox strong { color: var(--ivory); font-size: 13.5px; }
+        .wl-shiftbox strong i { color: var(--brass); margin-right: 4px; }
+        .wl-shiftbox b { color: var(--red); }
+        .wl-shiftbox button { flex-shrink: 0; border: 1px solid var(--brass); background: transparent; color: var(--brass-light); border-radius: 999px; padding: 9px 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .wl-shiftbox button:hover { background: rgba(198,161,91,0.15); }
+        @media (max-width: 420px) { .wl-shiftbox { flex-direction: column; align-items: stretch; } .wl-shiftbox button { width: 100%; } }
         #waitlistModal .modal-content.sheet { max-width: 460px; }
 
         /* Confirm block */

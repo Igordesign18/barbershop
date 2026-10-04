@@ -448,6 +448,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_waitlist_slot ON waitlist (tenant_id, barber_id, booking_date, status);
   CREATE INDEX IF NOT EXISTS idx_waitlist_phone ON waitlist (customer_phone, status);
 `);
+// Fila por TURNO: o cliente escolhe um ou mais turnos (manha, tarde, noite) de um dia e de um barbeiro.
+// shifts = "manha,tarde"; offered_time = horario exato que foi oferecido (booking_time fica so por compatibilidade).
+ensureColumn('waitlist', 'shifts', 'TEXT');
+ensureColumn('waitlist', 'offered_time', 'TEXT');
+// Filas antigas (por horario exato) viram fila do turno daquele horario; ofertas em andamento mantem o horario
+db.exec(`
+  UPDATE waitlist SET offered_time = booking_time WHERE offered_time IS NULL AND status = 'offered';
+  UPDATE waitlist SET shifts = CASE
+    WHEN CAST(substr(booking_time,1,2) AS INTEGER) < 12 THEN 'manha'
+    WHEN CAST(substr(booking_time,1,2) AS INTEGER) < 18 THEN 'tarde'
+    ELSE 'noite' END
+  WHERE shifts IS NULL;
+`);
 
 // ==================== Revendedores ====================
 // Revendedor = alguem que vende o sistema com login proprio (/revendedor), cria barbearias e

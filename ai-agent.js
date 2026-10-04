@@ -198,12 +198,56 @@ function computeFreeSlots(tenantId, barberId, date, duration, ignoreBookingId = 
 // Ofertas da fila de espera ainda validas (intervalos reservados) de um barbeiro num dia
 function heldOffers(tenantId, barberId, date, ignoreWaitlistId = null) {
   return db.prepare(`
-    SELECT booking_time, COALESCE(item_duration, 30) AS duration FROM waitlist
+    SELECT COALESCE(offered_time, booking_time) AS booking_time, COALESCE(item_duration, 30) AS duration FROM waitlist
     WHERE tenant_id = ? AND barber_id = ? AND booking_date = ? AND status = 'offered' AND offer_expires_at > ? AND id != ?
   `).all(tenantId, barberId, date, Date.now(), ignoreWaitlistId || 0).map(w => {
     const start = toMinutes(w.booking_time);
     return { start, end: start + Number(w.duration || 30) };
   });
+}
+
+// Situacao de cada turno (manha < 12h, tarde < 18h, noite) para um barbeiro num dia, usada pela fila por turno.
+// { manha: { exists, free: ['09:00', ...], endMin } , tarde: {...}, noite: {...} }
+//  exists = a barbearia atende nesse turno nesse dia (sem folga/bloqueio e sem o turno ja ter acabado)
+//  free   = horarios livres de verdade nesse turno para a duracao informada
+//  endMin = minuto em que o turno acaba (ultimo fim de expediente dentro dele)
+const SHIFT_KEYS = ['manha', 'tarde', 'noite'];
+function shiftInfo(tenantId, barberId, date, duration, ignoreWaitlistId = null) {
+  const out = { manha: { exists: false, free: [], endMin: 0, endRaw: 0 }, tarde: { exists: false, free: [], endMin: 0, endRaw: 0 }, noite: { exists: false, free: [], endMin: 0, endRaw: 0 } };
+  const { schedule } = getScheduleConfig(tenantId);
+  const dayConfig = schedule[weekdayOf(date)];
+  if (!dayConfig || !dayConfig.active) return out;
+  // endRaw = fim do turno no expediente, ignorando folgas/bloqueios (serve para saber quando a fila encerra)
+  for (const period of dayConfig.periods || []) {
+    const o = toMinutes(period.start), c = toMinutes(period.end);
+    for (const [k, [lo, hi]] of Object.entries({ manha: [0, 720], tarde: [720, 1080], noite: [1080, 1440] })) {
+      if (Math.min(c, hi) - Math.max(o, lo) > 0) out[k].endRaw = Math.max(out[k].endRaw, Math.min(c, hi));
+    }
+  }
+  const blocked = getBlockedPeriods(tenantId, date);
+  for (const p of barberServices.blockedPeriods(barberId, date)) blocked.add(p);
+  if (blocked.has('')) return out;
+  const now = nowBR();
+  if (date < now.date) return out;
+  const bounds = { manha: [0, 720], tarde: [720, 1080], noite: [1080, 1440] };
+  for (const period of dayConfig.periods || []) {
+    const open = toMinutes(period.start), close = toMinutes(period.end);
+    for (const k of SHIFT_KEYS) {
+      if (blocked.has(k)) continue;
+      const a = Math.max(open, bounds[k][0]), b = Math.min(close, bounds[k][1]);
+      if (b - a <= 0) continue;
+      out[k].exists = true;
+      out[k].endMin = Math.max(out[k].endMin, b);
+    }
+  }
+  for (const k of SHIFT_KEYS) {
+    if (date === now.date && out[k].endMin <= now.minutes) { out[k].exists = false; out[k].endMin = 0; }
+  }
+  for (const t of computeFreeSlots(tenantId, barberId, date, duration, null, ignoreWaitlistId)) {
+    const k = periodKey(Math.floor(toMinutes(t) / 60));
+    if (out[k].exists) out[k].free.push(t);
+  }
+  return out;
 }
 
 // O horario exato esta livre para esse servico? (dentro do expediente, sem folga/bloqueio, sem choque com agendamentos ou vagas reservadas)
@@ -1708,6 +1752,7 @@ module.exports = {
   saveAiConfig,
   handleWebhookEvent,
   computeFreeSlots,
+  shiftInfo,
   slotIsFree,
   heldOffers
 };

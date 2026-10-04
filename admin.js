@@ -1565,6 +1565,11 @@
         }
 
         // Fila de espera: quem aguarda um horario ocupado (so leitura; o aceite e feito pelo cliente no WhatsApp)
+        function shiftsLabel(csv) {
+            const names = { manha: 'manhã', tarde: 'tarde', noite: 'noite' };
+            const list = String(csv || '').split(',').filter(k => names[k]);
+            return list.length === 3 ? 'todos os turnos' : (list.map(k => names[k]).join(' e ') || '-');
+        }
         async function loadWaitlistAdmin() {
             const box = document.getElementById('agendaWaitlist');
             if (!box) return;
@@ -1574,7 +1579,7 @@
                 const fmt = iso => iso.split('-').reverse().join('/');
                 box.innerHTML = `<h3 style="font-size:15px; margin:0 0 10px;"><i class="fas fa-hourglass-half" aria-hidden="true"></i> Fila de espera (${rows.length})</h3>` + rows.map(r => `
                     <div style="display:flex; justify-content:space-between; gap:10px; align-items:center; padding:10px 12px; border:1px solid var(--border, #2a2a2a); border-radius:10px; margin-bottom:8px; font-size:13.5px;">
-                        <span><strong>${escapeHtmlSafe(r.customer_full_name)}</strong><br><span style="opacity:.75;">${fmt(r.booking_date)} às ${r.booking_time.slice(0, 5)} · ${escapeHtmlSafe(r.barbeiro || '')} · ${escapeHtmlSafe(r.item_name || '')}</span></span>
+                        <span><strong>${escapeHtmlSafe(r.customer_full_name)}</strong><br><span style="opacity:.75;">${fmt(r.booking_date)} · ${r.status === 'offered' && r.offered_time ? 'oferecido ' + r.offered_time.slice(0, 5) : shiftsLabel(r.shifts)} · ${escapeHtmlSafe(r.barbeiro || '')} · ${escapeHtmlSafe(r.item_name || '')}</span></span>
                         <span style="font-size:11.5px; font-weight:700; white-space:nowrap;">${r.status === 'offered' ? 'Vaga oferecida' : 'Aguardando'}</span>
                     </div>`).join('');
                 box.classList.remove('hidden');

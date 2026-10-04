@@ -546,18 +546,30 @@
         const escHtml = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         const fmtBR = iso => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
 
-        function openWaitlist(time) {
+        const WL_SHIFTS = { manha: { label: 'Manhã', icon: 'fa-sun' }, tarde: { label: 'Tarde', icon: 'fa-cloud-sun' }, noite: { label: 'Noite', icon: 'fa-moon' } };
+        const WL_WARNING = `<div class="wl-alert" role="alert">
+                    <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                    <div><strong>A fila NÃO garante a sua vaga.</strong>
+                    Entrar na fila não reserva horário: só avisamos se alguém desmarcar e <strong>quem aceitar primeiro fica com a vaga</strong>. Para garantir seu horário, <strong>agende outro horário</strong>.</div>
+                </div>`;
+
+        // pre: 'manha' | 'tarde' | 'noite' | 'all' (turnos que ja vem marcados)
+        function openWaitlist(pre) {
             if (!selectedService || !selectedBarber || !selectedDate) return;
             let savedPhone = '';
             try { savedPhone = (localStorage.getItem(SAVED_PHONE_KEY()) || '').replace(/\D/g, ''); } catch (_) {}
-            wlState = { time, entryId: null, phone: savedPhone };
-            const known = !!recognizedCustomer;
+            wlState = { pre: pre || 'all', sel: new Set(), full: [], entryId: null, phone: savedPhone };
             document.getElementById('waitlistBody').innerHTML = `
                 <div class="wl-box">
-                    <strong>${fmtBR(formatDateToYYYYMMDD(selectedDate))} às ${time}</strong> · ${escHtml(selectedBarber.name)}<br>
+                    <strong>${fmtBR(formatDateToYYYYMMDD(selectedDate))}</strong> · ${escHtml(selectedBarber.name)}<br>
                     <span style="color:var(--ivory-muted);">${escHtml(selectedService.name)}</span>
                 </div>
-                <p style="font-size:13.5px; line-height:1.6; margin:0 0 12px;">Esse horário está ocupado. Entre na fila: se a pessoa desmarcar, <strong>avisamos você pelo WhatsApp</strong> e você confirma com um toque.</p>
+                ${WL_WARNING}
+                <p style="font-size:13.5px; line-height:1.6; margin:0 0 10px;">Escolha em quais turnos você aceita ser avisado. Se um horário vagar nesses turnos, <strong>avisamos você pelo WhatsApp</strong> e você confirma com um toque.</p>
+                <div class="form-group">
+                    <label>Turnos da fila</label>
+                    <div id="wlShifts" class="wl-shifts"><span class="wl-note">Carregando turnos...</span></div>
+                </div>
                 <div class="form-group">
                     <label for="wlPhone">Seu telefone (WhatsApp)</label>
                     <div style="position: relative;">
@@ -570,16 +582,73 @@
                     <input type="text" id="wlName" placeholder="Seu nome completo" autocomplete="name">
                 </div>
                 <p id="wlKnown" class="wl-note" style="display:none; margin:-4px 0 12px;"></p>
-                <button class="btn" id="wlJoinBtn" onclick="joinWaitlist()">Entrar na fila</button>
+                <label class="wl-ack"><input type="checkbox" id="wlAck"><span>Entendi que a fila <strong>não garante a vaga</strong> e que preciso agendar outro horário para ter certeza.</span></label>
+                <button class="btn" id="wlJoinBtn" onclick="joinWaitlist()" disabled>Entrar na fila</button>
                 <p id="wlErr" class="wl-note" style="color:var(--red); display:none;"></p>
                 <p class="wl-note">Entrar na fila não cria agendamento e não custa nada. Você pode sair quando quiser.</p>`;
             formatPhoneInput(document.getElementById('wlPhone'));
             // Cliente ja cadastrado com esse telefone nao precisa digitar o nome; os demais precisam
             const wlPhoneEl = document.getElementById('wlPhone');
             wlPhoneEl.addEventListener('input', () => wlCheckKnown());
+            document.getElementById('wlAck').addEventListener('change', wlRefreshJoin);
             wlCheckKnown();
+            wlLoadShifts();
             document.getElementById('waitlistModal').classList.remove('hidden');
             document.getElementById('waitlistModal').querySelector('.sheet').scrollTop = 0;
+        }
+        function wlRefreshJoin() {
+            const btn = document.getElementById('wlJoinBtn');
+            if (!btn || !wlState) return;
+            btn.disabled = !(wlState.sel.size > 0 && document.getElementById('wlAck')?.checked);
+        }
+        async function wlLoadShifts() {
+            const box = document.getElementById('wlShifts');
+            const st = wlState;
+            try {
+                const qs = new URLSearchParams({ barber_id: selectedBarber.id, date: formatDateToYYYYMMDD(selectedDate) });
+                if (selectedService.isPackage) qs.set('package_id', selectedService.id); else qs.set('service_id', selectedService.id);
+                const r = await fetch(`${API_URL}/waitlist/shifts?${qs}`, { cache: 'no-store' });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error || 'Erro');
+                if (wlState !== st) return;
+                st.shifts = data.shifts;
+                st.full = Object.keys(WL_SHIFTS).filter(k => data.shifts[k] && data.shifts[k].state === 'full');
+                st.sel = new Set(st.pre === 'all' || !st.full.includes(st.pre) ? st.full : [st.pre]);
+                wlRenderShifts();
+            } catch (e) {
+                if (box) box.innerHTML = '<span class="wl-note" style="color:var(--red);">Não consegui carregar os turnos. Feche e tente de novo.</span>';
+            }
+        }
+        function wlRenderShifts() {
+            const box = document.getElementById('wlShifts');
+            if (!box || !wlState) return;
+            const st = wlState;
+            const visible = Object.keys(WL_SHIFTS).filter(k => st.shifts[k] && st.shifts[k].state !== 'closed');
+            if (!st.full.length) {
+                box.innerHTML = '<span class="wl-note">Esse dia ainda tem horário livre (ou o expediente já está acabando). É só agendar normalmente.</span>';
+                wlRefreshJoin();
+                return;
+            }
+            const chips = visible.map(k => {
+                const sh = st.shifts[k], isFull = sh.state === 'full';
+                return `<button type="button" class="wl-chip ${st.sel.has(k) ? 'on' : ''}" ${isFull ? '' : 'disabled'} data-k="${k}" aria-pressed="${st.sel.has(k)}">
+                    <i class="fas ${WL_SHIFTS[k].icon}" aria-hidden="true"></i><span>${WL_SHIFTS[k].label}</span>
+                    <small>${isFull ? 'lotado' : 'tem horário livre'}</small></button>`;
+            });
+            if (st.full.length > 1) chips.push(`<button type="button" class="wl-chip wl-chip-all ${st.sel.size === st.full.length ? 'on' : ''}" data-k="all" aria-pressed="${st.sel.size === st.full.length}">
+                    <i class="fas fa-layer-group" aria-hidden="true"></i><span>Todos os turnos</span><small>${st.full.map(k => WL_SHIFTS[k].label.toLowerCase()).join(', ')}</small></button>`);
+            box.innerHTML = chips.join('');
+            box.querySelectorAll('.wl-chip').forEach(c => c.addEventListener('click', () => {
+                const k = c.dataset.k;
+                if (k === 'all') { st.sel = st.sel.size === st.full.length ? new Set() : new Set(st.full); }
+                else if (st.sel.has(k)) st.sel.delete(k); else st.sel.add(k);
+                wlRenderShifts();
+            }));
+            wlRefreshJoin();
+        }
+        function wlShiftsText(sel) {
+            const list = Object.keys(WL_SHIFTS).filter(k => sel.includes(k));
+            return list.length === 3 ? 'todos os turnos' : list.map(k => WL_SHIFTS[k].label.toLowerCase()).join(' e ');
         }
         function wlFormatPhone(d) {
             d = d.replace(/\D/g, '').slice(-11);
@@ -614,6 +683,8 @@
             err.style.display = 'none';
             if (nameVisible && name.length < 3) { err.textContent = 'Informe seu nome completo.'; err.style.display = 'block'; document.getElementById('wlName').focus(); return; }
             if (phone.length < 10) { err.textContent = 'Digite um telefone válido (DDD + número).'; err.style.display = 'block'; return; }
+            if (!wlState.sel.size) { err.textContent = 'Escolha pelo menos um turno.'; err.style.display = 'block'; return; }
+            if (!document.getElementById('wlAck')?.checked) { err.textContent = 'Confirme que entendeu que a fila não garante a vaga.'; err.style.display = 'block'; return; }
             btn.disabled = true; btn.textContent = 'Entrando na fila...';
             try {
                 const r = await fetch(`${API_URL}/waitlist`, {
@@ -621,7 +692,7 @@
                     body: JSON.stringify({
                         customer_full_name: name, customer_phone: phone,
                         ...(selectedService.isPackage ? { package_id: selectedService.id } : { service_id: selectedService.id }),
-                        barber_id: selectedBarber.id, booking_date: formatDateToYYYYMMDD(selectedDate), booking_time: wlState.time
+                        barber_id: selectedBarber.id, booking_date: formatDateToYYYYMMDD(selectedDate), shifts: [...wlState.sel]
                     })
                 });
                 const data = await r.json().catch(() => ({}));
@@ -630,20 +701,22 @@
                     throw new Error(data.error || 'Não foi possível entrar na fila');
                 }
                 wlState.entryId = data.id; wlState.phone = phone;
+                wlState.joined = (data.shifts || [...wlState.sel].join(',')).split(',').filter(Boolean);
                 showWaitlistStep2(data.bookings || [], data.replace_booking_id);
             } catch (e) {
                 err.textContent = e.message; err.style.display = 'block';
-                btn.disabled = false; btn.textContent = 'Entrar na fila';
+                btn.textContent = 'Entrar na fila'; wlRefreshJoin();
             }
         }
 
         function showWaitlistStep2(bookings, currentLink) {
             const body = document.getElementById('waitlistBody');
-            const head = `<div class="wl-box" style="border-color:var(--green);"><strong><i class="fas fa-check-circle" aria-hidden="true" style="color:var(--green);"></i> Você está na fila!</strong><br>Se o horário das ${escHtml(wlState.time)} vagar, você recebe uma mensagem no WhatsApp com os botões <strong>Aceitar</strong> e <strong>Recusar</strong>. A vaga fica reservada para você por alguns minutos.</div>`;
+            const when = `${fmtBR(formatDateToYYYYMMDD(selectedDate))}, ${wlShiftsText(wlState.joined || [])}`;
+            const head = `<div class="wl-box" style="border-color:var(--green);"><strong><i class="fas fa-check-circle" aria-hidden="true" style="color:var(--green);"></i> Você entrou na fila!</strong><br>Fila: <strong>${escHtml(when)}</strong>. Se um horário vagar nesses turnos, você recebe uma mensagem no WhatsApp com os botões <strong>Aceitar</strong> e <strong>Recusar</strong>. A vaga fica reservada para você por alguns minutos.</div>${WL_WARNING}`;
             if (!bookings.length) {
                 body.innerHTML = head + `
-                    <div class="wl-box warn"><strong><i class="fas fa-triangle-exclamation" aria-hidden="true" style="color:var(--brass);"></i> Atenção</strong><br>Você ainda <strong>não tem um horário garantido</strong>. Se a vaga for para outra pessoa, você fica sem horário. Que tal marcar outro horário agora, só por segurança? Se a vaga abrir, você pode ficar com a melhor e cancelar a outra.</div>
-                    <button class="btn" onclick="closeWaitlist()" style="margin-bottom:10px;">Escolher outro horário agora</button>
+                    <div class="wl-box warn"><strong><i class="fas fa-calendar-check" aria-hidden="true" style="color:var(--brass);"></i> Garanta seu horário</strong><br>Você ainda <strong>não tem um horário marcado</strong>. Agende outro horário agora para ter certeza de que será atendido. Se uma vaga melhor abrir na fila, você pode aceitar e cancelar o outro.</div>
+                    <button class="btn" onclick="closeWaitlist()" style="margin-bottom:10px;">Agendar outro horário agora</button>
                     <button class="btn" style="background:transparent; border:1px solid var(--brass); color:var(--brass-light);" onclick="closeWaitlist()">Entendi, só aguardar</button>`;
                 return;
             }
@@ -684,7 +757,8 @@
                     <div class="bk" style="--bk-color:var(--brass);">
                         <div class="bk-main">
                             <div class="bk-top"><strong class="bk-title">${escHtml(e.item_name || 'Serviço')}</strong><span class="bk-status">${e.status === 'offered' ? 'Vaga oferecida' : 'Aguardando'}</span></div>
-                            <div class="bk-meta"><span><i class="fas fa-calendar" aria-hidden="true"></i>${fmtBR(e.booking_date)}</span><span><i class="fas fa-clock" aria-hidden="true"></i>${e.booking_time.substring(0, 5)}</span>${e.barbeiro ? `<span><i class="fas fa-user-tie" aria-hidden="true"></i>${escHtml(e.barbeiro)}</span>` : ''}</div>
+                            <div class="bk-meta"><span><i class="fas fa-calendar" aria-hidden="true"></i>${fmtBR(e.booking_date)}</span><span><i class="fas fa-clock" aria-hidden="true"></i>${e.status === 'offered' && e.offered_time ? e.offered_time.substring(0, 5) : escHtml(wlShiftsText((e.shifts || '').split(',')))}</span>${e.barbeiro ? `<span><i class="fas fa-user-tie" aria-hidden="true"></i>${escHtml(e.barbeiro)}</span>` : ''}</div>
+                            <p class="wl-note" style="color:var(--brass-light);"><i class="fas fa-triangle-exclamation" aria-hidden="true"></i> A fila não garante a vaga. Agende outro horário para ter certeza.</p>
                             ${e.replace_date ? `<p class="wl-note">Se você aceitar, o horário de ${fmtBR(e.replace_date)} às ${e.replace_time.substring(0, 5)} será cancelado.</p>` : ''}
                             <button class="btn" style="margin-top:10px; padding:9px; background:transparent; border:1px solid var(--red); color:var(--red);" onclick="leaveWaitlist(${e.id}, '${phone}')">Sair da fila</button>
                         </div>
@@ -692,7 +766,7 @@
             } catch (_) { /* a lista de filas e opcional */ }
         }
         async function leaveWaitlist(id, phone) {
-            if (!confirm('Sair da fila de espera desse horário?')) return;
+            if (!confirm('Sair da fila de espera desse dia?')) return;
             try {
                 const r = await fetch(`${API_URL}/waitlist/${id}/leave`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
                 if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Erro');
@@ -1555,6 +1629,16 @@
                 { key: 'noite', label: 'Noite', test: h => h >= 18 }
             ];
 
+            // Turno lotado = tem horarios, nenhum livre e pelo menos um ocupado por agendamento (nao so horario que ja passou)
+            const fullPeriods = [];
+            if (waitlistAvailable && selectedService) {
+                periods.forEach(pd => {
+                    const ps = slots.filter(sl => pd.test(parseInt(sl.time.split(':')[0])));
+                    pd.waitFull = ps.length > 0 && ps.every(sl => sl.isBooked) && ps.some(sl => sl.waitable);
+                    if (pd.waitFull) fullPeriods.push(pd);
+                });
+            }
+
             let html = '';
             if (myOff.length) {
                 const open = periods.filter(pd => slots.some(sl => pd.test(parseInt(sl.time.split(':')[0])) && !sl.isBooked)).map(pd => OFF_PHRASE[pd.key]);
@@ -1573,14 +1657,22 @@
                     </div>
                     <div class="time-slots">
                         ${periodSlots.map(slot => `
-                            <div class="time-slot ${slot.isBooked ? 'disabled' : ''} ${slot.waitable ? 'waitable' : ''} ${selectedTime === slot.time ? 'selected' : ''}"
-                                 onclick="${!slot.isBooked ? `selectTime('${slot.time}')` : (slot.waitable ? `openWaitlist('${slot.time}')` : '')}">
-                                <span>${slot.time}</span>${slot.waitable ? '<small class="wl-tag">fila</small>' : ''}
+                            <div class="time-slot ${slot.isBooked ? 'disabled' : ''} ${selectedTime === slot.time ? 'selected' : ''}"
+                                 onclick="${!slot.isBooked ? `selectTime('${slot.time}')` : ''}">
+                                <span>${slot.time}</span>
                             </div>
                         `).join('')}
                     </div>
                 `;
+                if (period.waitFull) {
+                    html += `<div class="wl-shiftbox"><div><strong><i class="fas fa-hourglass-half" aria-hidden="true"></i> ${period.label} lotada</strong><span>Sem horário livre neste turno. A fila avisa se alguém desmarcar, mas <b>não garante a vaga</b>.</span></div>
+                        <button type="button" onclick="openWaitlist('${period.key}')">Entrar na fila</button></div>`;
+                }
             });
+            if (fullPeriods.length > 1) {
+                html += `<div class="wl-shiftbox wl-shiftbox-all"><div><strong><i class="fas fa-layer-group" aria-hidden="true"></i> Fila de todos os turnos lotados</strong><span>Receba aviso de qualquer vaga que abrir. A fila <b>não garante a vaga</b>: agende outro horário para ter certeza.</span></div>
+                    <button type="button" onclick="openWaitlist('all')">Entrar em todos</button></div>`;
+            }
 
             container.innerHTML = html;
         }
@@ -1633,7 +1725,7 @@
                         time: time,
                         isBooked: isBlocked,
                         // Ocupado por outro agendamento (nao por horario que ja passou): da pra entrar na fila
-                        waitable: isBlocked && !isTimePassed && waitlistAvailable && !!selectedService
+                        waitable: isBlocked && !isTimePassed
                     });
                 }
             }
