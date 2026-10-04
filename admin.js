@@ -282,6 +282,12 @@
                     loadHandoffs();
                     return;
                 }
+                if (payload.eventType === 'WAITLIST') {
+                    const w = payload.waitlist || {};
+                    showNotification(`⏳ ${w.name || 'Um cliente'} entrou na fila de espera${w.barber ? ' (' + w.barber + ')' : ''}`, 'warning');
+                    loadWaitlistAdmin();
+                    return;
+                }
                 if (payload.eventType === 'INSERT' && payload.booking.status === 'confirmed') {
                      showNotification('Novo agendamento confirmado automaticamente!', 'success');
                 }

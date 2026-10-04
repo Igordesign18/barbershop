@@ -824,6 +824,53 @@ function notifyBooking(tenantId, bookingId, kind = 'novo', extra = {}) {
   });
 }
 
+// Aviso de que alguem entrou na fila de espera. Vai para o gestor (de qualquer barbeiro) e para o barbeiro da fila, se ele tiver WhatsApp cadastrado.
+// entry: { customer_full_name, customer_phone, item_name, barber_id, booking_date, shifts }
+function notifyWaitlistJoin(tenantId, entry) {
+  setImmediate(async () => {
+    try {
+      if (!token()) return;
+      await ensureWebhook();
+      const tenant = db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId);
+      if (!tenant) return;
+      const barber = entry.barber_id ? db.prepare('SELECT name, notify_phone FROM barbers WHERE id = ? AND tenant_id = ?').get(entry.barber_id, tenantId) : null;
+      const list = [];
+      if (tenant.notify_phone && tenant.notify_enabled !== 0) list.push({ phone: tenant.notify_phone, who: 'gestor' });
+      if (barber && barber.notify_phone) list.push({ phone: barber.notify_phone, who: `barbeiro ${barber.name}` });
+      const seen = new Set();
+      const to = list.filter(r => { const k = digits55(r.phone); if (seen.has(k)) return false; seen.add(k); return true; });
+      if (!to.length) return;
+      const names = { manha: 'manhã', tarde: 'tarde', noite: 'noite' };
+      const ks = String(entry.shifts || '').split(',').filter(k => names[k]);
+      const turnos = ks.length === 3 ? 'todos os turnos' : ks.map(k => names[k]).join(' e ');
+      const text = [
+        '⏳ *Novo cliente na fila de espera*',
+        `_${tenant.name}_`,
+        '',
+        `👤 *Cliente:* ${entry.customer_full_name || '-'}`,
+        `📱 *WhatsApp:* ${formatPhone(entry.customer_phone)}`,
+        `✂️ *Serviço:* ${entry.item_name || '-'}`,
+        `💈 *Profissional:* ${barber ? barber.name : '-'}`,
+        `🗓️ *Dia:* ${formatDate(entry.booking_date)}`,
+        `🕐 *Turnos:* ${turnos || '-'}`,
+        '',
+        '💡 A fila não garante vaga. Se um horário vagar, o cliente é avisado automaticamente. Se quiser, chame o cliente para oferecer outro horário.'
+      ].join('\n');
+      const url = clientChatUrl(entry);
+      for (const r of to) {
+        try {
+          await sendTo(r.phone, text, url ? { buttons: [{ text: 'WhatsApp', url }], fallbackText: `${text}\n\n💬 *WhatsApp do cliente:* ${url}` } : null);
+          console.log(`[aviso] fila enviada para ${r.who} de ${tenant.name}`);
+        } catch (err) {
+          console.error(`[aviso] fila falhou para ${r.who} (tenant ${tenantId}):`, err.message);
+        }
+      }
+    } catch (err) {
+      console.error(`[aviso] fila falhou (tenant ${tenantId}):`, err.message);
+    }
+  });
+}
+
 // Aviso para o DONO do sistema (novo cliente de revendedor, pagamento registrado...).
 // Numero cadastrado no super admin (aba Revendedores). Em segundo plano; erro so vai pro log.
 function notifyOwner(text) {
@@ -879,4 +926,4 @@ async function sendOwnCard(tenant, instance, bookingId, text, kind) {
   return true;
 }
 
-module.exports = { sendTo, sameNumber, handleOwnConfirm, sendOwnCard, hasToken: () => !!token(), usesCentral, status, connect, currentQr, disconnect, notifyBooking, notifyClient, sendClientCard, sendTest, buildMessage, recipientsFor, handleIncoming, ensureWebhook, notifyOwner };
+module.exports = { sendTo, sameNumber, handleOwnConfirm, sendOwnCard, hasToken: () => !!token(), usesCentral, status, connect, currentQr, disconnect, notifyBooking, notifyWaitlistJoin, notifyClient, sendClientCard, sendTest, buildMessage, recipientsFor, handleIncoming, ensureWebhook, notifyOwner };

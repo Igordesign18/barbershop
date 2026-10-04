@@ -616,6 +616,14 @@
         .wl-chip:disabled { opacity: .45; cursor: not-allowed; }
         .wl-chip-all { flex-basis: 100%; flex-direction: row; justify-content: center; gap: 8px; }
         .wl-chip-all small { margin-left: 2px; }
+        .wl-book { border: 1px solid var(--brass); background: rgba(198,161,91,0.08); border-radius: 12px; padding: 14px; margin: 12px 0; }
+        .wl-book h4 { margin: 0 0 4px; font-family: 'Fraunces', serif; font-size: 16px; }
+        .wl-book h4 i { color: var(--brass); margin-right: 6px; }
+        .wl-book p { margin: 0 0 8px; font-size: 13px; color: var(--ivory-muted); line-height: 1.5; }
+        .wl-day { font-size: 12.5px; font-weight: 700; margin: 12px 0 6px; color: var(--brass-light); }
+        .wl-times { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+        .wl-time { padding: 10px 0; border: 1px solid var(--hairline); background: var(--surface-raised); color: var(--ivory); border-radius: 9px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+        .wl-time:hover, .wl-time:active { border-color: var(--brass); background: rgba(198,161,91,0.16); }
         .wl-ack { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; line-height: 1.5; margin: 4px 0 14px; cursor: pointer; }
         .wl-ack input { margin-top: 3px; accent-color: var(--brass); width: 18px; height: 18px; flex-shrink: 0; }
         .btn:disabled { opacity: .5; cursor: not-allowed; }

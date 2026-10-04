@@ -700,8 +700,9 @@
                     if (r.status === 400 && /nome/i.test(data.error || '')) document.getElementById('wlNameBox').style.display = '';
                     throw new Error(data.error || 'Não foi possível entrar na fila');
                 }
-                wlState.entryId = data.id; wlState.phone = phone;
+                wlState.entryId = data.id; wlState.phone = phone; wlState.name = name;
                 wlState.joined = (data.shifts || [...wlState.sel].join(',')).split(',').filter(Boolean);
+                wlState.alts = data.alternatives || [];
                 showWaitlistStep2(data.bookings || [], data.replace_booking_id);
             } catch (e) {
                 err.textContent = e.message; err.style.display = 'block';
@@ -709,19 +710,46 @@
             }
         }
 
+        // Tela "agende ja um horario disponivel", mostrada logo depois de entrar na fila
+        function wlSuggestHtml() {
+            const alts = (wlState && wlState.alts) || [];
+            const wd = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            if (!alts.length) return `<div class="wl-box warn"><strong><i class="fas fa-calendar-xmark" aria-hidden="true" style="color:var(--brass);"></i> Sem horários livres agora</strong><br>Não há horário livre com ${escHtml(selectedBarber.name)} nos próximos dias. Tente outro profissional para garantir seu atendimento.</div>`;
+            return `<div class="wl-book">
+                <h4><i class="fas fa-calendar-check" aria-hidden="true"></i> Garanta seu horário agora</h4>
+                <p>Estes horários estão <strong>livres</strong>. Toque em um para agendar de verdade:</p>
+                ${alts.map(a => { const dt = new Date(a.date + 'T12:00:00'); return `<div class="wl-day">${wd[dt.getDay()]}, ${fmtBR(a.date)}</div>
+                    <div class="wl-times">${a.times.map(t => `<button type="button" class="wl-time" onclick="wlBookSlot('${a.date}','${t}')">${t}</button>`).join('')}</div>`; }).join('')}
+            </div>`;
+        }
+        async function wlBookSlot(date, time) {
+            closeWaitlist();
+            const [y, m, d] = date.split('-').map(Number);
+            currentDate = new Date(y, m - 1, 1);
+            await selectDate(y, m - 1, d);
+            selectTime(time);
+            // Aproveita o telefone (e o nome, se digitado) que ele acabou de informar na fila
+            try {
+                const ph = document.getElementById('bookingPhone');
+                if (ph && !ph.value && wlState && wlState.phone) { ph.value = wlFormatPhone(wlState.phone); ph.dispatchEvent(new Event('input', { bubbles: true })); }
+                const nm = document.getElementById('bookingFullName');
+                if (nm && !nm.value && wlState && wlState.name) nm.value = wlState.name;
+            } catch (_) {}
+            try { document.getElementById('confirmBooking')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+        }
+
         function showWaitlistStep2(bookings, currentLink) {
             const body = document.getElementById('waitlistBody');
             const when = `${fmtBR(formatDateToYYYYMMDD(selectedDate))}, ${wlShiftsText(wlState.joined || [])}`;
             const head = `<div class="wl-box" style="border-color:var(--green);"><strong><i class="fas fa-check-circle" aria-hidden="true" style="color:var(--green);"></i> Você entrou na fila!</strong><br>Fila: <strong>${escHtml(when)}</strong>. Se um horário vagar nesses turnos, você recebe uma mensagem no WhatsApp com os botões <strong>Aceitar</strong> e <strong>Recusar</strong>. A vaga fica reservada para você por alguns minutos.</div>${WL_WARNING}`;
             if (!bookings.length) {
-                body.innerHTML = head + `
-                    <div class="wl-box warn"><strong><i class="fas fa-calendar-check" aria-hidden="true" style="color:var(--brass);"></i> Garanta seu horário</strong><br>Você ainda <strong>não tem um horário marcado</strong>. Agende outro horário agora para ter certeza de que será atendido. Se uma vaga melhor abrir na fila, você pode aceitar e cancelar o outro.</div>
-                    <button class="btn" onclick="closeWaitlist()" style="margin-bottom:10px;">Agendar outro horário agora</button>
+                body.innerHTML = head + wlSuggestHtml() + `
+                    <p class="wl-note" style="margin:12px 0;">Se uma vaga melhor abrir na fila, você pode aceitar e cancelar o outro horário.</p>
                     <button class="btn" style="background:transparent; border:1px solid var(--brass); color:var(--brass-light);" onclick="closeWaitlist()">Entendi, só aguardar</button>`;
                 return;
             }
-            body.innerHTML = head + `
-                <p style="font-size:13.5px; line-height:1.6; margin:14px 0 10px;">Você já tem horário marcado. <strong>Se a vaga abrir e você aceitar</strong>, qual horário deve ser cancelado?</p>
+            body.innerHTML = head + wlSuggestHtml() + `
+                <p style="font-size:13.5px; line-height:1.6; margin:18px 0 10px;">Você já tem horário marcado. <strong>Se a vaga abrir e você aceitar</strong>, qual horário deve ser cancelado?</p>
                 <div id="wlOpts">
                     ${bookings.map(b => `<label class="wl-opt ${currentLink === b.id ? 'on' : ''}"><input type="radio" name="wlRepl" value="${b.id}" ${currentLink === b.id ? 'checked' : ''}><span><strong>${fmtBR(b.booking_date)} às ${b.booking_time.substring(0, 5)}</strong><br><span style="color:var(--ivory-muted);">${escHtml(b.servico || '')}${b.barbeiro ? ' · ' + escHtml(b.barbeiro) : ''}</span></span></label>`).join('')}
                     <label class="wl-opt ${!currentLink ? 'on' : ''}"><input type="radio" name="wlRepl" value="" ${!currentLink ? 'checked' : ''}><span><strong>Não cancelar nenhum</strong><br><span style="color:var(--ivory-muted);">Fico com os dois horários</span></span></label>

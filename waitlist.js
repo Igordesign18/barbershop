@@ -113,6 +113,20 @@ function futureBookingsOf(tenantId, phone) {
   `).all(tenantId, phone, n.date, n.date, nowHHMM);
 }
 
+// Horarios livres para o cliente agendar agora (mesmo barbeiro e servico): primeiro o proprio dia, depois os proximos.
+// Devolve ate 4 dias com horarios: [{ date, times: ['09:00', ...] }]
+function alternativesFor(tenantId, barberId, date, duration) {
+  const { computeFreeSlots } = require('./ai-agent');
+  const out = [];
+  const base = new Date(date + 'T12:00:00Z');
+  for (let i = 0; i < 14 && out.length < 4; i++) {
+    const d = new Date(base.getTime() + i * 86400000).toISOString().slice(0, 10);
+    const times = computeFreeSlots(tenantId, barberId, d, duration).filter(t => minutesUntil(d, t) > CLOSE_MINUTES);
+    if (times.length) out.push({ date: d, times: times.slice(0, 16) });
+  }
+  return out;
+}
+
 // body: { customer_full_name, customer_phone, service_id | package_id, barber_id, booking_date, shifts: ['manha','tarde','noite'] | 'all' }
 function createEntry(tenant, body) {
   const bs = require('./barber-services');
@@ -166,7 +180,7 @@ function createEntry(tenant, body) {
   if (dup) {
     // Mesmo barbeiro e dia: atualiza os turnos em vez de duplicar a fila
     if (dup.status === 'waiting' && dup.shifts !== shifts) db.prepare('UPDATE waitlist SET shifts = ? WHERE id = ?').run(shifts, dup.id);
-    return { status: 200, json: { id: dup.id, already: true, shifts: dup.status === 'waiting' ? shifts : dup.shifts, bookings: futureBookingsOf(tenant.id, phone), replace_booking_id: dup.replace_booking_id || null } };
+    return { status: 200, json: { id: dup.id, already: true, shifts: dup.status === 'waiting' ? shifts : dup.shifts, alternatives: alternativesFor(tenant.id, barberId, date, item.duration), bookings: futureBookingsOf(tenant.id, phone), replace_booking_id: dup.replace_booking_id || null } };
   }
   if (mine.length >= MAX_ACTIVE_PER_PHONE) return { status: 400, json: { error: `Você já está em ${MAX_ACTIVE_PER_PHONE} filas. Saia de alguma antes de entrar em outra.` } };
 
@@ -174,7 +188,12 @@ function createEntry(tenant, body) {
     INSERT INTO waitlist (tenant_id, customer_full_name, customer_phone, service_id, package_id, item_name, item_price, item_duration, barber_id, booking_date, booking_time, shifts)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '00:00', ?)
   `).run(tenant.id, name, phone, item.service_id, item.package_id, item.name, item.price, item.duration, barberId, date, shifts);
-  return { status: 201, json: { id: r.lastInsertRowid, shifts, bookings: futureBookingsOf(tenant.id, phone), replace_booking_id: null } };
+  // Avisa o gestor (WhatsApp + painel em tempo real), de qualquer barbeiro
+  try {
+    gn().notifyWaitlistJoin(tenant.id, { customer_full_name: name, customer_phone: phone, item_name: item.name, barber_id: barberId, booking_date: date, shifts });
+    require('./events').broadcastEvent(tenant.id, { eventType: 'WAITLIST', waitlist: { id: r.lastInsertRowid, name, barber: barber.name, date, shifts } });
+  } catch (_) { /* aviso e best-effort */ }
+  return { status: 201, json: { id: r.lastInsertRowid, shifts, alternatives: alternativesFor(tenant.id, barberId, date, item.duration), bookings: futureBookingsOf(tenant.id, phone), replace_booking_id: null } };
 }
 
 // Quais turnos de um barbeiro/dia estao cheios (da para entrar na fila) e quais tem horario livre. Para a pagina publica.
