@@ -162,6 +162,8 @@ function createEntry(tenant, body) {
     item = { service_id: svc.id, package_id: null, name: svc.name, price: svc.price, duration: bs.durationFor(barberId, svc.id, svc.duration) };
   }
 
+  const blocked = require('./client-block').check(tenant, phone, item.price);
+  if (blocked) return { status: blocked.status, json: blocked.json };
   if (!channelAvailable(tenant.id)) return { status: 400, json: { error: 'A fila de espera não está disponível nesta barbearia.' } };
 
   // Turnos cheios (existem, tem expediente e nenhum horario livre) sao os unicos em que faz sentido esperar

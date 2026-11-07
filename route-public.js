@@ -58,7 +58,9 @@ router.get('/:slug/customer', (req, res) => {
   if (!phone) return res.json({ found: false });
   const user = db.prepare('SELECT full_name, birth_date FROM users WHERE tenant_id = ? AND phone = ?').get(req.tenantId, phone);
   if (!user) return res.json({ found: false });
-  res.json({ found: true, first_name: String(user.full_name || '').trim().split(/\s+/)[0] || '', has_birth_date: !!user.birth_date });
+  const blk = require('./client-block').check(req.tenant, phone, 0);
+  res.json({ found: true, first_name: String(user.full_name || '').trim().split(/\s+/)[0] || '', has_birth_date: !!user.birth_date,
+    blocked: blk ? { penalty: blk.block.penalty, message: blk.message, whatsapp_url: blk.json.whatsapp_url } : null });
 });
 
 router.get('/:slug/barbers', (req, res) => {
@@ -425,6 +427,10 @@ router.post('/:slug/bookings', async (req, res) => {
   const finalName = customer_full_name.trim();
   const finalPhone = normalizePhone(customer_phone);
   if (!finalPhone) return res.status(400).json({ error: 'Telefone invalido' });
+
+  // Cliente bloqueado pelo gestor (pagar na hora ou bloqueio definitivo)
+  const blocked = require('./client-block').check(req.tenant, finalPhone, itemPrice);
+  if (blocked) return res.status(blocked.status).json(blocked.json);
 
   let user = db.prepare('SELECT * FROM users WHERE tenant_id = ? AND phone = ?').get(req.tenantId, finalPhone);
   if (user) {

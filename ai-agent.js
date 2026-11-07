@@ -948,6 +948,12 @@ async function runTool(name, args, ctx) {
       if (!barber) return { erro: 'Profissional inválido.' };
       const loaded = loadServices(tenantId, args.servicos_ids);
       if (loaded.error) return { erro: loaded.error };
+      // Cliente bloqueado pelo gestor: nao agenda (pagar na hora ou bloqueio definitivo)
+      {
+        const tenantRow = db.prepare('SELECT * FROM tenants WHERE id = ?').get(tenantId);
+        const blk = tenantRow && require('./client-block').check(tenantRow, user.phone, loaded.services.reduce((sum, s) => sum + Number(s.price), 0));
+        if (blk) return { erro: 'AGENDAMENTO NÃO PERMITIDO. Não crie o agendamento e não tente de novo. Explique ao cliente, com educação, exatamente isto: ' + blk.message, bloqueado: true };
+      }
       if (!barberServices.barberDoesAll(barber.id, loaded.services.map(sv => sv.id))) {
         return { erro: `${barber.name} não faz todos esses serviços. Chame listar_servicos com profissional_id=${barber.id} e ofereça só os que ele faz, ou sugira outro profissional.` };
       }

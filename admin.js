@@ -2552,7 +2552,9 @@
                     return `
                         <div class="client-item">
                             <div class="client-info">
-                                <h4><i class="fas fa-user" aria-hidden="true"></i> ${client.full_name || 'Nome não informado'}</h4>
+                                <h4><i class="fas fa-user" aria-hidden="true"></i> ${client.full_name || 'Nome não informado'}
+                                    ${client.blocked_penalty ? `<span class="client-stat" style="color:var(--danger, #e06666); margin-left:8px;" title="${(client.blocked_reason || '').replace(/"/g, '&quot;')}"><i class="fas fa-ban" aria-hidden="true"></i> ${client.blocked_penalty === 'ban' ? 'Bloqueio definitivo' : 'Pagar o corte na hora'}</span>` : ''}</h4>
+                                ${client.blocked_penalty && client.blocked_reason ? `<p style="color:var(--danger, #e06666);"><i class="fas fa-comment-dots" aria-hidden="true"></i> Motivo: ${String(client.blocked_reason).replace(/</g, '&lt;')}</p>` : ''}
                                 <p><i class="fas fa-envelope" aria-hidden="true"></i> ${client.email}</p>
                                 <p><i class="fas fa-phone" aria-hidden="true"></i> ${client.phone || 'Telefone não informado'}</p>
                                 ${client.birth_date ? `<p><i class="fas fa-cake-candles" aria-hidden="true"></i> Aniversário: ${client.birth_date.slice(8, 10)}/${client.birth_date.slice(5, 7)}</p>` : ''}
@@ -2580,6 +2582,9 @@
                                 <button class="btn-edit" onclick="openEditClientModal('${client.id}')" aria-label="Editar cliente ${client.full_name}">
                                     <i class="fas fa-edit" aria-hidden="true"></i> Editar
                                 </button>
+                                ${client.blocked_penalty
+                                    ? `<button class="btn-edit" onclick="unblockClient('${client.id}')" aria-label="Desbloquear cliente ${client.full_name}"><i class="fas fa-lock-open" aria-hidden="true"></i> Desbloquear</button>`
+                                    : `<button class="btn-delete" onclick="openBlockClientModal('${client.id}', ${JSON.stringify(client.full_name || '').replace(/"/g, '&quot;')})" aria-label="Bloquear cliente ${client.full_name}"><i class="fas fa-ban" aria-hidden="true"></i> Bloquear</button>`}
                                 <button class="btn-delete" onclick="deleteClient('${client.id}')" aria-label="Excluir cliente ${client.full_name}">
                                     <i class="fas fa-trash" aria-hidden="true"></i> Excluir
                                 </button>
@@ -2591,6 +2596,50 @@
                 console.error('Erro ao carregar clientes:', error);
                 container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" aria-hidden="true"></i><p>Erro ao carregar clientes</p></div>';
                 showNotification('Erro ao carregar clientes', 'error');
+            }
+        }
+
+        // ===== Bloqueio de clientes (penalidade: pagar o corte na hora ou bloqueio definitivo) =====
+        function openBlockClientModal(clientId, name) {
+            document.getElementById('blockClientId').value = clientId;
+            document.getElementById('blockClientWho').textContent = name ? `Cliente: ${name}` : '';
+            document.querySelector('input[name="blockPenalty"][value="pay"]').checked = true;
+            document.getElementById('blockClientReason').value = '';
+            document.getElementById('blockClientCancelFuture').checked = false;
+            document.getElementById('blockClientModal').classList.remove('hidden');
+        }
+        function closeBlockClientModal() {
+            document.getElementById('blockClientModal').classList.add('hidden');
+        }
+        document.getElementById('blockClientForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('blockClientId').value;
+            const penalty = document.querySelector('input[name="blockPenalty"]:checked').value;
+            try {
+                const r = await apiFetch(`/clients/${id}/block`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        penalty,
+                        reason: document.getElementById('blockClientReason').value.trim(),
+                        cancel_future: document.getElementById('blockClientCancelFuture').checked
+                    })
+                });
+                closeBlockClientModal();
+                showNotification(`Cliente bloqueado (${penalty === 'ban' ? 'bloqueio definitivo' : 'pagar o corte na hora'}).${r && r.cancelled ? ` ${r.cancelled} agendamento(s) cancelado(s).` : ''}`, 'success');
+                loadClients();
+                if (r && r.cancelled) loadBookings();
+            } catch (err) {
+                showNotification(err.message || 'Erro ao bloquear cliente', 'error');
+            }
+        });
+        async function unblockClient(clientId) {
+            if (!confirm('Desbloquear este cliente? Ele volta a poder agendar normalmente.')) return;
+            try {
+                await apiFetch(`/clients/${clientId}/block`, { method: 'DELETE' });
+                showNotification('Cliente desbloqueado.', 'success');
+                loadClients();
+            } catch (err) {
+                showNotification(err.message || 'Erro ao desbloquear cliente', 'error');
             }
         }
 

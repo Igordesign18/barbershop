@@ -939,6 +939,7 @@
                 const digits = phoneInput.value.replace(/\D/g, '');
                 if (digits.length !== 11) {
                     if (recognizedCustomer) applyRecognition(null);
+                    showBlockedNotice(null);
                     lastChecked = '';
                     return;
                 }
@@ -948,6 +949,7 @@
                     const response = await fetch(`${API_URL}/customer?phone=${encodeURIComponent('55' + digits)}`);
                     const data = await response.json();
                     applyRecognition(data && data.found ? data : null);
+                    showBlockedNotice(data && data.blocked ? data.blocked : null);
                 } catch (_) {
                     applyRecognition(null);
                 }
@@ -966,6 +968,26 @@
                     }
                 }
             } catch (_) {}
+        }
+
+        // Aviso vermelho quando o gestor bloqueou este cliente: pagar o corte na hora ou bloqueio definitivo
+        function showBlockedNotice(info, scroll) {
+            let box = document.getElementById('blockedNotice');
+            if (!info) { if (box) box.remove(); return; }
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'blockedNotice';
+                const anchor = document.getElementById('customerWelcome');
+                anchor.parentNode.insertBefore(box, anchor);
+            }
+            const title = info.penalty === 'ban' ? 'Cadastro bloqueado' : 'Pagamento imediato necessário';
+            const icon = info.penalty === 'ban' ? 'fa-ban' : 'fa-money-bill-wave';
+            box.className = 'wl-alert';
+            box.setAttribute('role', 'alert');
+            box.innerHTML = `<i class="fas ${icon}" aria-hidden="true"></i>
+                <div><strong>${title}</strong>${escHtml(info.message || '')}
+                ${info.whatsapp_url ? `<div style="margin-top:10px;"><a href="${escHtml(info.whatsapp_url)}" target="_blank" rel="noopener" class="btn" style="display:inline-block; padding:10px 16px; text-decoration:none; font-size:14px;"><i class="fab fa-whatsapp" aria-hidden="true"></i> Falar com a barbearia</a></div>` : ''}</div>`;
+            if (scroll) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function applyRecognition(customer) {
@@ -1854,7 +1876,9 @@
 
                 if (!response.ok) {
                     const err = await response.json().catch(() => ({}));
-                    throw new Error(err.error || 'Erro ao confirmar agendamento');
+                    const failure = new Error(err.error || 'Erro ao confirmar agendamento');
+                    failure.data = err;
+                    throw failure;
                 }
 
                 const bookingData = await response.json();
@@ -1933,6 +1957,10 @@
                 updateStepProgress('service');
                 
             } catch (error) {
+                if (error.data && error.data.code === 'CLIENT_BLOCKED') {
+                    // Cliente bloqueado pelo gestor: mostra o aviso da penalidade em vez de um erro generico
+                    showBlockedNotice({ penalty: error.data.penalty, message: error.data.error, whatsapp_url: error.data.whatsapp_url }, true);
+                } else
                 alert('Erro ao confirmar agendamento: ' + error.message);
                 console.error('Erro completo:', error);
             } finally {

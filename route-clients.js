@@ -3,6 +3,7 @@ const { db } = require('./db');
 const { requireManager } = require('./auth');
 const { requireActiveTenant } = require('./tenant');
 const { normalizePhone } = require('./phone');
+require('./client-block'); // garante as colunas de bloqueio no banco assim que o servidor sobe
 
 const router = express.Router();
 router.use(requireManager, requireActiveTenant);
@@ -10,7 +11,7 @@ router.use(requireManager, requireActiveTenant);
 router.get('/', (req, res) => {
   const nameFilter = (req.query.name || '').toLowerCase();
 
-  const users = db.prepare('SELECT id, full_name, email, phone, birth_date, loyalty_progress, created_at FROM users WHERE tenant_id = ? ORDER BY created_at DESC').all(req.tenantId);
+  const users = db.prepare('SELECT id, full_name, email, phone, birth_date, loyalty_progress, created_at, blocked_penalty, blocked_reason, blocked_at FROM users WHERE tenant_id = ? ORDER BY created_at DESC').all(req.tenantId);
   const filtered = nameFilter
     ? users.filter(u => (u.full_name || '').toLowerCase().includes(nameFilter))
     : users;
@@ -25,6 +26,32 @@ router.get('/', (req, res) => {
   });
 
   res.json(withStats);
+});
+
+// Bloqueia o cliente. penalty: 'pay' (so agenda pagando o corte na hora) ou 'ban' (bloqueio definitivo).
+// cancel_future: true cancela os agendamentos futuros dele (o horario volta a ficar livre e a fila e avisada).
+router.put('/:id/block', (req, res) => {
+  const cb = require('./client-block');
+  const { penalty, reason, cancel_future } = req.body || {};
+  if (!cb.PENALTIES[penalty]) return res.status(400).json({ error: 'Escolha a penalidade: pagar o corte na hora ou bloqueio definitivo.' });
+  if (!cb.setBlock(req.tenantId, req.params.id, penalty, reason)) return res.status(404).json({ error: 'Cliente nao encontrado' });
+  let cancelled = 0;
+  if (cancel_future) {
+    const today = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
+    const rows = db.prepare("SELECT id FROM bookings WHERE tenant_id = ? AND user_id = ? AND status = 'confirmed' AND booking_date >= ?").all(req.tenantId, req.params.id, today);
+    for (const r of rows) {
+      db.prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ?").run(r.id);
+      try { require('./events').broadcastBookingChange(req.tenantId, 'UPDATE', { id: r.id, status: 'cancelled' }); } catch (_) {}
+    }
+    cancelled = rows.length;
+    if (cancelled) { try { require('./waitlist').kick(req.tenantId); } catch (_) {} }
+  }
+  res.json({ ok: true, cancelled });
+});
+
+router.delete('/:id/block', (req, res) => {
+  if (!require('./client-block').clearBlock(req.tenantId, req.params.id)) return res.status(404).json({ error: 'Cliente nao encontrado' });
+  res.json({ ok: true });
 });
 
 router.get('/:id', (req, res) => {
